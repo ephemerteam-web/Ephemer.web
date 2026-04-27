@@ -3,286 +3,185 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
-import {
-  calculerProchainAnniversaire,
-  formaterDateFR,
-} from '@/lib/anniversaires'
-
-// Type Contact : décrit la forme d'un contact dans notre app
-type Contact = {
-  id: string
-  nom: string
-  prenom: string
-  date_naissance: string | null
-  relation: string
-  email: string | null   // ← on ajoute l'email
-  estLie?: boolean       // ← badge "lié" (optionnel, calculé après)
-}
-
-// Type enrichi : un contact + ses infos d'anniversaire calculées
-type ContactAvecAnniv = Contact & {
-  joursRestants: number
-  ageAVenir: number
-  prochainAnniv: Date
-}
 
 export default function Dashboard() {
   const router = useRouter()
   const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [contactsAvecAnniv, setContactsAvecAnniv] = useState<ContactAvecAnniv[]>([])
+  const [userName, setUserName] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const init = async () => {
-      // Vérification de la session utilisateur
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push('/connexion')
         return
       }
-
       setUserEmail(session.user.email ?? null)
-
-      // Récupération des contacts depuis Supabase
-      const { data, error } = await supabase
-  .from('contacts')
-  .select('*')
-  .eq('user_id', session.user.id)
-  .order('nom', { ascending: true })
-
-if (error) {
-  console.error('Erreur chargement contacts :', error)
-} else {
-  const liste = data as Contact[]
-
-  // Pour chaque contact avec un email, on vérifie si le lien est mutuel
-  const listeAvecLiens = await Promise.all(
-    liste.map(async (c) => {
-      if (!c.email) return { ...c, estLie: false }
-      const { data: lieData } = await supabase.rpc('est_contact_lie', {
-        mon_user_id: session.user.id,
-        email_du_contact: c.email,
-      })
-      return { ...c, estLie: lieData === true }
-    })
-  )
-
-  setContacts(listeAvecLiens)
-
-  const avecAnniv: ContactAvecAnniv[] = listeAvecLiens
-    .filter((c) => c.date_naissance !== null)
-    .map((c) => {
-      const { joursRestants, ageAVenir, prochainAnniv } =
-        calculerProchainAnniversaire(c.date_naissance!)
-      return { ...c, joursRestants, ageAVenir, prochainAnniv }
-    })
-    .sort((a, b) => a.joursRestants - b.joursRestants)
-
-  setContactsAvecAnniv(avecAnniv)
-}
-setLoading(false)
-
+      const pseudo = session.user.email?.split('@')[0] ?? null
+      setUserName(pseudo)
+      setLoading(false)
     }
-
     init()
   }, [router])
 
-  // Déconnexion
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/connexion')
-  }
-
-  // Couleur du badge selon la proximité
-  const couleurBadge = (jours: number) => {
-    if (jours === 0) return 'bg-red-100 text-red-600'
-    if (jours <= 7) return 'bg-orange-100 text-orange-600'
-    if (jours <= 30) return 'bg-yellow-100 text-yellow-700'
-    return 'bg-purple-100 text-purple-600'
-  }
-
-  // Texte du badge
-  const texteBadge = (jours: number) => {
-    if (jours === 0) return '🎉 Aujourd\'hui !'
-    if (jours === 1) return '⏰ Demain !'
-    return `Dans ${jours} j`
-  }
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <p className="text-gray-400 animate-pulse">Chargement...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <div className="animate-pulse mb-4">
+            <span className="text-6xl">🌙</span>
+          </div>
+          <p className="text-indigo-200">Chargement...</p>
+        </div>
       </div>
     )
   }
 
+  const cartes = [
+    {
+      id: 1,
+      icon: '🎂',
+      titre: 'Anniversaires',
+      description: 'Vois vos prochains anniversaires',
+      couleur: 'from-rose-500 to-pink-500',
+      path: '/dashboard/anniversaires'
+    },
+    {
+      id: 2,
+      icon: '📒',
+      titre: 'Contacts',
+      description: 'Gère tous tes contacts',
+      couleur: 'from-blue-500 to-cyan-500',
+      path: '/contacts'
+    },
+    {
+      id: 3,
+      icon: '📅',
+      titre: 'Calendrier',
+      description: 'Explore les fêtes des saints',
+      couleur: 'from-purple-500 to-violet-500',
+      path: '/dashboard/calendrier'
+    },
+    {
+      id: 4,
+      icon: '✨',
+      titre: 'Messages IA',
+      description: 'Génère des messages personnalisés',
+      couleur: 'from-amber-500 to-orange-500',
+      path: '/dashboard/generate',
+      disabled: false
+    }
+  ]
+
   return (
-    <main className="min-h-screen bg-gray-50">
+    <div className="p-6 md:p-8">
 
-      {/* Barre de navigation */}
-      <nav className="bg-white shadow-sm px-6 py-4 flex justify-between items-center">
-        <h1 className="text-xl font-bold text-purple-600">💜 RelAtion</h1>
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-gray-500">{userEmail}</span>
- <button
-      onClick={() => router.push('/profil')}
-      className="text-sm text-purple-500 hover:text-purple-700 transition"
-    >
-      👤 Profil
-    </button>
+      {/* Message de bienvenue */}
+      {userName && (
+        <p className="text-indigo-200 text-sm mb-8">
+          Bienvenue, <span className="font-semibold">{userName}</span> 👋
+        </p>
+      )}
 
-          <button
-            onClick={handleLogout}
-            className="text-sm text-red-400 hover:text-red-600 transition"
-          >
-            Déconnexion
-          </button>
+      {/* Section principale */}
+      <div>
+        <h2 className="text-xl md:text-2xl font-bold text-white mb-6">
+          Accède à tes outils
+        </h2>
+
+        {/* Grille des cartes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {cartes.map((carte) => (
+            <button
+              key={carte.id}
+              onClick={() => !carte.disabled && router.push(carte.path)}
+              disabled={carte.disabled}
+              className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 ${
+                carte.disabled
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:scale-105 hover:shadow-2xl cursor-pointer'
+              }`}
+            >
+              <div
+                className={`absolute inset-0 bg-gradient-to-br ${carte.couleur} ${
+                  carte.disabled ? 'opacity-30' : 'opacity-80 group-hover:opacity-100'
+                } transition-opacity duration-300`}
+              ></div>
+
+              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 transform translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+
+              <div className="relative z-10 flex flex-col h-full">
+                <span className="text-4xl md:text-5xl mb-4 transform group-hover:scale-110 transition-transform duration-300">
+                  {carte.icon}
+                </span>
+                <h3 className="text-lg md:text-xl font-bold text-white text-left mb-2">
+                  {carte.titre}
+                </h3>
+                <p className="text-white/80 text-sm text-left flex-1">
+                  {carte.description}
+                </p>
+
+                {carte.disabled && (
+                  <div className="mt-4 inline-flex px-3 py-1 bg-white/20 rounded-full">
+                    <span className="text-xs font-semibold text-white">🔧 Bientôt</span>
+                  </div>
+                )}
+
+                {!carte.disabled && (
+                  <div className="mt-4 flex items-center gap-2 text-white group-hover:gap-3 transition-all">
+                    <span className="text-sm font-semibold">Ouvrir</span>
+                    <span className="transform group-hover:translate-x-1 transition-transform">→</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-colors"></div>
+            </button>
+          ))}
         </div>
-      </nav>
 
-      {/* Contenu principal */}
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+        {/* Section infos */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
 
-        {/* Message de bienvenue */}
-        <div>
-          <h2 className="text-2xl font-bold text-gray-800">
-            Bonjour 👋
-          </h2>
-          <p className="text-gray-400 mt-1">
-            Voici un aperçu de tes contacts et anniversaires à venir.
+          {/* Carte info 1 */}
+          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-colors">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-3xl">✨</span>
+              <h3 className="text-lg font-bold text-white">Comment ça marche ?</h3>
+            </div>
+            <p className="text-indigo-200 text-sm">
+              Ajoute tes contacts, définis leurs dates importantes, et reçois des rappels pour ne jamais oublier un anniversaire ou une fête.
+            </p>
+          </div>
+
+          {/* Carte Générateur IA */}
+          <div
+            onClick={() => router.push('/dashboard/generate')}
+            className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-purple-400/50 hover:bg-white/10 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-3xl group-hover:scale-110 transition-transform">🤖</span>
+              <h3 className="text-lg font-bold text-white">Générateur IA</h3>
+            </div>
+            <p className="text-indigo-200 text-sm">
+              Génère un message personnalisé pour SMS, email ou réseaux sociaux en quelques secondes.
+            </p>
+            <span className="inline-block mt-3 text-xs text-purple-300 font-medium">
+              Essayer →
+            </span>
+          </div>
+
+        </div>{/* fin grid infos */}
+
+        {/* Footer */}
+        <div className="mt-12 pt-6 border-t border-white/10 text-center">
+          <p className="text-indigo-300 text-sm">
+            Made with 💜 • Version 1.0
           </p>
         </div>
 
-        {/* Grille de cartes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Carte : Prochains anniversaires */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-700 text-lg">🎂 Prochains anniversaires</h3>
-              <span className="text-xs text-gray-400">{contactsAvecAnniv.length} avec date</span>
-            </div>
-
-            {contactsAvecAnniv.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Aucun contact avec une date de naissance pour l'instant.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {contactsAvecAnniv.map((c) => (
-                  <li
-                    key={c.id}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition"
-                  >
-                    {/* Infos du contact */}
-                    <div>
-                      <p className="font-medium text-gray-800">
-                        {c.prenom} {c.nom}
-                      </p>
-                      <p className="text-xs text-gray-400">
-                        {formaterDateFR(c.prochainAnniv)} · {c.ageAVenir} ans
-                      </p>
-                    </div>
-
-                    {/* Badge + bouton générer */}
-<div className="flex flex-col items-end gap-2">
-  <span
-    className={`text-xs font-semibold px-3 py-1 rounded-full ${couleurBadge(c.joursRestants)}`}
-  >
-    {texteBadge(c.joursRestants)}
-  </span>
-  <button
-    onClick={() =>
-      router.push(
-        `/dashboard/generate?prenom=${encodeURIComponent(c.prenom)}&nom=${encodeURIComponent(c.nom)}&relation=${encodeURIComponent(c.relation)}&age=${c.ageAVenir}`
-)
-    }
-    className="text-xs text-purple-500 hover:text-purple-700 underline transition"
-  >
-    ✍️ Générer un message
-  </button>
-</div>
-
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Carte : Liste de tous les contacts */}
-          <div className="bg-white rounded-2xl shadow-sm p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-700 text-lg">👥 Mes contacts</h3>
-              <button
-                onClick={() => router.push('/contacts/nouveau')}
-                className="text-xs bg-purple-600 text-white px-3 py-1 rounded-full hover:bg-purple-700 transition"
-              >
-                + Ajouter
-              </button>
-            </div>
-
-            {contacts.length === 0 ? (
-              <p className="text-sm text-gray-400">
-                Aucun contact pour l'instant.
-              </p>
-            ) : (
-              <ul className="space-y-2">
-                {contacts.map((c) => (
-                  <li
-  key={c.id}
-  className="flex items-center justify-between text-sm p-2 rounded-xl hover:bg-gray-50 transition"
->
-  <span className="font-medium text-gray-800">
-    {c.prenom} {c.nom}
-  </span>
-  <div className="flex items-center gap-2">
-  <span className="text-xs text-gray-400 capitalize">
-    {c.relation}
-  </span>
-
-  {/* Badge lié — visible uniquement si le lien est mutuel */}
-  {c.estLie && (
-    <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
-      🤝 Lié
-    </span>
-  )}
-
-  <button
-    onClick={() => router.push(`/contacts/${c.id}/edit`)}
-    className="text-xs text-purple-400 hover:text-purple-600 border border-purple-100 px-2 py-1 rounded-lg transition"
-  >
-    ✏️ Modifier
-  </button>
-</div>
-
-</li>
-
-                ))}
-              </ul>
-            )}
-          </div>
-
-          {/* Carte placeholder : Générateur de messages */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border-2 border-dashed border-purple-100">
-            <div className="text-3xl mb-3">✍️</div>
-            <h3 className="font-bold text-gray-700">Générateur de messages</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Prochaine étape : générer automatiquement un message personnalisé pour chaque anniversaire.
-            </p>
-          </div>
-
-          {/* Carte placeholder : Éphéméride */}
-          <div className="bg-white rounded-2xl shadow-sm p-6 border-2 border-dashed border-purple-100">
-            <div className="text-3xl mb-3">📅</div>
-            <h3 className="font-bold text-gray-700">Éphéméride</h3>
-            <p className="text-sm text-gray-400 mt-1">
-              Prochaine étape : détecter la fête de chaque prénom (ex: Saint-Joseph le 19 mars).
-            </p>
-          </div>
-
-        </div>
-      </div>
-    </main>
+      </div>{/* fin section principale */}
+    </div>
   )
 }

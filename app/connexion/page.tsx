@@ -9,153 +9,148 @@ export default function ConnexionPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
-  const [showPassword, setShowPassword] = useState(false) // afficher/masquer le mot de passe
+  const [showPassword, setShowPassword] = useState(false)
 
   const router = useRouter()
 
   const handleConnexion = async (e: React.FormEvent) => {
     e.preventDefault()
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    })
-
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
     if (error) {
       setIsError(true)
       setMessage('❌ Erreur : ' + error.message)
     } else {
       setIsError(false)
       setMessage('✅ Connexion réussie ! Redirection...')
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1000)
+      setTimeout(() => router.push('/dashboard'), 1000)
     }
   }
 
-  // Fonction déclenchée quand on clique sur "Mot de passe oublié"
   const handleMotDePasseOublie = async () => {
     if (!email) {
       setIsError(true)
       setMessage('❌ Entre d\'abord ton adresse email ci-dessus.')
       return
     }
-
-    // Supabase envoie un email avec un lien pour réinitialiser le mot de passe
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reinitialiser-mot-de-passe`,
     })
-
     if (error) {
       setIsError(true)
       setMessage('❌ Erreur : ' + error.message)
     } else {
       setIsError(false)
-      setMessage('📧 Email envoyé ! Vérifie ta boîte mail pour réinitialiser ton mot de passe.')
+      setMessage('📧 Email envoyé ! Vérifie ta boîte mail.')
     }
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#0a0118] flex items-center justify-center px-4 relative overflow-hidden">
 
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+      {/* BOULES LUMINEUSES */}
+      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-purple-700 opacity-20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-[350px] h-[350px] bg-indigo-600 opacity-20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-pink-600 opacity-10 rounded-full blur-[80px] pointer-events-none" />
 
-        {/* Titre */}
+      <div className="w-full max-w-md relative z-10">
+
+        {/* LOGO */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700">Bon retour ! 👋</h1>
-          <p className="text-gray-500 mt-2">Connecte-toi pour voir tes événements du jour</p>
+          <a href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 transition text-sm mb-6">
+            ← Retour à l'accueil
+          </a>
+          <div className="text-5xl mb-3">🌙</div>
+          <h1 className="text-3xl font-black text-white">Bon retour !</h1>
+          <p className="text-white/40 mt-2 text-sm">Connecte-toi pour voir tes événements du jour</p>
         </div>
 
-        {/* Formulaire */}
-        <form onSubmit={handleConnexion} className="flex flex-col gap-5">
+        {/* CARTE FORMULAIRE */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
 
-          {/* Champ Email */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-700">
-              Adresse email
-            </label>
-            <input
-              type="email"
-              placeholder="ton@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-            />
-          </div>
+          <form onSubmit={handleConnexion} className="flex flex-col gap-5">
 
-          {/* Champ Mot de passe */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-700">
-              Mot de passe
-            </label>
-            <input
-              // Si showPassword est true, on affiche le texte, sinon on masque
-              type={showPassword ? 'text' : 'password'}
-              placeholder="Ton mot de passe"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-            />
-
-            {/* Case à cocher pour afficher/masquer */}
-            <label className="flex items-center gap-2 mt-1 cursor-pointer text-sm text-gray-500">
+            {/* Email */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">
+                Adresse email
+              </label>
               <input
-                type="checkbox"
-                checked={showPassword}
-                onChange={(e) => setShowPassword(e.target.checked)}
-                className="accent-indigo-600"
+                type="email"
+                placeholder="ton@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
               />
-              Afficher le mot de passe
-            </label>
-          </div>
+            </div>
 
-          {/* Lien mot de passe oublié */}
-          <button
-            type="button" // "button" pour ne pas soumettre le formulaire
-            onClick={handleMotDePasseOublie}
-            className="text-sm text-indigo-500 hover:underline text-right -mt-2"
-          >
-            Mot de passe oublié ?
-          </button>
+            {/* Mot de passe */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">
+                Mot de passe
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Ton mot de passe"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+              />
+              <label className="flex items-center gap-2 mt-1 cursor-pointer text-sm text-white/30 hover:text-white/50 transition">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="accent-purple-500"
+                />
+                Afficher le mot de passe
+              </label>
+            </div>
 
-          {/* Bouton connexion */}
-          <button
-            type="submit"
-            className="bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-500 transition mt-2"
-          >
-            Me connecter
-          </button>
+            {/* Mot de passe oublié */}
+            <button
+              type="button"
+              onClick={handleMotDePasseOublie}
+              className="text-sm text-purple-400 hover:text-pink-400 transition text-right -mt-2"
+            >
+              Mot de passe oublié ?
+            </button>
 
-        </form>
+            {/* Bouton connexion */}
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-purple-900/40 hover:scale-105 mt-2"
+            >
+              Me connecter →
+            </button>
 
-        {/* Message succès ou erreur */}
-        {message && (
-          <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
-            isError
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-green-50 text-green-700 border border-green-200'
-          }`}>
-            {message}
-          </div>
-        )}
+          </form>
 
-        {/* Liens du bas */}
-        <div className="text-center text-sm text-gray-500 mt-6 flex flex-col gap-2">
-          <p>
+          {/* Message succès ou erreur */}
+          {message && (
+            <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
+              isError
+                ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+                : 'bg-green-500/10 text-green-300 border border-green-500/20'
+            }`}>
+              {message}
+            </div>
+          )}
+
+          {/* Lien inscription */}
+          <p className="text-center text-sm text-white/30 mt-6">
             Pas encore de compte ?{' '}
-            <a href="/inscription" className="text-indigo-600 font-semibold hover:underline">
+            <a href="/inscription" className="text-purple-400 font-semibold hover:text-pink-400 transition">
               S'inscrire
             </a>
           </p>
-          <a href="/" className="text-gray-400 hover:text-indigo-500 hover:underline transition">
-            ← Retour à l'accueil
-          </a>
+
         </div>
 
-      </div>
+        <p className="text-center text-white/20 text-xs mt-8">© 2025 Ephemer — Fait avec 💜</p>
 
+      </div>
     </main>
   )
 }

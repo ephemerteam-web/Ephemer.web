@@ -18,11 +18,7 @@ export default function InscriptionPage() {
   const handleInscription = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Étape 1 : on crée le compte avec email + mot de passe
-    const { data, error } = await supabase.auth.signUp({
-      email: email,
-      password: password,
-    })
+    const { data, error } = await supabase.auth.signUp({ email, password })
 
     if (error) {
       setIsError(true)
@@ -30,15 +26,13 @@ export default function InscriptionPage() {
       return
     }
 
-    // Étape 2 : on sauvegarde le profil dans la table profiles
-    // data.user.id est l'identifiant unique créé par Supabase pour cet utilisateur
     if (data.user) {
       const { error: profileError } = await supabase
         .from('profiles')
         .upsert({
-          id: data.user.id,       // on lie le profil à l'utilisateur
-          prenom: prenom,
-          nom: nom,
+          id: data.user.id,
+          prenom,
+          nom,
           date_naissance: dateNaissance || null,
         })
 
@@ -54,117 +48,131 @@ export default function InscriptionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 flex items-center justify-center px-4">
+    <main className="min-h-screen bg-[#0a0118] flex items-center justify-center px-4 relative overflow-hidden">
 
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+      {/* BOULES LUMINEUSES */}
+      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-purple-700 opacity-20 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-80px] right-[-80px] w-[350px] h-[350px] bg-indigo-600 opacity-20 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-pink-600 opacity-10 rounded-full blur-[80px] pointer-events-none" />
 
-        {/* Titre */}
+      <div className="w-full max-w-md relative z-10 py-12">
+
+        {/* LOGO + TITRE */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-indigo-700">Créer un compte</h1>
-          <p className="text-gray-500 mt-2">Rejoins Ephemer et ne rate plus aucune date importante 🎉</p>
+          <a href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 transition text-sm mb-6">
+            ← Retour à l'accueil
+          </a>
+          <div className="text-5xl mb-3">🌙</div>
+          <h1 className="text-3xl font-black text-white">Créer un compte</h1>
+          <p className="text-white/40 mt-2 text-sm">Rejoins Ephemer et ne rate plus aucune date importante 🎉</p>
         </div>
 
-        {/* Formulaire */}
-        <form onSubmit={handleInscription} className="flex flex-col gap-5">
+        {/* CARTE FORMULAIRE */}
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
 
-          {/* Prénom */}
-<div className="flex flex-col gap-1">
-  <label className="text-sm font-semibold text-gray-700">Prénom</label>
-  <input
-    type="text"
-    placeholder="Marie"
-    value={prenom}
-    onChange={(e) => setPrenom(e.target.value)}
-    required
-    className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-  />
-</div>
+          <form onSubmit={handleInscription} className="flex flex-col gap-5">
 
-{/* Nom */}
-<div className="flex flex-col gap-1">
-  <label className="text-sm font-semibold text-gray-700">Nom</label>
-  <input
-    type="text"
-    placeholder="Dupont"
-    value={nom}
-    onChange={(e) => setNom(e.target.value)}
-    required
-    className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-  />
-</div>
+            {/* Prénom + Nom côte à côte */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-white/70">Prénom</label>
+                <input
+                  type="text"
+                  placeholder="Marie"
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  required
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-white/70">Nom</label>
+                <input
+                  type="text"
+                  placeholder="Dupont"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  required
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                />
+              </div>
+            </div>
 
+            {/* Date de naissance */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">
+                Date de naissance{' '}
+                <span className="text-white/30 font-normal">(optionnel)</span>
+              </label>
+              <input
+                type="date"
+                value={dateNaissance}
+                onChange={(e) => setDateNaissance(e.target.value)}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+              />
+            </div>
 
-          {/* Date de naissance */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-700">
-              Date de naissance <span className="text-gray-400 font-normal">(optionnel)</span>
-            </label>
-            <input
-              type="date"
-              value={dateNaissance}
-              onChange={(e) => setDateNaissance(e.target.value)}
-              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-            />
-          </div>
+            {/* Email */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Adresse email</label>
+              <input
+                type="email"
+                placeholder="ton@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+              />
+            </div>
 
-          {/* Email */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-700">Adresse email</label>
-            <input
-              type="email"
-              placeholder="ton@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-            />
-          </div>
+            {/* Mot de passe */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Mot de passe</label>
+              <input
+                type="password"
+                placeholder="Minimum 6 caractères"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+              />
+            </div>
 
-          {/* Mot de passe */}
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-semibold text-gray-700">Mot de passe</label>
-            <input
-              type="password"
-              placeholder="Minimum 6 caractères"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              className="border border-gray-300 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition"
-            />
-          </div>
+            {/* Bouton */}
+            <button
+              type="submit"
+              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-purple-900/40 hover:scale-105 mt-2"
+            >
+              ✨ Créer mon compte
+            </button>
 
-          {/* Bouton */}
-          <button
-            type="submit"
-            className="bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-500 transition mt-2"
-          >
-            Créer mon compte
-          </button>
+          </form>
 
-        </form>
+          {/* Message succès ou erreur */}
+          {message && (
+            <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
+              isError
+                ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+                : 'bg-green-500/10 text-green-300 border border-green-500/20'
+            }`}>
+              {message}
+            </div>
+          )}
 
-        {/* Message succès ou erreur */}
-        {message && (
-          <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
-            isError
-              ? 'bg-red-50 text-red-700 border border-red-200'
-              : 'bg-green-50 text-green-700 border border-green-200'
-          }`}>
-            {message}
-          </div>
-        )}
+          {/* Lien connexion */}
+          <p className="text-center text-sm text-white/30 mt-6">
+            Déjà un compte ?{' '}
+            <a href="/connexion" className="text-purple-400 font-semibold hover:text-pink-400 transition">
+              Se connecter
+            </a>
+          </p>
 
-        {/* Lien vers connexion */}
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Déjà un compte ?{' '}
-          <a href="/connexion" className="text-indigo-600 font-semibold hover:underline">
-            Se connecter
-          </a>
-        </p>
+        </div>
+
+        <p className="text-center text-white/20 text-xs mt-8">© 2025 Ephemer — Fait avec 💜</p>
 
       </div>
-
     </main>
   )
 }

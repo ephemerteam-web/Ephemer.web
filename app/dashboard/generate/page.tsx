@@ -2,6 +2,16 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+
+// Type corrigé avec les vrais noms de colonnes
+type Contact = {
+  id: number;
+  prenom: string;
+  nom: string;
+  relation: string;
+  date_naissance: string | null;
+};
 
 function GenerateForm() {
   const searchParams = useSearchParams();
@@ -18,6 +28,56 @@ function GenerateForm() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [selectedContactId, setSelectedContactId] = useState("");
+
+  // Charger les contacts avec les bons noms de colonnes
+  useEffect(() => {
+    async function loadContacts() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("id, prenom, nom, relation, date_naissance")
+        .eq("user_id", session.user.id)
+        .order("prenom");
+
+      if (error) console.error("Erreur chargement contacts:", error);
+      if (data) setContacts(data);
+    }
+    loadContacts();
+  }, []);
+
+  // Quand un contact est sélectionné
+  function handleContactSelect(contactId: string) {
+    setSelectedContactId(contactId);
+
+    if (!contactId) {
+      setFirstName("");
+      setLastName("");
+      setRelation("ami");
+      setAge("");
+      return;
+    }
+
+    const contact = contacts.find((c) => c.id === Number(contactId));
+    if (!contact) return;
+
+    setFirstName(contact.prenom);
+    setLastName(contact.nom || "");
+    setRelation(contact.relation || "ami");
+
+    if (contact.date_naissance) {
+      const birthYear = new Date(contact.date_naissance).getFullYear();
+      const currentYear = new Date().getFullYear();
+      setAge(String(currentYear - birthYear));
+    } else {
+      setAge("");
+    }
+  }
+
+  // Préremplir depuis les paramètres URL
   useEffect(() => {
     const prenom = searchParams.get("prenom");
     const nom = searchParams.get("nom");
@@ -69,8 +129,7 @@ function GenerateForm() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4 md:p-8">
-      
-      {/* En-tête avec bouton retour */}
+
       <div className="max-w-2xl mx-auto mb-6 flex items-center gap-4">
         <button
           onClick={() => router.push("/dashboard")}
@@ -81,16 +140,44 @@ function GenerateForm() {
       </div>
 
       <div className="max-w-2xl mx-auto">
-        
-        {/* Titre */}
-        <div className="mb-8">
+
+        <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">✨ Générateur de messages</h1>
           <p className="text-gray-500 mt-1">Crée un message personnalisé grâce à l'IA en quelques secondes.</p>
         </div>
 
+        {/* Menu déroulant de sélection de contact */}
+        <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border-2 border-purple-100">
+          <label className="block text-sm font-semibold text-gray-700 mb-2">
+            👥 Sélectionner un contact existant
+          </label>
+          <select
+            value={selectedContactId}
+            onChange={(e) => handleContactSelect(e.target.value)}
+            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+          >
+            <option value="">-- Saisir manuellement ou choisir un contact --</option>
+            {contacts.map((contact) => (
+              <option key={contact.id} value={contact.id}>
+                {contact.prenom} {contact.nom} ({contact.relation})
+              </option>
+            ))}
+          </select>
+          {contacts.length === 0 && (
+            <p className="text-xs text-gray-400 mt-2">
+              Aucun contact trouvé.{" "}
+              <span
+                className="text-purple-500 cursor-pointer hover:underline"
+                onClick={() => router.push("/contacts")}
+              >
+                Ajouter des contacts →
+              </span>
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-          {/* Colonne gauche : formulaire */}
           <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-5">
             <h2 className="font-semibold text-gray-700 text-lg">👤 La personne</h2>
 
@@ -159,7 +246,6 @@ function GenerateForm() {
 
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-2">Ton du message</label>
-              {/* Boutons de ton en grille au lieu d'un select */}
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { value: "formel", label: "🎩 Formel" },
@@ -195,10 +281,8 @@ function GenerateForm() {
             </button>
           </div>
 
-          {/* Colonne droite : résultat */}
           <div className="flex flex-col gap-4">
 
-            {/* État vide */}
             {!message && !error && !loading && (
               <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center text-center h-full min-h-48 border-2 border-dashed border-purple-100">
                 <div className="text-4xl mb-3">💌</div>
@@ -206,7 +290,6 @@ function GenerateForm() {
               </div>
             )}
 
-            {/* Chargement */}
             {loading && (
               <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center text-center h-full min-h-48">
                 <div className="text-4xl mb-3 animate-bounce">✨</div>
@@ -214,14 +297,12 @@ function GenerateForm() {
               </div>
             )}
 
-            {/* Erreur */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-600 text-sm">
                 ⚠️ {error}
               </div>
             )}
 
-            {/* Message généré */}
             {message && (
               <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-4">
                 <div className="flex items-center justify-between">
