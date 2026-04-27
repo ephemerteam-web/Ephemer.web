@@ -8,12 +8,13 @@ export default function ProfilPage() {
   const router = useRouter()
 
   const [email, setEmail] = useState("")
+  const [nouvelEmail, setNouvelEmail] = useState("") // 👈 Nouveau champ
   const [prenom, setPrenom] = useState("")
   const [nom, setNom] = useState("")
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState("")
+  const [modifierEmail, setModifierEmail] = useState(false) // 👈 Affiche/cache le champ
 
-  // Au chargement, on récupère les infos de l'utilisateur connecté
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -26,25 +27,39 @@ export default function ProfilPage() {
     getUser()
   }, [])
 
-  // Sauvegarde les modifications
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setMessage("")
 
-    const { error } = await supabase.auth.updateUser({
+    // On prépare l'objet de mise à jour
+    // "updateData" contiendra soit juste les métadonnées, soit aussi le nouvel email
+    const updateData: { data: { prenom: string; nom: string }; email?: string } = {
       data: { prenom, nom }
-    })
+    }
+
+    // Si l'utilisateur a rempli le champ nouvel email, on l'ajoute
+    if (modifierEmail && nouvelEmail && nouvelEmail !== email) {
+      updateData.email = nouvelEmail
+    }
+
+    const { error } = await supabase.auth.updateUser(updateData)
 
     if (error) {
       setMessage("❌ Erreur : " + error.message)
     } else {
-      setMessage("✅ Profil mis à jour avec succès !")
+      // Si l'email a été changé, on affiche un message spécifique
+      if (modifierEmail && nouvelEmail && nouvelEmail !== email) {
+        setMessage("✅ Un email de confirmation a été envoyé à " + nouvelEmail + ". Clique sur le lien pour valider le changement.")
+        setModifierEmail(false)
+        setNouvelEmail("")
+      } else {
+        setMessage("✅ Profil mis à jour avec succès !")
+      }
     }
     setLoading(false)
   }
 
-  // Déconnexion
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push("/connexion")
@@ -54,7 +69,6 @@ export default function ProfilPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
       <div className="max-w-lg mx-auto">
 
-        {/* Bouton retour */}
         <button
           onClick={() => router.push("/dashboard")}
           className="mb-6 text-sm text-gray-500 hover:text-purple-600 flex items-center gap-2 transition"
@@ -64,7 +78,6 @@ export default function ProfilPage() {
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
 
-          {/* Avatar avec initiales */}
           <div className="flex flex-col items-center mb-8">
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-400 to-pink-400 flex items-center justify-center text-white text-2xl font-bold mb-3">
               {prenom ? prenom[0].toUpperCase() : "?"}
@@ -73,13 +86,10 @@ export default function ProfilPage() {
             <p className="text-sm text-gray-400">{email}</p>
           </div>
 
-          {/* Formulaire */}
           <form onSubmit={handleSave} className="flex flex-col gap-5">
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Prénom
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
               <input
                 type="text"
                 value={prenom}
@@ -90,9 +100,7 @@ export default function ProfilPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
               <input
                 type="text"
                 value={nom}
@@ -102,20 +110,47 @@ export default function ProfilPage() {
               />
             </div>
 
+            {/* Section email */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                disabled
-                className="w-full px-4 py-2 border border-gray-100 rounded-xl bg-gray-50 text-gray-400 cursor-not-allowed"
-              />
-              <p className="text-xs text-gray-400 mt-1">L'email ne peut pas être modifié</p>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Email actuel</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="email"
+                  value={email}
+                  disabled
+                  className="w-full px-4 py-2 border border-gray-100 rounded-xl bg-gray-50 text-gray-400 cursor-not-allowed"
+                />
+                {/* Bouton pour afficher le champ de changement */}
+                <button
+                  type="button"
+                  onClick={() => setModifierEmail(!modifierEmail)}
+                  className="text-xs text-purple-500 hover:text-purple-700 whitespace-nowrap underline"
+                >
+                  {modifierEmail ? "Annuler" : "Modifier"}
+                </button>
+              </div>
             </div>
 
-            {/* Message succès ou erreur */}
+            {/* Champ nouvel email — visible seulement si modifierEmail = true */}
+            {modifierEmail && (
+              <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                <label className="block text-sm font-medium text-purple-700 mb-1">
+                  Nouvel email
+                </label>
+                <input
+                  type="email"
+                  value={nouvelEmail}
+                  onChange={(e) => setNouvelEmail(e.target.value)}
+                  className="w-full px-4 py-2 border border-purple-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+                  placeholder="nouveau@email.com"
+                  required
+                />
+                <p className="text-xs text-purple-500 mt-2">
+                  📬 Un email de confirmation sera envoyé à cette adresse. Ton email actuel reste actif jusqu'à confirmation.
+                </p>
+              </div>
+            )}
+
             {message && (
               <p className="text-sm text-center py-2 px-4 rounded-xl bg-purple-50 text-purple-700">
                 {message}
@@ -132,7 +167,6 @@ export default function ProfilPage() {
 
           </form>
 
-          {/* Déconnexion */}
           <div className="mt-6 pt-6 border-t border-gray-100">
             <button
               onClick={handleLogout}
