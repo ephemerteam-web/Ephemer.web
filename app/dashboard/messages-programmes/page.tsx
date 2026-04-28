@@ -13,7 +13,7 @@ type MessageProgramme = {
   statut: string;
   source: string;
   ton: string | null;
-  destinataire_email: string | null;
+ 
   contacts: {
     prenom: string;
     nom: string;
@@ -64,14 +64,16 @@ export default function MessagesProgrammesPage() {
         statut,
         source,
         ton,
-        destinataire_email,
+
         contacts (prenom, nom)
       `)
       .eq("user_id", user.id)
-      .eq("source", "message_programme") // uniquement les messages programmés manuellement
+      
       .order("date_envoi", { ascending: true });
 
     if (error) console.error(error);
+    if (data) console.log("DATA REÇUE :", data)
+
     if (data) {
   const formatted = data.map((item) => ({
     ...item,

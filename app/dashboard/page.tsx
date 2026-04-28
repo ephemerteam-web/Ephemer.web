@@ -33,9 +33,6 @@ export default function Dashboard() {
     init()
   }, [router])
 
-  // ============================================================
-  // FÊTE DU JOUR
-  // ============================================================
   const feteDuJour = useMemo(() => {
     const today = new Date()
     const mois = String(today.getMonth() + 1).padStart(2, '0')
@@ -43,33 +40,18 @@ export default function Dashboard() {
     return SAINTS.filter((s) => s.date === `${mois}-${jour}`)
   }, [])
 
-  // ============================================================
-  // LOGIQUE ANNIVERSAIRES
-  // On compare uniquement le mois et le jour (pas l'année)
-  // ============================================================
   const { anniversairesAujourdhui, anniversairesPassés, anniversairesBientot } = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Helpers
     const prochainAnniv = (dateNaissance: string): Date => {
-      // Retourne la date de l'anniversaire cette année (ou l'an prochain si déjà passé)
       const [annee, mois, jour] = dateNaissance.split('-').map(Number)
       const anniv = new Date(today.getFullYear(), mois - 1, jour)
-      // Si l'anniversaire est déjà passé cette année, on regarde l'an prochain
-      // (utile pour le tri "bientôt")
       return anniv
     }
 
     const diffJours = (d: Date): number => {
-      // Différence en jours entre aujourd'hui et une date
-      // Positif = dans le futur, négatif = dans le passé
       return Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-    }
-
-    const age = (dateNaissance: string): number => {
-      const [annee] = dateNaissance.split('-').map(Number)
-      return today.getFullYear() - annee
     }
 
     const aujourd: Contact[] = []
@@ -84,15 +66,12 @@ export default function Dashboard() {
       if (diff === 0) {
         aujourd.push(c)
       } else if (diff < 0 && diff >= -7) {
-        // Passé depuis moins de 7 jours
         passés.push({ ...c, joursPassés: Math.abs(diff) })
       } else if (diff > 0 && diff <= 30) {
-        // Dans les 30 prochains jours
         bientot.push({ ...c, joursRestants: diff })
       }
     }
 
-    // Tri : les plus proches en premier
     passés.sort((a, b) => a.joursPassés - b.joursPassés)
     bientot.sort((a, b) => a.joursRestants - b.joursRestants)
 
@@ -131,12 +110,10 @@ export default function Dashboard() {
         </p>
       )}
 
-      {/* ============================================================ */}
-      {/* BLOC : FÊTE DU JOUR + ANNIVERSAIRES                          */}
-      {/* ============================================================ */}
+      {/* BLOC : FÊTE DU JOUR + ANNIVERSAIRES */}
       <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-5 mb-8 flex flex-col gap-6">
 
-        {/* — Fête du jour — */}
+        {/* Fête du jour */}
         <div>
           <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">
             ✨ Fête du jour
@@ -155,10 +132,9 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Séparateur */}
         <div className="border-t border-white/10" />
 
-        {/* — Anniversaires aujourd'hui — */}
+        {/* Anniversaires aujourd'hui */}
         <div>
           <p className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-3">
             🎂 Anniversaire(s) aujourd'hui
@@ -168,9 +144,7 @@ export default function Dashboard() {
               {anniversairesAujourdhui.map((c) => (
                 <div key={c.id} className="bg-rose-500/10 border border-rose-400/20 rounded-2xl px-4 py-3">
                   <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
-                  <p className="text-rose-300 text-xs mt-0.5">
-                    🎉 C'est son anniversaire !
-                  </p>
+                  <p className="text-rose-300 text-xs mt-0.5">🎉 C'est son anniversaire !</p>
                 </div>
               ))}
             </div>
@@ -181,7 +155,7 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* — Anniversaires passés (7 derniers jours) — */}
+        {/* Anniversaires passés */}
         {anniversairesPassés.length > 0 && (
           <>
             <div className="border-t border-white/10" />
@@ -203,7 +177,7 @@ export default function Dashboard() {
           </>
         )}
 
-        {/* — Anniversaires à venir (30 jours) — */}
+        {/* Anniversaires à venir */}
         {anniversairesBientot.length > 0 && (
           <>
             <div className="border-t border-white/10" />
@@ -226,7 +200,6 @@ export default function Dashboard() {
         )}
 
       </div>
-      {/* ============================================================ */}
 
       {/* Section principale */}
       <div>
@@ -267,8 +240,10 @@ export default function Dashboard() {
           ))}
         </div>
 
-        {/* Section infos */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-12">
+        {/* Section infos — 3 cartes */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+
+          {/* Carte : Comment ça marche */}
           <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-colors">
             <div className="flex items-center gap-3 mb-3">
               <span className="text-3xl">✨</span>
@@ -278,17 +253,12 @@ export default function Dashboard() {
               Ajoute tes contacts, définis leurs dates importantes, et reçois des rappels pour ne jamais oublier un anniversaire ou une fête.
             </p>
           </div>
+
+          {/* Carte : Générateur IA */}
           <div
             onClick={() => router.push('/dashboard/generate')}
             className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-purple-400/50 hover:bg-white/10 transition-all cursor-pointer group"
           >
-            <button
-  onClick={() => router.push("/dashboard/messages-programmes")}
-  className="..."
->
-  📅 Messages programmés
-</button>
-
             <div className="flex items-center gap-3 mb-3">
               <span className="text-3xl group-hover:scale-110 transition-transform">🤖</span>
               <h3 className="text-lg font-bold text-white">Générateur IA</h3>
@@ -298,8 +268,25 @@ export default function Dashboard() {
             </p>
             <span className="inline-block mt-3 text-xs text-purple-300 font-medium">Essayer →</span>
           </div>
+
+          {/* Carte : Messages programmés */}
+          <div
+            onClick={() => router.push('/dashboard/messages-programmes')}
+            className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-blue-400/50 hover:bg-white/10 transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <span className="text-3xl group-hover:scale-110 transition-transform">📅</span>
+              <h3 className="text-lg font-bold text-white">Messages programmés</h3>
+            </div>
+            <p className="text-indigo-200 text-sm">
+              Consulte et gère tous tes messages en attente d'envoi.
+            </p>
+            <span className="inline-block mt-3 text-xs text-blue-300 font-medium">Voir →</span>
+          </div>
+
         </div>
 
+        {/* Footer */}
         <div className="mt-12 pt-6 border-t border-white/10 text-center">
           <p className="text-indigo-300 text-sm">Made with 💜 • Version 1.0</p>
         </div>
