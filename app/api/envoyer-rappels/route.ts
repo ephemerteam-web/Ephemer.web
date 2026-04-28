@@ -76,7 +76,7 @@ export async function GET(request: Request) {
       console.log(`👤 Contact: ${nomContact}`)
 
       const { data, error: errorEmail } = await resend.emails.send({
-        from: 'noreply@resend.dev',
+        from: 'nnoreply@ephemer.name',
         to: destination,
         subject: rappel.sujet_email,
         html: `

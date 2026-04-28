@@ -100,3 +100,121 @@ export async function annulerRappelsContact(userId: string, contactId: string) {
     throw error
   }
 }
+// ============================================================
+// 📨 NOUVELLE FONCTIONNALITÉ : Messages programmés par l'utilisateur
+// ============================================================
+
+import { calculerDateEvenement, TypeEvenement } from './dates-evenements'
+
+// Type des destinataires possibles
+export type Destinataire = 'moi' | 'contact' | 'les_deux'
+
+// 📋 Paramètres pour programmer un message
+export interface ParametresMessageProgramme {
+  userId: string
+  contactId: string
+  contact: {
+    prenom: string
+    nom?: string
+    email?: string | null
+    date_naissance?: string | null
+  }
+  typeEvenement: TypeEvenement
+  message: string         // le texte généré par l'IA
+  ton?: string            // ex: "formel", "humoristique"
+  destinataire: Destinataire
+  emailUtilisateur: string // ton propre email (pour 'moi' ou 'les_deux')
+}
+
+/**
+ * Programme un message à envoyer le jour J de l'événement.
+ * Crée 1 ou 2 entrées dans la table 'rappels' selon le destinataire.
+ */
+export async function programmerMessage(params: ParametresMessageProgramme) {
+  const {
+    userId,
+    contactId,
+    contact,
+    typeEvenement,
+    message,
+    ton,
+    destinataire,
+    emailUtilisateur,
+  } = params
+
+  // 🗓️ 1. Calculer la date d'envoi
+  const dateEvenement = calculerDateEvenement(typeEvenement, contact)
+
+  if (!dateEvenement) {
+    throw new Error(
+      `Impossible de calculer la date pour l'événement "${typeEvenement}". ` +
+      `Vérifie que le contact a bien une date de naissance ou un prénom reconnu.`
+    )
+  }
+
+  // 📧 2. Préparer le sujet de l'email
+  const nomComplet = `${contact.prenom}${contact.nom ? ' ' + contact.nom : ''}`
+  const sujet = `✨ Message pour ${nomComplet}`
+
+  // 👥 3. Construire les entrées à insérer selon le destinataire
+  const entrees = []
+
+  // Pour MOI (l'utilisateur)
+  if (destinataire === 'moi' || destinataire === 'les_deux') {
+    entrees.push({
+      user_id: userId,
+      contact_id: contactId,
+      type_evenement: typeEvenement,
+      type_rappel: 'jourj',
+      source: 'message_programme',
+      date_envoi: dateEvenement.toISOString().split('T')[0],
+      message,
+      sujet_email: sujet,
+      destinataire: 'moi',
+      email_destinataire: emailUtilisateur,
+      ton: ton || null,
+      statut: 'programme',
+    })
+  }
+
+  // Pour le CONTACT
+  if (destinataire === 'contact' || destinataire === 'les_deux') {
+    if (!contact.email) {
+      throw new Error(
+        `Ce contact n'a pas d'email. Ajoute un email à ${contact.prenom} avant de programmer.`
+      )
+    }
+    entrees.push({
+      user_id: userId,
+      contact_id: contactId,
+      type_evenement: typeEvenement,
+      type_rappel: 'jourj',
+      source: 'message_programme',
+      date_envoi: dateEvenement.toISOString().split('T')[0],
+      message,
+      sujet_email: sujet,
+      destinataire: 'contact',
+      email_destinataire: contact.email,
+      ton: ton || null,
+      statut: 'programme',
+    })
+  }
+
+  // 💾 4. Insertion dans Supabase
+  const { data, error } = await supabase
+    .from('rappels')
+    .insert(entrees)
+    .select()
+
+  if (error) {
+    console.error('❌ Erreur programmation message:', error)
+    throw error
+  }
+
+  return {
+    success: true,
+    nbMessages: data.length,
+    dateEnvoi: dateEvenement,
+    data,
+  }
+}
