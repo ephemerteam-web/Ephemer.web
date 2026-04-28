@@ -72,7 +72,14 @@ export default function MessagesProgrammesPage() {
       .order("date_envoi", { ascending: true });
 
     if (error) console.error(error);
-    if (data) setMessages(data as MessageProgramme[]);
+    if (data) {
+  const formatted = data.map((item) => ({
+    ...item,
+    contacts: Array.isArray(item.contacts) ? item.contacts[0] ?? null : item.contacts,
+  }));
+  setMessages(formatted as MessageProgramme[]);
+}
+
     setLoading(false);
   }
 
