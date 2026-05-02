@@ -287,9 +287,18 @@ export default function Dashboard() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 pt-6 border-t border-white/10 text-center">
-          <p className="text-indigo-300 text-sm">Made with 💜 • Version 1.0</p>
-        </div>
+<div className="mt-12 pt-6 border-t border-white/10 text-center space-y-3">
+  <p className="text-indigo-300 text-sm">Made with 💜 • Version 0.2</p>
+  
+  <a
+    href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+  >
+    <span>💬</span>
+    Contacter le support
+  </a>
+</div>
+
       </div>
 
     </div>
