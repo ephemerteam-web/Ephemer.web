@@ -13,7 +13,8 @@ type MessageProgramme = {
   statut: string;
   source: string;
   ton: string | null;
- 
+  email_destinataire: string | null; // 👈 CORRIGÉ (nom exact de la colonne BDD)
+
   contacts: {
     prenom: string;
     nom: string;
@@ -42,7 +43,8 @@ export default function MessagesProgrammesPage() {
   const router = useRouter();
   const [messages, setMessages] = useState<MessageProgramme[]>([]);
   const [loading, setLoading] = useState(true);
-  const [annulation, setAnnulation] = useState<number | null>(null); // id en cours d'annulation
+  const [annulation, setAnnulation] = useState<number | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   useEffect(() => {
     loadMessages();
@@ -50,8 +52,14 @@ export default function MessagesProgrammesPage() {
 
   async function loadMessages() {
     setLoading(true);
+    setErreur(null);
+
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+
+    if (!user) {
+      router.push("/connexion");
+      return;
+    }
 
     const { data, error } = await supabase
       .from("rappels")
@@ -64,23 +72,28 @@ export default function MessagesProgrammesPage() {
         statut,
         source,
         ton,
-
+        email_destinataire,
         contacts (prenom, nom)
       `)
       .eq("user_id", user.id)
-      
       .order("date_envoi", { ascending: true });
 
-    if (error) console.error(error);
-    if (data) console.log("DATA REÇUE :", data)
+    if (error) {
+      console.error(error);
+      setErreur("Impossible de charger vos messages. Vérifiez votre connexion et réessayez.");
+      setLoading(false);
+      return;
+    }
+
+    if (data) console.log("DATA REÇUE :", data);
 
     if (data) {
-  const formatted = data.map((item) => ({
-    ...item,
-    contacts: Array.isArray(item.contacts) ? item.contacts[0] ?? null : item.contacts,
-  }));
-  setMessages(formatted as MessageProgramme[]);
-}
+      const formatted = data.map((item) => ({
+        ...item,
+        contacts: Array.isArray(item.contacts) ? item.contacts[0] ?? null : item.contacts,
+      }));
+      setMessages(formatted as MessageProgramme[]);
+    }
 
     setLoading(false);
   }
@@ -94,8 +107,8 @@ export default function MessagesProgrammesPage() {
 
     if (error) {
       console.error(error);
+      setErreur("Impossible d'annuler ce message. Réessayez.");
     } else {
-      // Mise à jour locale sans recharger toute la page
       setMessages((prev) =>
         prev.map((m) => (m.id === id ? { ...m, statut: "annule" } : m))
       );
@@ -139,11 +152,26 @@ export default function MessagesProgrammesPage() {
           </button>
         </div>
 
+        {/* Bandeau d'erreur */}
+        {erreur && (
+          <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="font-medium">⚠️ {erreur}</p>
+            </div>
+            <button
+              onClick={() => loadMessages()}
+              className="text-sm font-semibold underline hover:text-red-900 shrink-0"
+            >
+              Réessayer
+            </button>
+          </div>
+        )}
+
         {loading && (
           <div className="text-center py-20 text-gray-400">Chargement...</div>
         )}
 
-        {!loading && messages.length === 0 && (
+        {!loading && !erreur && messages.length === 0 && (
           <div className="bg-white rounded-2xl shadow-sm p-12 text-center border-2 border-dashed border-purple-100">
             <div className="text-5xl mb-4">💌</div>
             <p className="text-gray-500 font-medium">Aucun message programmé pour l'instant.</p>
@@ -246,9 +274,9 @@ function MessageCard({
             {m.ton && <span className="ml-2 text-gray-400">· Ton : {m.ton}</span>}
           </p>
 
-          {m.destinataire_email && (
+          {m.email_destinataire && (
             <p className="text-xs text-gray-400 mt-0.5">
-              ✉️ {m.destinataire_email}
+              ✉️ {m.email_destinataire}
             </p>
           )}
         </div>
