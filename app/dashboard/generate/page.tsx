@@ -6,32 +6,48 @@ import { supabase } from "@/lib/supabase";
 import { programmerMessage } from "@/lib/rappels";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
 
-// Type corrigé avec les vrais noms de colonnes
+// 🆕 Import des constantes centralisées (plus de duplication !)
+import {
+  TYPES_RELATION,
+  TONS_MESSAGE,
+  TYPES_EVENEMENT,
+  DESTINATAIRES_RAPPEL,
+} from "@/lib/constants";
+
+// Type contact
 type Contact = {
   id: number;
   prenom: string;
   nom: string;
   relation: string;
   date_naissance: string | null;
-  email?: string | null; // on en aura besoin pour l'envoi
+  email?: string | null;
 };
 
-// ⬇️ Correspondance entre les valeurs du select et TypeEvenement
+// On ne garde que les types réellement gérés par calculerDateEvenement().
 const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
-  "anniversaire": "anniversaire",
-  "fete-prenomale": "fete_prenomale",
-  "nouvelle-annee": "nouvel_an",
-  "noel": "noel",
-  "saint-valentin": "saint_valentin",
-  "fete-des-meres": "fete_des_meres",
-  "fete-des-peres": "fete_des_peres",
-  "paques": "paques",
+  anniversaire: "anniversaire",
+  fete_prenomale: "fete_prenomale",
 };
+
+// Type pour le choix de date d'envoi
+type ChoixDateEnvoi = "jourj" | "j1" | "j7" | "custom";
+
+// Petite fonction utilitaire pour afficher une date en français
+function formaterDate(d: Date): string {
+  return d.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 function GenerateForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // Champs du formulaire
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [age, setAge] = useState("");
@@ -43,11 +59,12 @@ function GenerateForm() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Contacts
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
-  // 🆕 États pour la programmation
+  // Programmation
   const [destinataire, setDestinataire] = useState<"moi" | "contact" | "les_deux">("moi");
   const [programmation, setProgrammation] = useState<{
     loading: boolean;
@@ -55,9 +72,13 @@ function GenerateForm() {
     isError: boolean;
   }>({ loading: false, message: "", isError: false });
 
-  // Charger les contacts avec email
+  // ─── État pour la date d'envoi ────────────────────────────────────────────
+  const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourj");
+  const [dateCustom, setDateCustom] = useState<string>(""); // format YYYY-MM-DD
+
+  // ─── Chargement initial : contacts + préremplissage via URL ────────────────
   useEffect(() => {
-    async function loadContacts() {
+    async function loadContactsAndPrefill() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
@@ -67,62 +88,84 @@ function GenerateForm() {
         .eq("user_id", session.user.id)
         .order("prenom");
 
-      if (error) console.error("Erreur chargement contacts:", error);
-      if (data) setContacts(data);
+      if (error || !data) {
+        console.error("Erreur chargement contacts :", error);
+        return;
+      }
+
+      setContacts(data as Contact[]);
+
+      // Lecture des paramètres de l'URL pour préremplir
+      const contactIdFromUrl = searchParams.get("contactId");
+      const eventTypeFromUrl = searchParams.get("eventType");
+
+      if (eventTypeFromUrl) {
+        setEventType(eventTypeFromUrl);
+      }
+
+      if (contactIdFromUrl) {
+        const contactTrouve = (data as Contact[]).find(
+          (c) => String(c.id) === contactIdFromUrl
+        );
+        if (contactTrouve) {
+          appliquerContact(contactTrouve);
+        }
+      }
     }
-    loadContacts();
+
+    loadContactsAndPrefill();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Quand un contact est sélectionné
-  function handleContactSelect(contactId: string) {
-    setSelectedContactId(contactId);
-    setProgrammation({ loading: false, message: "", isError: false }); // reset
-
-    if (!contactId) {
-      setSelectedContact(null);
-      setFirstName("");
-      setLastName("");
-      setRelation("ami");
-      setAge("");
-      return;
-    }
-
-    const contact = contacts.find((c) => c.id === Number(contactId));
-    if (!contact) return;
-
+  // ─── Applique les infos d'un contact dans le formulaire ───────────────────
+  function appliquerContact(contact: Contact) {
+    setSelectedContactId(String(contact.id));
     setSelectedContact(contact);
     setFirstName(contact.prenom);
-    setLastName(contact.nom || "");
+    setLastName(contact.nom);
     setRelation(contact.relation || "ami");
 
     if (contact.date_naissance) {
-      const birthYear = new Date(contact.date_naissance).getFullYear();
-      const currentYear = new Date().getFullYear();
-      setAge(String(currentYear - birthYear));
+      const naissance = new Date(contact.date_naissance);
+      const aujourdhui = new Date();
+      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
+      const anniversaireCetteAnnee = new Date(
+        aujourdhui.getFullYear(),
+        naissance.getMonth(),
+        naissance.getDate()
+      );
+      if (anniversaireCetteAnnee < aujourdhui) {
+        ageCalcule = ageCalcule + 1;
+      }
+      setAge(String(ageCalcule));
     } else {
       setAge("");
     }
   }
 
-  // Préremplir depuis les paramètres URL
-  useEffect(() => {
-    const prenom = searchParams.get("prenom");
-    const nom = searchParams.get("nom");
-    const rel = searchParams.get("relation");
-    const ageParam = searchParams.get("age");
+  // ─── Quand on change de contact dans le menu déroulant ────────────────────
+  function handleContactSelect(contactId: string) {
+    if (!contactId) {
+      setSelectedContactId("");
+      setSelectedContact(null);
+      setFirstName("");
+      setLastName("");
+      setAge("");
+      setRelation("ami");
+      return;
+    }
 
-    if (prenom) setFirstName(prenom);
-    if (nom) setLastName(nom);
-    if (rel) setRelation(rel);
-    if (ageParam) setAge(ageParam);
-  }, [searchParams]);
+    const contact = contacts.find((c) => String(c.id) === contactId);
+    if (contact) appliquerContact(contact);
+  }
 
+  // ─── Génération du message via API ────────────────────────────────────────
   async function handleGenerate() {
     setLoading(true);
     setError("");
     setMessage("");
     setCopied(false);
-    setProgrammation({ loading: false, message: "", isError: false }); // reset
+    setProgrammation({ loading: false, message: "", isError: false });
 
     try {
       const response = await fetch("/api/generate-message", {
@@ -155,16 +198,50 @@ function GenerateForm() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // 🆕 Fonction qui programme l'envoi
+  // ─── Calcul des dates d'envoi possibles ──────────────────────────────────
+  // Recalculé à chaque rendu : dès que selectedContact ou eventType change,
+  // on a automatiquement les bonnes dates.
+  const datesPossibles = (() => {
+    if (!selectedContact) return null;
+    const typeEvt = EVENT_TYPE_MAP[eventType];
+    if (!typeEvt) return null;
+
+    const dateEvenement = calculerDateEvenement(typeEvt, {
+      prenom: selectedContact.prenom,
+      date_naissance: selectedContact.date_naissance,
+    });
+    if (!dateEvenement) return null;
+
+    const j1 = new Date(dateEvenement);
+    j1.setDate(j1.getDate() - 1);
+
+    const j7 = new Date(dateEvenement);
+    j7.setDate(j7.getDate() - 7);
+
+    return { jourj: dateEvenement, j1, j7 };
+  })();
+
+  // Date min pour l'input custom = aujourd'hui (pas de date dans le passé)
+  const dateMin = new Date().toISOString().split("T")[0];
+
+  // Calcule la date finale qui sera envoyée à programmerMessage
+  function getDateEnvoiChoisie(): Date | null {
+    if (!datesPossibles) return null;
+    if (choixDate === "jourj") return datesPossibles.jourj;
+    if (choixDate === "j1") return datesPossibles.j1;
+    if (choixDate === "j7") return datesPossibles.j7;
+    if (choixDate === "custom" && dateCustom) return new Date(dateCustom);
+    return null;
+  }
+
+  // ─── Programmer l'envoi ───────────────────────────────────────────────────
   async function handleProgrammer() {
     setProgrammation({ loading: true, message: "", isError: false });
 
     try {
-      // 1. Récupérer l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Tu dois être connecté.");
 
-      // 2. Vérifications de base
       if (!selectedContact) {
         throw new Error("Sélectionne un contact dans la liste pour programmer l'envoi.");
       }
@@ -172,33 +249,36 @@ function GenerateForm() {
         throw new Error("Génère d'abord un message.");
       }
 
-      // 3. Convertir le type d'événement vers notre format interne
       const typeEvenement = EVENT_TYPE_MAP[eventType];
       if (!typeEvenement) {
         throw new Error("Type d'événement non reconnu.");
       }
 
-      // 4. Vérifier qu'on peut calculer la date
-      const datePreview = calculerDateEvenement(typeEvenement, {
-        prenom: selectedContact.prenom,
-        date_naissance: selectedContact.date_naissance,
-      });
-      if (!datePreview) {
-        throw new Error(
-          `Impossible de calculer la date pour "${eventType}". ` +
-          `Vérifie que le contact a une date de naissance (anniversaire) ou un prénom reconnu (fête prénomale).`
-        );
-      }
-
-      // 5. Vérification email si envoi au contact
       if ((destinataire === "contact" || destinataire === "les_deux") && !selectedContact.email) {
         throw new Error(
-          `${selectedContact.prenom} n'a pas d'email enregistré. Ajoute son email dans sa fiche contact.`
+          `${selectedContact.prenom} n'a pas d'email enregistré. Ajoute-le dans sa fiche contact.`
         );
       }
 
-      // 6. Lancer la programmation
-      const resultat = await programmerMessage({
+      // ✅ Récupérer la date choisie par l'utilisateur
+      const dateEnvoiChoisie = getDateEnvoiChoisie();
+      if (!dateEnvoiChoisie) {
+        throw new Error("Sélectionne une date d'envoi (ou saisis-en une personnalisée).");
+      }
+
+      // Vérification : pas de date dans le passé
+      const maintenant = new Date();
+      maintenant.setHours(0, 0, 0, 0); // on compare juste les jours
+      if (dateEnvoiChoisie < maintenant) {
+        throw new Error("La date d'envoi ne peut pas être dans le passé.");
+      }
+
+      const emailUtilisateur = user.email;
+      if (!emailUtilisateur) {
+        throw new Error("Impossible de récupérer ton email. Reconnecte-toi.");
+      }
+
+      await programmerMessage({
         userId: user.id,
         contactId: String(selectedContact.id),
         contact: {
@@ -211,40 +291,27 @@ function GenerateForm() {
         message,
         ton: tone,
         destinataire,
-        emailUtilisateur: user.email!,
-      });
-
-      // 7. Afficher le succès avec la date calculée
-      const dateFR = resultat.dateEnvoi.toLocaleDateString("fr-FR", {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
+        emailUtilisateur,
+        dateOverride: dateEnvoiChoisie, // ✅ on passe la date choisie
       });
 
       setProgrammation({
         loading: false,
-        message: `✅ Message programmé ! Il sera envoyé le ${dateFR} (${resultat.nbMessages} email${resultat.nbMessages > 1 ? "s" : ""}).`,
+        message: "✅ Envoi programmé avec succès !",
         isError: false,
       });
-
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
-      setProgrammation({ loading: false, message: `❌ ${msg}`, isError: true });
+    } catch (err: any) {
+      setProgrammation({
+        loading: false,
+        message: err.message || "Erreur inconnue.",
+        isError: true,
+      });
     }
   }
 
+  // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-4 md:p-8">
-
-      <div className="max-w-2xl mx-auto mb-6 flex items-center gap-4">
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition"
-        >
-          ← Retour au dashboard
-        </button>
-      </div>
+    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
 
       <div className="max-w-2xl mx-auto">
 
@@ -253,7 +320,7 @@ function GenerateForm() {
           <p className="text-gray-500 mt-1">Crée un message personnalisé grâce à l'IA en quelques secondes.</p>
         </div>
 
-        {/* Menu déroulant de sélection de contact */}
+        {/* Sélection contact */}
         <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border-2 border-purple-100">
           <label className="block text-sm font-semibold text-gray-700 mb-2">
             👥 Sélectionner un contact existant
@@ -283,13 +350,14 @@ function GenerateForm() {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
 
-          <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-5">
-            <h2 className="font-semibold text-gray-700 text-lg">👤 La personne</h2>
+          {/* Infos personne */}
+          <h2 className="font-semibold text-gray-700 text-lg">👤 La personne</h2>
 
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Prénom *</label>
+              <label className="block text-sm font-medium text-gray-600 mb-1">Prénom</label>
               <input
                 type="text"
                 value={firstName}
@@ -298,7 +366,6 @@ function GenerateForm() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
-
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
               <input
@@ -309,198 +376,234 @@ function GenerateForm() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
               />
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Âge</label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                placeholder="30"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Relation</label>
-              <select
-                value={relation}
-                onChange={(e) => setRelation(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
-              >
-                <option value="famille">Famille</option>
-                <option value="ami">Ami(e)</option>
-                <option value="collegue">Collègue / Pro</option>
-                <option value="connaissance">Connaissance</option>
-              </select>
-            </div>
-
-            <h2 className="font-semibold text-gray-700 text-lg pt-2 border-t border-gray-100">🎨 Le message</h2>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Type d'événement</label>
-              <select
-                value={eventType}
-                onChange={(e) => setEventType(e.target.value)}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
-              >
-                <option value="anniversaire">🎂 Anniversaire</option>
-                <option value="fete-prenomale">🌸 Fête prénomale</option>
-                <option value="nouvelle-annee">🎆 Nouvelle année</option>
-                <option value="noel">🎄 Noël</option>
-                <option value="saint-valentin">💝 Saint-Valentin</option>
-                <option value="fete-des-meres">💐 Fête des Mères</option>
-                <option value="fete-des-peres">👔 Fête des Pères</option>
-                <option value="paques">🐰 Pâques</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-2">Ton du message</label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: "formel", label: "🎩 Formel" },
-                  { value: "familier", label: "😊 Familier" },
-                  { value: "humoristique", label: "😄 Humour" },
-                  { value: "poetique", label: "🌹 Poétique" },
-                ].map((t) => (
-                  <button
-                    key={t.value}
-                    onClick={() => setTone(t.value)}
-                    className={`py-2 px-3 rounded-xl text-sm font-medium border-2 transition ${
-                      tone === t.value
-                        ? "border-purple-500 bg-purple-50 text-purple-700"
-                        : "border-gray-200 text-gray-500 hover:border-purple-300"
-                    }`}
-                  >
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <button
-              onClick={handleGenerate}
-              disabled={loading || !firstName}
-              className={`w-full py-3 rounded-xl font-semibold text-white transition ${
-                loading || !firstName
-                  ? "bg-gray-300 cursor-not-allowed"
-                  : "bg-purple-600 hover:bg-purple-700 cursor-pointer"
-              }`}
-            >
-              {loading ? "✨ L'IA réfléchit..." : "Générer le message →"}
-            </button>
           </div>
 
-          {/* Colonne droite */}
-          <div className="flex flex-col gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Âge</label>
+            <input
+              type="number"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              placeholder="30"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+            />
+          </div>
 
-            {!message && !error && !loading && (
-              <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center text-center h-full min-h-48 border-2 border-dashed border-purple-100">
-                <div className="text-4xl mb-3">💌</div>
-                <p className="text-gray-400 text-sm">Ton message apparaîtra ici après génération.</p>
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Relation</label>
+            <select
+              value={relation}
+              onChange={(e) => setRelation(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+            >
+              {TYPES_RELATION.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.emoji} {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-1">Type d'événement</label>
+            <select
+              value={eventType}
+              onChange={(e) => setEventType(e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+            >
+              {TYPES_EVENEMENT.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <h2 className="font-semibold text-gray-700 text-lg pt-2 border-t border-gray-100">🎨 Le message</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-600 mb-2">Ton du message</label>
+            <div className="grid grid-cols-2 gap-2">
+              {TONS_MESSAGE.map((t) => (
+                <button
+                  key={t.value}
+                  onClick={() => setTone(t.value)}
+                  className={`py-2 px-3 rounded-xl text-sm font-medium border-2 transition ${
+                    tone === t.value
+                      ? "border-purple-500 bg-purple-50 text-purple-700"
+                      : "border-gray-200 text-gray-500 hover:border-purple-300"
+                  }`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Bouton générer */}
+          <button
+            onClick={handleGenerate}
+            disabled={loading || !firstName}
+            className="w-full bg-purple-600 text-white font-semibold py-3 rounded-xl hover:bg-purple-500 transition disabled:opacity-50"
+          >
+            {loading ? "Génération..." : "✨ Générer le message"}
+          </button>
+
+          {error && <p className="text-sm text-red-500">{error}</p>}
+
+          {/* Résultat + programmation */}
+          {message && (
+            <div className="space-y-4 pt-4 border-t border-gray-100">
+              <div>
+                <label className="block text-sm font-medium text-gray-600 mb-1">Message généré</label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={6}
+                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                />
               </div>
-            )}
 
-            {loading && (
-              <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col items-center justify-center text-center h-full min-h-48">
-                <div className="text-4xl mb-3 animate-bounce">✨</div>
-                <p className="text-gray-500 text-sm">L'IA compose ton message...</p>
-              </div>
-            )}
+              <button
+                onClick={handleCopy}
+                className="w-full bg-gray-100 text-gray-700 font-medium py-2 rounded-xl hover:bg-gray-200 transition text-sm"
+              >
+                {copied ? "✅ Copié !" : "📋 Copier le message"}
+              </button>
 
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-red-600 text-sm">
-                ⚠️ {error}
-              </div>
-            )}
+              {/* Programmation : visible seulement si un contact est sélectionné */}
+              {selectedContact && (
+                <div className="space-y-3 pt-4 border-t border-gray-100">
+                  <h3 className="font-semibold text-gray-700">📤 Programmer l'envoi</h3>
 
-            {message && (
-              <div className="bg-white rounded-2xl shadow-sm p-6 flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-gray-700">💌 Message généré</h3>
-                  <span className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">Prêt ✓</span>
-                </div>
+                  {/* Destinataire */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-2">À qui envoyer ?</label>
+                    <div className="grid gap-2">
+                      {DESTINATAIRES_RAPPEL.map((d) => {
+                        const needsEmail = d.value === "contact" || d.value === "les_deux";
+                        const disabled = needsEmail && !selectedContact.email;
 
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap bg-gray-50 rounded-xl p-4">
-                  {message}
-                </p>
-
-                {/* Boutons Copier + Refaire */}
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleCopy}
-                    className={`flex-1 py-2 rounded-xl text-sm font-medium transition ${
-                      copied
-                        ? "bg-green-500 text-white"
-                        : "bg-gray-800 text-white hover:bg-gray-700"
-                    }`}
-                  >
-                    {copied ? "✅ Copié !" : "📋 Copier le message"}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setMessage("");
-                      setError("");
-                      setProgrammation({ loading: false, message: "", isError: false });
-                    }}
-                    className="px-4 py-2 rounded-xl text-sm font-medium border border-gray-200 text-gray-500 hover:border-gray-400 transition"
-                  >
-                    🔄 Refaire
-                  </button>
-                </div>
-
-                {/* 🆕 Bloc de programmation */}
-                <div className="border-t border-gray-100 pt-4 flex flex-col gap-3">
-                  <p className="text-sm font-semibold text-gray-700">📅 Programmer l'envoi</p>
-
-                  {/* Choix du destinataire */}
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: "moi", label: "🙋 Moi" },
-                      { value: "contact", label: "👤 Contact" },
-                      { value: "les_deux", label: "👥 Les deux" },
-                    ].map((d) => (
-                      <button
-                        key={d.value}
-                        onClick={() => setDestinataire(d.value as typeof destinataire)}
-                        className={`py-2 px-2 rounded-xl text-xs font-medium border-2 transition ${
-                          destinataire === d.value
-                            ? "border-purple-500 bg-purple-50 text-purple-700"
-                            : "border-gray-200 text-gray-500 hover:border-purple-300"
-                        }`}
-                      >
-                        {d.label}
-                      </button>
-                    ))}
+                        return (
+                          <button
+                            key={d.value}
+                            onClick={() => !disabled && setDestinataire(d.value as any)}
+                            disabled={disabled}
+                            className={`text-left py-2 px-3 rounded-xl text-sm border-2 transition ${
+                              destinataire === d.value
+                                ? "border-purple-500 bg-purple-50 text-purple-700"
+                                : "border-gray-200 text-gray-600 hover:border-purple-300"
+                            } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
+                          >
+                            <p className="font-medium">{d.label}</p>
+                            {disabled && <p className="text-xs text-red-400">Pas d'email enregistré</p>}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
 
-                  {/* Info contextuelle */}
-                  {!selectedContact && (
-                    <p className="text-xs text-amber-600 bg-amber-50 rounded-lg px-3 py-2">
-                      ⚠️ Sélectionne un contact dans la liste pour programmer l'envoi.
-                    </p>
-                  )}
-                  {selectedContact && (destinataire === "contact" || destinataire === "les_deux") && !selectedContact.email && (
-                    <p className="text-xs text-red-500 bg-red-50 rounded-lg px-3 py-2">
-                      ⚠️ {selectedContact.prenom} n'a pas d'email. Ajoute-le dans sa fiche contact.
-                    </p>
+                  {/* 🆕 Choix de la date d'envoi */}
+                  {datesPossibles && (
+                    <div className="bg-purple-50 rounded-xl p-4 space-y-2 border border-purple-100">
+                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                        📅 Quand envoyer ce message ?
+                      </label>
+
+                      {/* Option : Jour J */}
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                        <input
+                          type="radio"
+                          name="choixDate"
+                          checked={choixDate === "jourj"}
+                          onChange={() => setChoixDate("jourj")}
+                          className="mt-1 accent-purple-600"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">🎯 Le jour J</p>
+                          <p className="text-xs text-gray-500 capitalize">
+                            {formaterDate(datesPossibles.jourj)}
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Option : J-1 */}
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                        <input
+                          type="radio"
+                          name="choixDate"
+                          checked={choixDate === "j1"}
+                          onChange={() => setChoixDate("j1")}
+                          className="mt-1 accent-purple-600"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">⏰ La veille (J-1)</p>
+                          <p className="text-xs text-gray-500 capitalize">
+                            {formaterDate(datesPossibles.j1)}
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Option : J-7 */}
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                        <input
+                          type="radio"
+                          name="choixDate"
+                          checked={choixDate === "j7"}
+                          onChange={() => setChoixDate("j7")}
+                          className="mt-1 accent-purple-600"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">📆 Une semaine avant (J-7)</p>
+                          <p className="text-xs text-gray-500 capitalize">
+                            {formaterDate(datesPossibles.j7)}
+                          </p>
+                        </div>
+                      </label>
+
+                      {/* Option : Date personnalisée */}
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                        <input
+                          type="radio"
+                          name="choixDate"
+                          checked={choixDate === "custom"}
+                          onChange={() => setChoixDate("custom")}
+                          className="mt-1 accent-purple-600"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-800">🗓️ Choisir une autre date</p>
+                          {choixDate === "custom" && (
+                            <input
+                              type="date"
+                              value={dateCustom}
+                              min={dateMin}
+                              onChange={(e) => setDateCustom(e.target.value)}
+                              className="mt-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                            />
+                          )}
+                        </div>
+                      </label>
+
+                      {/* Récapitulatif visuel */}
+                      {getDateEnvoiChoisie() && (
+                        <div className="mt-2 bg-white border border-purple-200 rounded-lg px-3 py-2">
+                          <p className="text-xs text-purple-700 font-semibold">
+                            ✉️ Envoi prévu le :{" "}
+                            <span className="capitalize">{formaterDate(getDateEnvoiChoisie()!)}</span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   )}
 
-                  {/* Bouton programmer */}
                   <button
                     onClick={handleProgrammer}
-                    disabled={programmation.loading || !selectedContact}
-                    className={`w-full py-3 rounded-xl text-sm font-bold text-white transition ${
-                      programmation.loading || !selectedContact
-                        ? "bg-gray-300 cursor-not-allowed"
-                        : "bg-gradient-to-r from-purple-500 to-pink-500 hover:opacity-90 cursor-pointer"
-                    }`}
+                    disabled={programmation.loading}
+                    className="w-full bg-purple-600 text-white font-semibold py-3 rounded-xl hover:bg-purple-500 transition disabled:opacity-50"
                   >
-                    {programmation.loading ? "⏳ Programmation en cours..." : "📅 Programmer ce message"}
+                    {programmation.loading ? "Programmation..." : "✅ Programmer cet envoi"}
                   </button>
 
-                  {/* Résultat de la programmation */}
                   {programmation.message && (
                     <p className={`text-xs font-medium rounded-lg px-3 py-2 ${
                       programmation.isError
@@ -511,11 +614,10 @@ function GenerateForm() {
                     </p>
                   )}
                 </div>
+              )}
+            </div>
+          )}
 
-              </div>
-            )}
-
-          </div>
         </div>
       </div>
     </main>
