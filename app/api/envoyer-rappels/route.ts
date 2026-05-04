@@ -4,11 +4,16 @@ import { createClient } from '@supabase/supabase-js';
 import { resend } from '@/lib/resend';
 import { genererEmailRappel } from '@/lib/email-templates';
 
-// 🔑 Client Supabase avec clé ADMIN (indispensable pour le cron côté serveur)
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// 🔑 CLIENT SUPABASE SÉCURISÉ
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// 🛡️ Vérification stricte au démarrage (évite les erreurs silencieuses en production)
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('❌ Variables d\'environnement Supabase manquantes : SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const EMAIL_TEST = 'ephemer.team@gmail.com';
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -19,7 +24,7 @@ export async function GET(request: NextRequest) {
   const urlSecret = request.nextUrl.searchParams.get('secret');
   const authHeader = request.headers.get('authorization');
 
-  const isAuthorized = 
+  const isAuthorized =
     isVercelCron ||
     (urlSecret && urlSecret === CRON_SECRET) ||
     (authHeader && authHeader === `Bearer ${CRON_SECRET}`);
@@ -33,7 +38,7 @@ export async function GET(request: NextRequest) {
     const force = request.nextUrl.searchParams.get('force') === 'true';
 
     console.log(`\n📅 === CRON RAPPELS EPHEMER - ${aujourdhui} ===`);
-    console.log(`🔧 Mode force : ${force ? 'OUI (tous les rappels programme)' : 'NON (date_envoi <= aujourd\'hui)'}`);
+    console.log(`🔧 Mode force : ${force ? 'OUI (tous les rappels programmés)' : 'NON (date_envoi <= aujourd\'hui)'}`);
 
     // 1️⃣ Récupération des rappels + infos du contact
     let query = supabase
@@ -58,16 +63,23 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, message: 'Aucun rappel à envoyer', date: aujourdhui });
     }
 
-    // 2️⃣ Récupération des profils expéditeurs (1 seule requête, très rapide)
+    // 2️⃣ Récupération des profils expéditeurs (optimisé)
     const userIds = [...new Set(rappels.map(r => r.user_id).filter(Boolean))];
-    const { data: profils } = await supabase
-      .from('profiles')
-      .select('id, prenom, nom, email')
-      .in('id', userIds);
-
-    // 📖 Dictionnaire pour associer rapidement user_id → profil
     const profilsMap: Record<string, { prenom?: string; nom?: string; email?: string }> = {};
-    profils?.forEach(p => { if (p.id) profilsMap[p.id] = p; });
+
+    // ✅ SÉCURITÉ 2 : PostgreSQL n'accepte pas .in([]) vide
+    if (userIds.length > 0) {
+      const { data: profils, error: errorProfils } = await supabase
+        .from('profiles')
+        .select('id, prenom, nom, email')
+        .in('id', userIds);
+
+      if (errorProfils) {
+        console.error('⚠️ Erreur récupération profils:', errorProfils.message);
+      } else {
+        profils?.forEach(p => { if (p.id) profilsMap[p.id] = p; });
+      }
+    }
 
     const resultats = [];
 
@@ -78,13 +90,10 @@ export async function GET(request: NextRequest) {
       const expediteurNom = `${expediteur.prenom || ''} ${expediteur.nom || ''}`.trim() || 'Un ami Ephemer';
       const expediteurEmail = expediteur.email || 'contact@ephemer.name';
 
-      // 🤝 Contact
-      const contact = rappel.contacts;
-      const nomContact = contact
-        ? `${contact.prenom || ''} ${contact.nom || ''}`.trim()
-        : 'ton contact';
-
-      // 📍 Logique de destination selon ton champ `destinataire`
+      // 🤝 Contact (sécurisé contre null/undefined)
+      const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '' };
+      
+      // 📍 Logique de destination
       let destEmail: string | string[];
       const emailContactFallback = rappel.email_destinataire || EMAIL_TEST;
 
@@ -111,8 +120,8 @@ export async function GET(request: NextRequest) {
           replyTo: expediteurEmail,
           subject: rappel.sujet_email || `Rappel - ${rappel.type_evenement || 'Événement'}`,
           html: genererEmailRappel({
-            prenom: nomContact,
-            nom: '',
+            prenom: contact.prenom || 'ton contact',
+            nom: contact.nom || '',
             typeEvenement: rappel.type_evenement || 'Événement',
             message: rappel.message || 'Pense à cette personne aujourd\'hui ❤️',
             dateEnvoi: aujourdhui,

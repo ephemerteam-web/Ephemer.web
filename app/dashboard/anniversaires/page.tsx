@@ -99,14 +99,6 @@ export default function AnniversairesPage() {
     <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
       <div className="max-w-3xl mx-auto">
 
-        {/* Bouton retour */}
-        <button
-          onClick={() => router.push('/dashboard')}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-600 transition mb-6"
-        >
-          ← Retour au dashboard
-        </button>
-
         <h1 className="text-2xl font-bold text-gray-800 mb-6">🎂 Anniversaires</h1>
 
         {contactsAvecAnniv.length === 0 ? (

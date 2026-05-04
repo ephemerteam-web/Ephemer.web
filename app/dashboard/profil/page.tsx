@@ -69,13 +69,6 @@ export default function ProfilPage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 p-6">
       <div className="max-w-lg mx-auto">
 
-        <button
-          onClick={() => router.push("/dashboard")}
-          className="mb-6 text-sm text-gray-500 hover:text-purple-600 flex items-center gap-2 transition"
-        >
-          ← Retour au dashboard
-        </button>
-
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
 
           <div className="flex flex-col items-center mb-8">
