@@ -154,7 +154,7 @@ export default function ContactsPage() {
                   <button
                     onClick={(e) => {
                       e.stopPropagation()
-                      router.push(`/dashboard/contacts/${contact.id}/modifier`)
+                      router.push(`/dashboard/contacts/${contact.id}/edit`)
                     }}
                     className="text-xs text-indigo-300 hover:text-white font-medium border border-indigo-500/40 px-3 py-1 rounded-lg hover:bg-indigo-500/30 transition"
                   >
