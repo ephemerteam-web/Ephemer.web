@@ -15,6 +15,7 @@ type Contact = {
 export default function Dashboard() {
   const router = useRouter()
   const [userName, setUserName] = useState<string | null>(null)
+  const [prenom, setPrenom] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [contacts, setContacts] = useState<Contact[]>([])
 
@@ -23,6 +24,7 @@ export default function Dashboard() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/connexion'); return }
       setUserName(session.user.email?.split('@')[0] ?? null)
+      setPrenom(session.user.user_metadata?.prenom ?? null)
       const { data } = await supabase
         .from('contacts')
         .select('id, nom, prenom, date_naissance')
@@ -104,15 +106,23 @@ export default function Dashboard() {
   return (
     <div className="p-6 md:p-8">
 
-      {/* Bienvenue */}
-      {userName && (
-        <p className="text-indigo-200 text-sm mb-6">
-          Bienvenue, <span className="font-semibold">{userName}</span> 👋
-        </p>
-      )}
+      {/* TABLEAU DE BORD */}
+      <div className="mb-8">
+        <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Tableau de bord</h2>
 
-      {/* BLOC : FÊTE DU JOUR + ANNIVERSAIRES */}
-      <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-5 mb-8 flex flex-col gap-6">
+        {/* Bienvenue */}
+        {prenom ? (
+          <p className="text-indigo-200 text-sm mb-6">
+            Bienvenue, <span className="font-semibold">{prenom}</span> 👋
+          </p>
+        ) : userName && (
+          <p className="text-indigo-200 text-sm mb-6">
+            Bienvenue, <span className="font-semibold">{userName}</span> 👋
+          </p>
+        )}
+
+        {/* BLOC : FÊTE DU JOUR + ANNIVERSAIRES */}
+        <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-5 mb-8 flex flex-col gap-6">
 
         {/* Fête du jour */}
         <div>
@@ -200,6 +210,7 @@ export default function Dashboard() {
           </>
         )}
 
+      </div>
       </div>
 
       {/* Section principale */}

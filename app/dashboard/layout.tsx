@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import { DrawerProvider } from '@/lib/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
+import NotificationBell from '@/components/NotificationBell'
+
 
 export default function DashboardLayout({
   children,
@@ -39,6 +41,7 @@ export default function DashboardLayout({
             </Link>
 
             <div className="flex gap-2">
+              <NotificationBell />   {/* ← on l'ajoute ici */}
               <button
                 onClick={() => router.push('/dashboard/profil')}
                 className="px-3 md:px-4 py-2 text-sm font-medium text-indigo-200 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30 flex items-center gap-2"
