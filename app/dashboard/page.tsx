@@ -94,11 +94,12 @@ export default function Dashboard() {
   }
 
   const cartes = [
-    { id: 1, icon: '🎂', titre: 'Anniversaires', description: 'Vois vos prochains anniversaires', couleur: 'from-rose-500 to-pink-500', path: '/dashboard/anniversaires' },
-    { id: 2, icon: '📒', titre: 'Contacts', description: 'Gère tous tes contacts', couleur: 'from-blue-500 to-cyan-500', path: '/dashboard/contacts' },
-    { id: 3, icon: '📅', titre: 'Calendrier', description: 'Explore les fêtes des saints', couleur: 'from-purple-500 to-violet-500', path: '/dashboard/calendrier' },
-    { id: 4, icon: '🙏', titre: 'Fêtes des Saints', description: 'Les fêtes de vos contacts', couleur: 'from-amber-500 to-orange-500', path: '/dashboard/calendrier_saints' }
-  ]
+  { id: 1, icon: '🎂', titre: 'Anniversaires', description: 'Vois vos prochains anniversaires', couleur: 'from-rose-500 to-pink-500', path: '/dashboard/anniversaires', disabled: false },
+  { id: 2, icon: '📒', titre: 'Contacts', description: 'Gère tous tes contacts', couleur: 'from-blue-500 to-cyan-500', path: '/dashboard/contacts', disabled: false },
+  { id: 3, icon: '📅', titre: 'Calendrier', description: 'Explore les fêtes des saints', couleur: 'from-purple-500 to-violet-500', path: '/dashboard/calendrier', disabled: false },
+  { id: 4, icon: '🙏', titre: 'Fêtes des Saints', description: 'Les fêtes de vos contacts', couleur: 'from-amber-500 to-orange-500', path: '/dashboard/calendrier_saints', disabled: false }
+]
+
 
   return (
     <div className="p-6 md:p-8">
