@@ -20,6 +20,8 @@ export interface EmailRappelParams {
   message: string;
   dateEnvoi: string;
   ton: string | null;
+  expediteurNom?: string;
+  expediteurEmail?: string;
 }
 
 // 🛠️ FONCTION GÉNÉRATRICE
