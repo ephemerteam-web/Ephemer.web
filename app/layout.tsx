@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   title: "Ephemer — Ne rate plus aucune date importante",
   description: "Gérez vos anniversaires et événements importants avec Ephemer",
   icons: {
-    icon: "/favicon.ico", // ← Ajoute cette ligne
-  },
-};
+    icon: "/favicon.ico"
+  }
+};  // ← UN SEUL ; !
 
 export default function RootLayout({
   children,
