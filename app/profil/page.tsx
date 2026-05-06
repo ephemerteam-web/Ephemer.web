@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
+import AppLayout from '@/components/AppLayout'
 
 export default function Profil() {
   const router = useRouter()
@@ -70,29 +71,23 @@ export default function Profil() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0a0118] flex items-center justify-center">
-        <div className="text-center">
+      <AppLayout className="justify-center">
+        <div className="text-center relative z-10">
           <div className="animate-pulse mb-4"><span className="text-6xl">🌙</span></div>
-          <p className="text-indigo-200">Chargement...</p>
+          <p className="text-white/50">Chargement...</p>
         </div>
-      </main>
+      </AppLayout>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0118] flex items-center justify-center px-4 relative overflow-hidden">
-
-      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-purple-700 opacity-20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[350px] h-[350px] bg-indigo-600 opacity-20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-pink-600 opacity-10 rounded-full blur-[80px] pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10">
+    <AppLayout className="justify-center">
+      <div className="w-full max-w-md relative z-10 px-4">
         <div className="text-center mb-8">
-          <div className="text-5xl mb-3">🌙</div>
           <h1 className="text-3xl font-black text-white">Mon Profil</h1>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8 backdrop-blur-sm">
 
           <div className="flex flex-col gap-5">
             <div className="flex flex-col gap-1.5">
@@ -101,7 +96,7 @@ export default function Profil() {
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
@@ -111,7 +106,7 @@ export default function Profil() {
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
@@ -121,7 +116,7 @@ export default function Profil() {
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/70 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
@@ -138,14 +133,14 @@ export default function Profil() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-purple-900/40 hover:scale-105 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all hover:scale-105 mt-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? 'Enregistrement...' : 'Enregistrer'}
             </button>
 
             <button
               onClick={() => router.push('/dashboard')}
-              className="text-sm text-white/40 hover:text-white/70 transition text-center mt-2"
+              className="text-sm text-white/40 hover:text-[#C8A84E] transition text-center mt-2"
             >
               ← Retour au dashboard
             </button>
@@ -153,6 +148,6 @@ export default function Profil() {
 
         </div>
       </div>
-    </main>
+    </AppLayout>
   )
 }

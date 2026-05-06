@@ -3,6 +3,8 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import AppLayout from '@/components/AppLayout'
+import Link from 'next/link'
 
 export default function InscriptionPage() {
   const [email, setEmail] = useState('')
@@ -48,31 +50,21 @@ export default function InscriptionPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#0a0118] flex items-center justify-center px-4 relative overflow-hidden">
+    <AppLayout className="justify-center">
+      <div className="w-full max-w-md relative z-10 px-4 py-12">
 
-      {/* BOULES LUMINEUSES */}
-      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-purple-700 opacity-20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[350px] h-[350px] bg-indigo-600 opacity-20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-pink-600 opacity-10 rounded-full blur-[80px] pointer-events-none" />
-
-      <div className="w-full max-w-md relative z-10 py-12">
-
-        {/* LOGO + TITRE */}
         <div className="text-center mb-8">
-          <a href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 transition text-sm mb-6">
+          <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-[#C8A84E] transition text-sm mb-6">
             ← Retour à l'accueil
-          </a>
-          <div className="text-5xl mb-3">🌙</div>
+          </Link>
           <h1 className="text-3xl font-black text-white">Créer un compte</h1>
           <p className="text-white/40 mt-2 text-sm">Rejoins Ephemer et ne rate plus aucune date importante 🎉</p>
         </div>
 
-        {/* CARTE FORMULAIRE */}
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8 backdrop-blur-sm">
 
           <form onSubmit={handleInscription} className="flex flex-col gap-5">
 
-            {/* Prénom + Nom côte à côte */}
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <label className="text-sm font-semibold text-white/70">Prénom</label>
@@ -82,7 +74,7 @@ export default function InscriptionPage() {
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
                   required
-                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -93,12 +85,11 @@ export default function InscriptionPage() {
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   required
-                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
                 />
               </div>
             </div>
 
-            {/* Date de naissance */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-white/70">
                 Date de naissance{' '}
@@ -108,11 +99,10 @@ export default function InscriptionPage() {
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/70 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/70 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
-            {/* Email */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-white/70">Adresse email</label>
               <input
@@ -121,11 +111,10 @@ export default function InscriptionPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
-            {/* Mot de passe */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-white/70">Mot de passe</label>
               <input
@@ -135,21 +124,19 @@ export default function InscriptionPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 minLength={6}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
-            {/* Bouton */}
             <button
               type="submit"
-              className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold py-3.5 rounded-2xl hover:opacity-90 transition-all shadow-lg shadow-purple-900/40 hover:scale-105 mt-2"
+              className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all hover:scale-105 mt-2"
             >
               ✨ Créer mon compte
             </button>
 
           </form>
 
-          {/* Message succès ou erreur */}
           {message && (
             <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
               isError
@@ -160,12 +147,11 @@ export default function InscriptionPage() {
             </div>
           )}
 
-          {/* Lien connexion */}
           <p className="text-center text-sm text-white/30 mt-6">
             Déjà un compte ?{' '}
-            <a href="/connexion" className="text-purple-400 font-semibold hover:text-pink-400 transition">
+            <Link href="/connexion" className="text-[#C8A84E] font-semibold hover:text-white transition">
               Se connecter
-            </a>
+            </Link>
           </p>
 
         </div>
@@ -173,6 +159,6 @@ export default function InscriptionPage() {
         <p className="text-center text-white/20 text-xs mt-8">© 2025 Ephemer — Fait avec 💜</p>
 
       </div>
-    </main>
+    </AppLayout>
   )
 }

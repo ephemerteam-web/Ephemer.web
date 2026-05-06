@@ -188,7 +188,7 @@ export default function CalendrierPage() {
                       aspect-square rounded-2xl p-1.5 flex flex-col items-center justify-start
                       cursor-pointer transition-all duration-200 relative group
                       ${isSelected
-                        ? 'bg-purple-500/30 border border-purple-400/60 shadow-lg shadow-purple-900/30'
+                        ? 'bg-[#C8A84E]/30 border border-[#C8A84E]/60 shadow-lg shadow-[#C8A84E]/20'
                         : isTodayDay
                         ? 'bg-white/10 border border-white/30'
                         : hasEvent
@@ -200,7 +200,7 @@ export default function CalendrierPage() {
                     {/* ✅ Chiffre agrandi : text-sm → text-base */}
                     <span className={`
                       text-base font-bold leading-none mt-0.5
-                      ${isSelected ? 'text-purple-200'
+                      ${isSelected ? 'text-[#C8A84E]'
                         : isTodayDay ? 'text-white'
                         : 'text-white/60'}
                     `}>
@@ -210,7 +210,7 @@ export default function CalendrierPage() {
                     {/* Indicateurs visuels */}
                     <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
                       {saintsAvecContact.length > 0 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-purple-400" title="Fête prénomale d'un contact" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#C8A84E]" title="Fête prénomale d'un contact" />
                       )}
                       {anniversaires.length > 0 && (
                         <span className="w-1.5 h-1.5 rounded-full bg-pink-400" title="Anniversaire" />
@@ -227,8 +227,8 @@ export default function CalendrierPage() {
                               🎂 {c.prenom} {c.nom}
                             </p>
                           ))}
-                          {saintsAvecContact.map((s, i) => (
-                            <p key={i} className="text-purple-300">
+                              {saintsAvecContact.map((s, i) => (
+                            <p key={i} className="text-[#C8A84E]">
                               ✨ Fête de {s.prenoms.filter(p => prenomContacts.has(normaliser(p))).join(', ')}
                             </p>
                           ))}
@@ -247,7 +247,7 @@ export default function CalendrierPage() {
                 <span className="text-xs text-white/40">Anniversaire</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-purple-400" />
+                <span className="w-2 h-2 rounded-full bg-[#C8A84E]" />
                 <span className="text-xs text-white/40">Fête prénomale</span>
               </div>
               <div className="flex items-center gap-2">
@@ -289,18 +289,18 @@ export default function CalendrierPage() {
                           key={idx}
                           className={`rounded-2xl p-3 border ${
                             aUnContact
-                              ? 'bg-purple-500/10 border-purple-500/20'
+                              ? 'bg-[#C8A84E]/10 border-[#C8A84E]/20'
                               : 'bg-white/5 border-white/5'
                           }`}
                         >
                           <p className={`text-sm font-medium ${aUnContact ? 'text-white/80' : 'text-white/40'}`}>
                             {saint.nomSaint}
                           </p>
-                          <p className={`text-xs mt-0.5 ${aUnContact ? 'text-purple-300' : 'text-white/25'}`}>
+                          <p className={`text-xs mt-0.5 ${aUnContact ? 'text-[#C8A84E]' : 'text-white/25'}`}>
                             {saint.prenoms.join(', ')}
                           </p>
                           {aUnContact && (
-                            <p className="text-xs text-purple-400 mt-1 font-semibold">
+                            <p className="text-xs text-[#C8A84E] mt-1 font-semibold">
                               👤 {prenomsContacts.join(', ')} dans vos contacts
                             </p>
                           )}
@@ -346,7 +346,7 @@ export default function CalendrierPage() {
               value={recherche}
               onChange={handleRecherche}
               className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white
-                placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent
+                placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent
                 transition mb-4"
             />
 
@@ -364,7 +364,7 @@ export default function CalendrierPage() {
                         setRecherche('')
                         setResultatsRecherche([])
                       }}
-                      className="bg-white/5 border border-white/10 hover:border-purple-500/40 hover:bg-purple-500/10
+                      className="bg-white/5 border border-white/10 hover:border-[#C8A84E]/40 hover:bg-[#C8A84E]/10
                         rounded-2xl p-3 cursor-pointer transition-all"
                     >
                       <p className="text-white/80 text-sm font-medium">{saint.nomSaint}</p>

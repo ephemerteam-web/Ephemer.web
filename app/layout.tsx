@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Ephemer — Ne rate plus aucune date importante",
   description: "Gérez vos anniversaires et événements importants avec Ephemer",
+  icons: {
+    icon: "/favicon.ico", // ← Ajoute cette ligne
+  },
 };
 
 export default function RootLayout({

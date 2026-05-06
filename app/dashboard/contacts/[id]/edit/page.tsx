@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
-import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants' // ✨ Nouveau !
+import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants'
 
 
 export default function ModifierContact() {
@@ -109,7 +109,7 @@ export default function ModifierContact() {
   }
 
   if (chargement) {
-    return <p className="p-8 text-center text-indigo-400">Chargement...</p>
+    return <p className="p-8 text-center text-white/50">Chargement...</p>
   }
 
   return (
@@ -123,72 +123,71 @@ export default function ModifierContact() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
 
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Prénom *</label>
+            <label className="text-sm font-semibold text-white/70">Prénom *</label>
             <input
               type="text"
               value={prenom}
               onChange={(e) => setPrenom(e.target.value)}
               required
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             />
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Nom</label>
+            <label className="text-sm font-semibold text-white/70">Nom</label>
             <input
               type="text"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             />
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Date de naissance</label>
+            <label className="text-sm font-semibold text-white/70">Date de naissance</label>
             <input
               type="date"
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             />
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Type de relation</label>
+            <label className="text-sm font-semibold text-white/70">Type de relation</label>
             <select
               value={relation}
               onChange={(e) => setRelation(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             >
-              <option value="ami">👫 Ami(e)</option>
-              <option value="famille">👨‍👩‍👧 Famille</option>
-              <option value="pro">💼 Professionnel</option>
-              <option value="autre">✨ Autre</option>
+              <option value="ami" className="bg-[#0B1120]">👫 Ami(e)</option>
+              <option value="famille" className="bg-[#0B1120]">👨‍👩‍👧 Famille</option>
+              <option value="pro" className="bg-[#0B1120]">💼 Professionnel</option>
+              <option value="autre" className="bg-[#0B1120]">✨ Autre</option>
             </select>
           </div>
 
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Email</label>
+            <label className="text-sm font-semibold text-white/70">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="exemple@email.com"
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             />
           </div>
 
-          {/* Téléphone : indicatif + numéro */}
           <div>
-            <label className="text-sm font-semibold text-indigo-300">Téléphone</label>
+            <label className="text-sm font-semibold text-white/70">Téléphone</label>
             <div className="mt-1 flex gap-2">
               <select
                 value={telephoneIndicatif}
                 onChange={(e) => setTelephoneIndicatif(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="bg-white/5 border border-white/10 text-white rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
               >
                 {INDICATIFS_PAYS.map((i) => (
-                  <option key={i.code} value={i.code} className="bg-gray-800">
+                  <option key={i.code} value={i.code} className="bg-[#0B1120]">
                     {i.pays} ({i.code})
                   </option>
                 ))}
@@ -198,17 +197,16 @@ export default function ModifierContact() {
                 value={telephoneNumero}
                 onChange={(e) => setTelephoneNumero(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="612345678"
-                className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
               />
             </div>
-            <p className="text-xs text-indigo-400 mt-1">
+            <p className="text-xs text-white/40 mt-1">
               Sans le 0 du début (ex : 612345678 pour 06 12 34 56 78)
             </p>
           </div>
 
-          {/* Note / Description */}
           <div>
-            <label className="text-sm font-semibold text-indigo-300">
+            <label className="text-sm font-semibold text-white/70">
               Note / À propos de ce contact
             </label>
             <textarea
@@ -216,9 +214,9 @@ export default function ModifierContact() {
               onChange={(e) => setNote(e.target.value)}
               placeholder="Ex : aime le foot, fan de cuisine italienne, vit à Paris, deux enfants..."
               rows={4}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 resize-none"
+              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 resize-none"
             />
-            <p className="text-xs text-indigo-400 mt-1">
+            <p className="text-xs text-white/40 mt-1">
               💡 Plus tu en mets, plus les suggestions de cadeaux seront pertinentes.
             </p>
           </div>
@@ -227,15 +225,15 @@ export default function ModifierContact() {
             onClick={() => setEstFavori(!estFavori)}
             className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition ${
               estFavori
-                ? 'border-yellow-400 bg-yellow-500/10'
+                ? 'border-[#C8A84E] bg-[#C8A84E]/10'
                 : 'border-white/10 bg-white/5 hover:border-white/20'
             }`}
           >
             <div>
               <p className="text-sm font-semibold text-white">⭐ Contact favori</p>
-              <p className="text-xs text-indigo-400 mt-0.5">Apparaîtra en priorité</p>
+              <p className="text-xs text-white/40 mt-0.5">Apparaîtra en priorité</p>
             </div>
-            <div className={`w-11 h-6 rounded-full transition-colors ${estFavori ? 'bg-yellow-400' : 'bg-gray-500'}`}>
+            <div className={`w-11 h-6 rounded-full transition-colors ${estFavori ? 'bg-[#C8A84E]' : 'bg-gray-500'}`}>
               <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${estFavori ? 'translate-x-5' : 'translate-x-0.5'}`} />
             </div>
           </div>
@@ -245,7 +243,7 @@ export default function ModifierContact() {
           <button
             type="submit"
             disabled={saving}
-            className="bg-indigo-600 text-white font-semibold py-3 rounded-xl hover:bg-indigo-500 transition disabled:opacity-50"
+            className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
           >
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
@@ -272,7 +270,7 @@ export default function ModifierContact() {
                 </button>
                 <button
                   onClick={() => setConfirmSupprimer(false)}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium border border-white/10 text-indigo-300 transition"
+                  className="flex-1 py-2 rounded-xl text-sm font-medium border border-white/10 text-white/50 hover:text-white transition"
                 >
                   Annuler
                 </button>

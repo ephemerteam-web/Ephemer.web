@@ -1,21 +1,16 @@
 import Link from 'next/link';
+import AppLayout from '@/components/AppLayout';
 
 export default function ConfidentialitePage() {
   return (
-    <main className="min-h-screen bg-[#0a0118] relative overflow-hidden px-4 py-12">
+    <AppLayout className="py-12">
+      <div className="max-w-3xl mx-auto relative z-10 px-4">
 
-      {/* BOULES LUMINEUSES */}
-      <div className="absolute top-[-100px] left-[-100px] w-[400px] h-[400px] bg-purple-700 opacity-20 rounded-full blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-80px] right-[-80px] w-[350px] h-[350px] bg-indigo-600 opacity-20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute top-[40%] left-[60%] w-[200px] h-[200px] bg-pink-600 opacity-10 rounded-full blur-[80px] pointer-events-none" />
-
-      <div className="max-w-3xl mx-auto relative z-10">
-
-        <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-white/70 transition text-sm mb-8">
+        <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-[#C8A84E] transition text-sm mb-8">
           ← Retour à l'accueil
         </Link>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl backdrop-blur-sm p-8 md:p-10">
+        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl backdrop-blur-sm p-8 md:p-10">
           <h1 className="text-3xl font-black text-white mb-2">Politique de Confidentialité</h1>
           <p className="text-white/40 text-sm mb-8">Dernière mise à jour : {new Date().toLocaleDateString('fr-FR')}</p>
 
@@ -47,7 +42,7 @@ export default function ConfidentialitePage() {
             <h2 className="text-xl font-bold text-white mb-2">5. Vos droits (RGPD)</h2>
             <p className="text-white/60 leading-relaxed">
               Conformément au Règlement Général sur la Protection des Données, vous disposez d'un droit d'accès, de rectification, d'effacement et de portabilité de vos données. Pour l'exercer :{' '}
-              <a href="mailto:contact@ephemer.name" className="text-purple-400 hover:text-pink-400 transition">contact@ephemer.name</a>.
+              <a href="mailto:contact@ephemer.name" className="text-[#C8A84E] hover:text-white transition">contact@ephemer.name</a>.
             </p>
           </section>
 
@@ -57,6 +52,6 @@ export default function ConfidentialitePage() {
         </div>
 
       </div>
-    </main>
+    </AppLayout>
   );
 }

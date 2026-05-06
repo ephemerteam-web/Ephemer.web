@@ -5,8 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { programmerMessage } from "@/lib/rappels";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
-
-// 🆕 Import des constantes centralisées (plus de duplication !)
 import {
   TYPES_RELATION,
   TONS_MESSAGE,
@@ -14,7 +12,6 @@ import {
   DESTINATAIRES_RAPPEL,
 } from "@/lib/constants";
 
-// Type contact
 type Contact = {
   id: number;
   prenom: string;
@@ -24,16 +21,13 @@ type Contact = {
   email?: string | null;
 };
 
-// On ne garde que les types réellement gérés par calculerDateEvenement().
 const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
   anniversaire: "anniversaire",
   fete_prenomale: "fete_prenomale",
 };
 
-// Type pour le choix de date d'envoi
 type ChoixDateEnvoi = "jourj" | "j1" | "j7" | "custom";
 
-// Petite fonction utilitaire pour afficher une date en français
 function formaterDate(d: Date): string {
   return d.toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -47,7 +41,6 @@ function GenerateForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // Champs du formulaire
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [age, setAge] = useState("");
@@ -59,12 +52,10 @@ function GenerateForm() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Contacts
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
 
-  // Programmation
   const [destinataire, setDestinataire] = useState<"moi" | "contact" | "les_deux">("moi");
   const [programmation, setProgrammation] = useState<{
     loading: boolean;
@@ -72,11 +63,9 @@ function GenerateForm() {
     isError: boolean;
   }>({ loading: false, message: "", isError: false });
 
-  // ─── État pour la date d'envoi ────────────────────────────────────────────
   const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourj");
-  const [dateCustom, setDateCustom] = useState<string>(""); // format YYYY-MM-DD
+  const [dateCustom, setDateCustom] = useState<string>("");
 
-  // ─── Chargement initial : contacts + préremplissage via URL ────────────────
   useEffect(() => {
     async function loadContactsAndPrefill() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -95,7 +84,6 @@ function GenerateForm() {
 
       setContacts(data as Contact[]);
 
-      // Lecture des paramètres de l'URL pour préremplir
       const contactIdFromUrl = searchParams.get("contactId");
       const eventTypeFromUrl = searchParams.get("eventType");
 
@@ -117,7 +105,6 @@ function GenerateForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ─── Applique les infos d'un contact dans le formulaire ───────────────────
   function appliquerContact(contact: Contact) {
     setSelectedContactId(String(contact.id));
     setSelectedContact(contact);
@@ -143,7 +130,6 @@ function GenerateForm() {
     }
   }
 
-  // ─── Quand on change de contact dans le menu déroulant ────────────────────
   function handleContactSelect(contactId: string) {
     if (!contactId) {
       setSelectedContactId("");
@@ -159,7 +145,6 @@ function GenerateForm() {
     if (contact) appliquerContact(contact);
   }
 
-  // ─── Génération du message via API ────────────────────────────────────────
   async function handleGenerate() {
     setLoading(true);
     setError("");
@@ -198,9 +183,6 @@ function GenerateForm() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  // ─── Calcul des dates d'envoi possibles ──────────────────────────────────
-  // Recalculé à chaque rendu : dès que selectedContact ou eventType change,
-  // on a automatiquement les bonnes dates.
   const datesPossibles = (() => {
     if (!selectedContact) return null;
     const typeEvt = EVENT_TYPE_MAP[eventType];
@@ -221,10 +203,8 @@ function GenerateForm() {
     return { jourj: dateEvenement, j1, j7 };
   })();
 
-  // Date min pour l'input custom = aujourd'hui (pas de date dans le passé)
   const dateMin = new Date().toISOString().split("T")[0];
 
-  // Calcule la date finale qui sera envoyée à programmerMessage
   function getDateEnvoiChoisie(): Date | null {
     if (!datesPossibles) return null;
     if (choixDate === "jourj") return datesPossibles.jourj;
@@ -234,7 +214,6 @@ function GenerateForm() {
     return null;
   }
 
-  // ─── Programmer l'envoi ───────────────────────────────────────────────────
   async function handleProgrammer() {
     setProgrammation({ loading: true, message: "", isError: false });
 
@@ -260,15 +239,13 @@ function GenerateForm() {
         );
       }
 
-      // ✅ Récupérer la date choisie par l'utilisateur
       const dateEnvoiChoisie = getDateEnvoiChoisie();
       if (!dateEnvoiChoisie) {
         throw new Error("Sélectionne une date d'envoi (ou saisis-en une personnalisée).");
       }
 
-      // Vérification : pas de date dans le passé
       const maintenant = new Date();
-      maintenant.setHours(0, 0, 0, 0); // on compare juste les jours
+      maintenant.setHours(0, 0, 0, 0);
       if (dateEnvoiChoisie < maintenant) {
         throw new Error("La date d'envoi ne peut pas être dans le passé.");
       }
@@ -292,7 +269,7 @@ function GenerateForm() {
         ton: tone,
         destinataire,
         emailUtilisateur,
-        dateOverride: dateEnvoiChoisie, // ✅ on passe la date choisie
+        dateOverride: dateEnvoiChoisie,
       });
 
       setProgrammation({
@@ -309,40 +286,38 @@ function GenerateForm() {
     }
   }
 
-  // ─── Rendu ────────────────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+    <div className="p-6">
 
       <div className="max-w-2xl mx-auto">
 
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">✨ Générateur de messages</h1>
-          <p className="text-gray-500 mt-1">Crée un message personnalisé grâce à l'IA en quelques secondes.</p>
+          <h1 className="text-3xl font-bold text-white">✨ Générateur de messages</h1>
+          <p className="text-white/40 mt-1">Crée un message personnalisé grâce à l'IA en quelques secondes.</p>
         </div>
 
-        {/* Sélection contact */}
-        <div className="bg-white rounded-2xl shadow-sm p-5 mb-6 border-2 border-purple-100">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
+        <div className="bg-white/5 border border-[#C8A84E]/20 rounded-2xl p-5 mb-6">
+          <label className="block text-sm font-semibold text-white/70 mb-2">
             👥 Sélectionner un contact existant
           </label>
           <select
             value={selectedContactId}
             onChange={(e) => handleContactSelect(e.target.value)}
-            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+            className="w-full border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
           >
-            <option value="">-- Saisir manuellement ou choisir un contact --</option>
+            <option value="" className="bg-[#0B1120]">-- Saisir manuellement ou choisir un contact --</option>
             {contacts.map((contact) => (
-              <option key={contact.id} value={contact.id}>
+              <option key={contact.id} value={contact.id} className="bg-[#0B1120]">
                 {contact.prenom} {contact.nom} ({contact.relation})
               </option>
             ))}
           </select>
           {contacts.length === 0 && (
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-white/40 mt-2">
               Aucun contact trouvé.{" "}
               <span
-                className="text-purple-500 cursor-pointer hover:underline"
-                onClick={() => router.push("/contacts")}
+                className="text-[#C8A84E] cursor-pointer hover:underline"
+                onClick={() => router.push("/dashboard/contacts")}
               >
                 Ajouter des contacts →
               </span>
@@ -350,54 +325,53 @@ function GenerateForm() {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+        <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
 
-          {/* Infos personne */}
-          <h2 className="font-semibold text-gray-700 text-lg">👤 La personne</h2>
+          <h2 className="font-semibold text-white/80 text-lg">👤 La personne</h2>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Prénom</label>
+              <label className="block text-sm font-medium text-white/60 mb-1">Prénom</label>
               <input
                 type="text"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 placeholder="Marie"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white placeholder-white/30"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">Nom</label>
+              <label className="block text-sm font-medium text-white/60 mb-1">Nom</label>
               <input
                 type="text"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 placeholder="Dupont"
-                className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white placeholder-white/30"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Âge</label>
+            <label className="block text-sm font-medium text-white/60 mb-1">Âge</label>
             <input
               type="number"
               value={age}
               onChange={(e) => setAge(e.target.value)}
               placeholder="30"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+              className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white placeholder-white/30"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Relation</label>
+            <label className="block text-sm font-medium text-white/60 mb-1">Relation</label>
             <select
               value={relation}
               onChange={(e) => setRelation(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+              className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
             >
               {TYPES_RELATION.map((r) => (
-                <option key={r.value} value={r.value}>
+                <option key={r.value} value={r.value} className="bg-[#0B1120]">
                   {r.emoji} {r.label}
                 </option>
               ))}
@@ -405,24 +379,24 @@ function GenerateForm() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Type d'événement</label>
+            <label className="block text-sm font-medium text-white/60 mb-1">Type d'événement</label>
             <select
               value={eventType}
               onChange={(e) => setEventType(e.target.value)}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 bg-white"
+              className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
             >
               {TYPES_EVENEMENT.map((t) => (
-                <option key={t.value} value={t.value}>
+                <option key={t.value} value={t.value} className="bg-[#0B1120]">
                   {t.label}
                 </option>
               ))}
             </select>
           </div>
 
-          <h2 className="font-semibold text-gray-700 text-lg pt-2 border-t border-gray-100">🎨 Le message</h2>
+          <h2 className="font-semibold text-white/80 text-lg pt-2 border-t border-white/10">🎨 Le message</h2>
 
           <div>
-            <label className="block text-sm font-medium text-gray-600 mb-2">Ton du message</label>
+            <label className="block text-sm font-medium text-white/60 mb-2">Ton du message</label>
             <div className="grid grid-cols-2 gap-2">
               {TONS_MESSAGE.map((t) => (
                 <button
@@ -430,8 +404,8 @@ function GenerateForm() {
                   onClick={() => setTone(t.value)}
                   className={`py-2 px-3 rounded-xl text-sm font-medium border-2 transition ${
                     tone === t.value
-                      ? "border-purple-500 bg-purple-50 text-purple-700"
-                      : "border-gray-200 text-gray-500 hover:border-purple-300"
+                      ? "border-[#C8A84E] bg-[#C8A84E]/20 text-[#C8A84E]"
+                      : "border-white/10 text-white/50 hover:border-[#C8A84E]/30"
                   }`}
                 >
                   {t.label}
@@ -440,45 +414,41 @@ function GenerateForm() {
             </div>
           </div>
 
-          {/* Bouton générer */}
           <button
             onClick={handleGenerate}
             disabled={loading || !firstName}
-            className="w-full bg-purple-600 text-white font-semibold py-3 rounded-xl hover:bg-purple-500 transition disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
           >
             {loading ? "Génération..." : "✨ Générer le message"}
           </button>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <p className="text-sm text-red-400">{error}</p>}
 
-          {/* Résultat + programmation */}
           {message && (
-            <div className="space-y-4 pt-4 border-t border-gray-100">
+            <div className="space-y-4 pt-4 border-t border-white/10">
               <div>
-                <label className="block text-sm font-medium text-gray-600 mb-1">Message généré</label>
+                <label className="block text-sm font-medium text-white/60 mb-1">Message généré</label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={6}
-                  className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300 resize-none"
+                  className="w-full border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white resize-none"
                 />
               </div>
 
               <button
                 onClick={handleCopy}
-                className="w-full bg-gray-100 text-gray-700 font-medium py-2 rounded-xl hover:bg-gray-200 transition text-sm"
+                className="w-full bg-white/10 text-white/70 font-medium py-2 rounded-xl hover:bg-white/20 transition text-sm"
               >
                 {copied ? "✅ Copié !" : "📋 Copier le message"}
               </button>
 
-              {/* Programmation : visible seulement si un contact est sélectionné */}
               {selectedContact && (
-                <div className="space-y-3 pt-4 border-t border-gray-100">
-                  <h3 className="font-semibold text-gray-700">📤 Programmer l'envoi</h3>
+                <div className="space-y-3 pt-4 border-t border-white/10">
+                  <h3 className="font-semibold text-white/80">📤 Programmer l'envoi</h3>
 
-                  {/* Destinataire */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-600 mb-2">À qui envoyer ?</label>
+                    <label className="block text-sm font-medium text-white/60 mb-2">À qui envoyer ?</label>
                     <div className="grid gap-2">
                       {DESTINATAIRES_RAPPEL.map((d) => {
                         const needsEmail = d.value === "contact" || d.value === "les_deux";
@@ -491,8 +461,8 @@ function GenerateForm() {
                             disabled={disabled}
                             className={`text-left py-2 px-3 rounded-xl text-sm border-2 transition ${
                               destinataire === d.value
-                                ? "border-purple-500 bg-purple-50 text-purple-700"
-                                : "border-gray-200 text-gray-600 hover:border-purple-300"
+                                ? "border-[#C8A84E] bg-[#C8A84E]/20 text-[#C8A84E]"
+                                : "border-white/10 text-white/60 hover:border-[#C8A84E]/30"
                             } ${disabled ? "opacity-40 cursor-not-allowed" : ""}`}
                           >
                             <p className="font-medium">{d.label}</p>
@@ -503,91 +473,85 @@ function GenerateForm() {
                     </div>
                   </div>
 
-                  {/* 🆕 Choix de la date d'envoi */}
                   {datesPossibles && (
-                    <div className="bg-purple-50 rounded-xl p-4 space-y-2 border border-purple-100">
-                      <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    <div className="bg-[#C8A84E]/10 rounded-xl p-4 space-y-2 border border-[#C8A84E]/20">
+                      <label className="block text-sm font-semibold text-white/70 mb-1">
                         📅 Quand envoyer ce message ?
                       </label>
 
-                      {/* Option : Jour J */}
-                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
                         <input
                           type="radio"
                           name="choixDate"
                           checked={choixDate === "jourj"}
                           onChange={() => setChoixDate("jourj")}
-                          className="mt-1 accent-purple-600"
+                          className="mt-1 accent-[#C8A84E]"
                         />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">🎯 Le jour J</p>
-                          <p className="text-xs text-gray-500 capitalize">
+                          <p className="text-sm font-medium text-white">🎯 Le jour J</p>
+                          <p className="text-xs text-white/50 capitalize">
                             {formaterDate(datesPossibles.jourj)}
                           </p>
                         </div>
                       </label>
 
-                      {/* Option : J-1 */}
-                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
                         <input
                           type="radio"
                           name="choixDate"
                           checked={choixDate === "j1"}
                           onChange={() => setChoixDate("j1")}
-                          className="mt-1 accent-purple-600"
+                          className="mt-1 accent-[#C8A84E]"
                         />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">⏰ La veille (J-1)</p>
-                          <p className="text-xs text-gray-500 capitalize">
+                          <p className="text-sm font-medium text-white">⏰ La veille (J-1)</p>
+                          <p className="text-xs text-white/50 capitalize">
                             {formaterDate(datesPossibles.j1)}
                           </p>
                         </div>
                       </label>
 
-                      {/* Option : J-7 */}
-                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
                         <input
                           type="radio"
                           name="choixDate"
                           checked={choixDate === "j7"}
                           onChange={() => setChoixDate("j7")}
-                          className="mt-1 accent-purple-600"
+                          className="mt-1 accent-[#C8A84E]"
                         />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">📆 Une semaine avant (J-7)</p>
-                          <p className="text-xs text-gray-500 capitalize">
+                          <p className="text-sm font-medium text-white">📆 Une semaine avant (J-7)</p>
+                          <p className="text-xs text-white/50 capitalize">
                             {formaterDate(datesPossibles.j7)}
                           </p>
                         </div>
                       </label>
 
-                      {/* Option : Date personnalisée */}
-                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white transition">
+                      <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
                         <input
                           type="radio"
                           name="choixDate"
                           checked={choixDate === "custom"}
                           onChange={() => setChoixDate("custom")}
-                          className="mt-1 accent-purple-600"
+                          className="mt-1 accent-[#C8A84E]"
                         />
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-800">🗓️ Choisir une autre date</p>
+                          <p className="text-sm font-medium text-white">🗓️ Choisir une autre date</p>
                           {choixDate === "custom" && (
                             <input
                               type="date"
                               value={dateCustom}
                               min={dateMin}
                               onChange={(e) => setDateCustom(e.target.value)}
-                              className="mt-2 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-300"
+                              className="mt-2 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
                             />
                           )}
                         </div>
                       </label>
 
-                      {/* Récapitulatif visuel */}
                       {getDateEnvoiChoisie() && (
-                        <div className="mt-2 bg-white border border-purple-200 rounded-lg px-3 py-2">
-                          <p className="text-xs text-purple-700 font-semibold">
+                        <div className="mt-2 bg-white/10 border border-[#C8A84E]/30 rounded-lg px-3 py-2">
+                          <p className="text-xs text-[#C8A84E] font-semibold">
                             ✉️ Envoi prévu le :{" "}
                             <span className="capitalize">{formaterDate(getDateEnvoiChoisie()!)}</span>
                           </p>
@@ -599,7 +563,7 @@ function GenerateForm() {
                   <button
                     onClick={handleProgrammer}
                     disabled={programmation.loading}
-                    className="w-full bg-purple-600 text-white font-semibold py-3 rounded-xl hover:bg-purple-500 transition disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
                   >
                     {programmation.loading ? "Programmation..." : "✅ Programmer cet envoi"}
                   </button>
@@ -607,8 +571,8 @@ function GenerateForm() {
                   {programmation.message && (
                     <p className={`text-xs font-medium rounded-lg px-3 py-2 ${
                       programmation.isError
-                        ? "bg-red-50 text-red-600"
-                        : "bg-green-50 text-green-700"
+                        ? "bg-red-500/10 text-red-300"
+                        : "bg-green-500/10 text-green-300"
                     }`}>
                       {programmation.message}
                     </p>
@@ -620,15 +584,15 @@ function GenerateForm() {
 
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 
 export default function GeneratePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <p className="text-gray-400">Chargement...</p>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-white/50">Chargement...</p>
       </div>
     }>
       <GenerateForm />

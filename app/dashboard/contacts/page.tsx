@@ -99,7 +99,7 @@ export default function ContactsPage() {
           </h1>
           <Link
             href="/dashboard/contacts/nouveau"
-            className="bg-indigo-500 hover:bg-indigo-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition border border-indigo-400/50"
+            className="bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl transition"
           >
             + Nouveau
           </Link>
@@ -111,7 +111,7 @@ export default function ContactsPage() {
             <p className="text-indigo-300">Aucun contact pour le moment.</p>
             <Link
               href="/dashboard/contacts/nouveau"
-              className="inline-block mt-4 text-sm text-indigo-400 hover:text-white underline transition"
+              className="inline-block mt-4 text-sm text-[#C8A84E] hover:text-white underline transition"
             >
               Ajouter mon premier contact →
             </Link>
@@ -156,7 +156,7 @@ export default function ContactsPage() {
                       e.stopPropagation()
                       router.push(`/dashboard/contacts/${contact.id}/edit`)
                     }}
-                    className="text-xs text-indigo-300 hover:text-white font-medium border border-indigo-500/40 px-3 py-1 rounded-lg hover:bg-indigo-500/30 transition"
+                    className="text-xs text-[#C8A84E]/70 hover:text-white font-medium border border-[#C8A84E]/30 px-3 py-1 rounded-lg hover:bg-[#C8A84E]/10 transition"
                   >
                     ✏️ Modifier
                   </button>
