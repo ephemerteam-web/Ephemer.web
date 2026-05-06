@@ -6,7 +6,7 @@ export const EMAIL_CONFIG = {
   brandName: "Ephemer.name",
   primaryColor: "#4F46E5",
   secondaryColor: "#7C3AED",
-  supportEmail: "contact@ephemer.name",
+  supportEmail: "ephemer.team@gmail.com",
   dashboardUrl: "https://ephemer.name/dashboard",
   privacyPolicyUrl: "https://ephemer.name/confidentialite",
   defaultFrom: "noreply@ephemer.name" // ⚠️ À remplacer par ton domaine vérifié Resend

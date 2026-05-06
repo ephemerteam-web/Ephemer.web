@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       // 👤 Expéditeur
       const expediteur = profilsMap[rappel.user_id] || {};
       const expediteurNom = `${expediteur.prenom || ''} ${expediteur.nom || ''}`.trim() || 'Un ami Ephemer';
-      const expediteurEmail = expediteur.email || 'contact@ephemer.name';
+      const expediteurEmail = expediteur.email || 'noreply@ephemer.name';
 
       // 🤝 Contact (sécurisé contre null/undefined)
       const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '' };
