@@ -135,7 +135,7 @@ export default function ConnexionPage() {
 
         </div>
 
-        <p className="text-center text-white/20 text-xs mt-8">© 2025 Ephemer — Fait avec 💜</p>
+        <p className="text-center text-white/20 text-xs mt-8">© 2026 Ephemer — Fait avec 💜</p>
 
       </div>
     </AppLayout>
