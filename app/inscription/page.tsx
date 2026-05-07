@@ -6,18 +6,14 @@ import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'
 
-// ✅ Vérification email simple
-const isValidEmail = (email: string) => {
-  return /\S+@\S+\.\S+/.test(email)
-}
+const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email)
 
-// ✅ Calcul force mot de passe
 const getPasswordStrength = (password: string) => {
   let score = 0
   if (password.length >= 6) score++
-  if (password.match(/[A-Z]/)) score++
-  if (password.match(/[0-9]/)) score++
-  if (password.match(/[^A-Za-z0-9]/)) score++
+  if (/[A-Z]/.test(password)) score++
+  if (/[0-9]/.test(password)) score++
+  if (/[^A-Za-z0-9]/.test(password)) score++
   return score
 }
 
@@ -30,7 +26,6 @@ export default function InscriptionPage() {
   const [dateNaissance, setDateNaissance] = useState('')
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
-
   const [loading, setLoading] = useState(false)
   const [cooldown, setCooldown] = useState(0)
   const [showPassword, setShowPassword] = useState(false)
@@ -38,7 +33,6 @@ export default function InscriptionPage() {
   const router = useRouter()
 
   const passwordStrength = useMemo(() => getPasswordStrength(password), [password])
-
   const passwordsMatch = password === confirmPassword
 
   const isFormValid =
@@ -48,12 +42,25 @@ export default function InscriptionPage() {
     password.length >= 6 &&
     passwordsMatch
 
+  const startCooldown = () => {
+    setCooldown(30)
+    const interval = setInterval(() => {
+      setCooldown((prev) => {
+        if (prev <= 1) {
+          clearInterval(interval)
+          return 0
+        }
+        return prev - 1
+      })
+    }, 1000)
+  }
+
   const handleInscription = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (!isFormValid) {
       setIsError(true)
-      setMessage("❌ Vérifie les champs du formulaire.")
+      setMessage("❌ Vérifie les champs")
       return
     }
 
@@ -76,104 +83,102 @@ export default function InscriptionPage() {
         id: data.user.id,
         prenom,
         nom,
-        date_naissance: dateNaissance || null,
+        date_naissance: dateNaissance
       })
     }
 
     setIsError(false)
-    setMessage("✅ Compte créé ! Vérifie ton email.")
+    setMessage("✅ Compte créé ! Vérifie ton email 📧")
     startCooldown()
     setLoading(false)
   }
 
-  const startCooldown = () => {
-    setCooldown(30)
-    const interval = setInterval(() => {
-      setCooldown((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-  }
-
   return (
     <AppLayout className="justify-center">
-      <div className="w-full max-w-md px-4">
+      <div className="w-full max-w-md relative z-10 px-4">
 
         <div className="text-center mb-8">
           <Link href="/" className="text-white/40 hover:text-[#C8A84E] text-sm">
             ← Retour
           </Link>
-          <h1 className="text-3xl font-black text-white mt-4">Créer un compte</h1>
+          <h1 className="text-3xl font-black text-white mt-4">
+            Créer un compte
+          </h1>
         </div>
 
-        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8">
+        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8 backdrop-blur-sm">
 
           <form onSubmit={handleInscription} className="flex flex-col gap-5">
 
-            {/* NOM / PRENOM */}
-            <div className="grid grid-cols-2 gap-3">
-              <input placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} className="input" />
-              <input placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} className="input" />
+            {/* PRENOM */}
+            <div>
+              <label className="text-sm text-white/70">Prénom</label>
+              <input
+                value={prenom}
+                onChange={(e) => setPrenom(e.target.value)}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white w-full"
+              />
+            </div>
+
+            {/* NOM */}
+            <div>
+              <label className="text-sm text-white/70">Nom</label>
+              <input
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white w-full"
+              />
             </div>
 
             {/* EMAIL */}
-            <div className="flex flex-col gap-1">
+            <div>
+              <label className="text-sm text-white/70">Email</label>
               <input
-                type="email"
-                placeholder="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="input"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white w-full"
               />
               {email && !isValidEmail(email) && (
-                <span className="text-red-400 text-xs">Email invalide</span>
+                <span className="text-red-400 text-xs">
+                  Email invalide
+                </span>
               )}
             </div>
 
             {/* PASSWORD */}
-            <div className="flex flex-col gap-1">
+            <div>
+              <label className="text-sm text-white/70">Mot de passe</label>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Mot de passe"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white w-full"
               />
 
-              {/* ✅ Barre de force */}
-              <div className="h-2 rounded bg-white/10 overflow-hidden">
+              {/* BARRE FORCE */}
+              <div className="h-2 bg-white/10 rounded mt-2">
                 <div
-                  className={`h-full transition-all ${
+                  className={`h-2 rounded ${
                     passwordStrength <= 1
                       ? 'bg-red-500 w-1/4'
                       : passwordStrength === 2
-                      ? 'bg-orange-400 w-2/4'
+                      ? 'bg-yellow-500 w-2/4'
                       : passwordStrength === 3
-                      ? 'bg-yellow-400 w-3/4'
+                      ? 'bg-blue-500 w-3/4'
                       : 'bg-green-500 w-full'
                   }`}
                 />
               </div>
-
-              <span className="text-xs text-white/40">
-                {passwordStrength <= 1 && "Mot de passe faible"}
-                {passwordStrength === 2 && "Mot de passe moyen"}
-                {passwordStrength >= 3 && "Mot de passe fort"}
-              </span>
             </div>
 
             {/* CONFIRM PASSWORD */}
-            <div className="flex flex-col gap-1">
+            <div>
+              <label className="text-sm text-white/70">Confirmer</label>
               <input
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Confirme le mot de passe"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="input"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white w-full"
               />
               {confirmPassword && !passwordsMatch && (
                 <span className="text-red-400 text-xs">
@@ -182,16 +187,14 @@ export default function InscriptionPage() {
               )}
             </div>
 
-            {/* SHOW PASSWORD */}
             <label className="text-xs text-white/40 flex gap-2">
               <input type="checkbox" onChange={(e) => setShowPassword(e.target.checked)} />
               Afficher le mot de passe
             </label>
 
-            {/* BOUTON */}
             <button
               disabled={!isFormValid || loading || cooldown > 0}
-              className="bg-[#C8A84E] text-black py-3 rounded-xl disabled:opacity-40"
+              className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-black py-3 rounded-xl font-bold"
             >
               {loading
                 ? "Création..."
@@ -202,14 +205,22 @@ export default function InscriptionPage() {
 
           </form>
 
-          {/* MESSAGE GLOBAL */}
           {message && (
-            <div className={`mt-4 p-3 rounded ${
-              isError ? 'bg-red-500/20 text-red-300' : 'bg-green-500/20 text-green-300'
+            <div className={`mt-4 p-3 rounded-xl text-sm ${
+              isError
+                ? 'bg-red-500/10 text-red-300'
+                : 'bg-green-500/10 text-green-300'
             }`}>
               {message}
             </div>
           )}
+
+          <p className="text-center text-sm text-white/30 mt-6">
+            Déjà un compte ?{' '}
+            <Link href="/connexion" className="text-[#C8A84E]">
+              Se connecter
+            </Link>
+          </p>
 
         </div>
       </div>
