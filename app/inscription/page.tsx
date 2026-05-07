@@ -6,18 +6,18 @@ import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'
 
-// ✅ Fonction pour traduire les erreurs Supabase
+// ✅ Traduction des erreurs Supabase
 function getFriendlyAuthError(error: any) {
   if (error?.code === "over_email_send_rate_limit") {
-    return "⏳ Merci de patienter quelques secondes avant de réessayer. Un email a déjà été envoyé.";
+    return "⏳ Un email vient d’être envoyé. Merci d’attendre 30 secondes.";
   }
 
   if (error?.status === 429) {
-    return "⏳ Trop de tentatives. Merci d’attendre un instant avant de réessayer.";
+    return "⏳ Trop de tentatives. Merci d’attendre un instant.";
   }
 
   if (error?.message?.includes("already registered")) {
-    return "📧 Un compte existe déjà avec cette adresse email.";
+    return "📧 Un compte existe déjà avec cet email.";
   }
 
   return "❌ Une erreur est survenue. Merci de réessayer.";
@@ -31,8 +31,8 @@ export default function InscriptionPage() {
   const [dateNaissance, setDateNaissance] = useState('')
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-  // ✅ état pour bloquer le bouton
   const [loading, setLoading] = useState(false)
   const [cooldown, setCooldown] = useState(0)
 
@@ -41,22 +41,20 @@ export default function InscriptionPage() {
   const handleInscription = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // ✅ bloque si déjà en cooldown
     if (cooldown > 0) return
 
     setLoading(true)
 
-    const { data, error } = await supabase.auth.signUp({ email, password })
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+    })
 
     if (error) {
       console.error("Erreur Supabase:", error)
-
       setIsError(true)
       setMessage(getFriendlyAuthError(error))
-
-      // ✅ lance cooldown même en cas d'erreur
       startCooldown()
-
       setLoading(false)
       return
     }
@@ -73,24 +71,20 @@ export default function InscriptionPage() {
 
       if (profileError) {
         console.error("Erreur profile:", profileError)
-
         setIsError(true)
-        setMessage('❌ Erreur profil : ' + profileError.message)
+        setMessage("❌ Erreur lors de la création du profil.")
         setLoading(false)
         return
       }
     }
 
     setIsError(false)
-    setMessage('✅ Compte créé ! Vérifie tes emails pour confirmer.')
+    setMessage("✅ Compte créé ! Vérifie ton email pour confirmer.")
 
-    // ✅ cooldown après succès
     startCooldown()
-
     setLoading(false)
   }
 
-  // ✅ Fonction cooldown 30 secondes
   const startCooldown = () => {
     setCooldown(30)
 
@@ -107,38 +101,103 @@ export default function InscriptionPage() {
 
   return (
     <AppLayout className="justify-center">
-      <div className="w-full max-w-md relative z-10 px-4 py-12">
+      <div className="w-full max-w-md relative z-10 px-4">
 
+        {/* HEADER */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2 text-white/40 hover:text-[#C8A84E] transition text-sm mb-6">
             ← Retour à l'accueil
           </Link>
           <h1 className="text-3xl font-black text-white">Créer un compte</h1>
-          <p className="text-white/40 mt-2 text-sm">Rejoins Ephemer et ne rate plus aucune date importante 🎉</p>
+          <p className="text-white/40 mt-2 text-sm">
+            Rejoins Ephemer et ne rate plus aucune date 🎉
+          </p>
         </div>
 
+        {/* CARD */}
         <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8 backdrop-blur-sm">
 
           <form onSubmit={handleInscription} className="flex flex-col gap-5">
 
+            {/* NOM / PRENOM */}
             <div className="grid grid-cols-2 gap-3">
-              <input type="text" placeholder="Prénom" value={prenom} onChange={(e) => setPrenom(e.target.value)} required className="input" />
-              <input type="text" placeholder="Nom" value={nom} onChange={(e) => setNom(e.target.value)} required className="input" />
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-white/70">Prénom</label>
+                <input
+                  type="text"
+                  value={prenom}
+                  onChange={(e) => setPrenom(e.target.value)}
+                  required
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 transition"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-white/70">Nom</label>
+                <input
+                  type="text"
+                  value={nom}
+                  onChange={(e) => setNom(e.target.value)}
+                  required
+                  className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 transition"
+                />
+              </div>
             </div>
 
-            <input type="date" value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} className="input" />
+            {/* DATE */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Date de naissance</label>
+              <input
+                type="date"
+                value={dateNaissance}
+                onChange={(e) => setDateNaissance(e.target.value)}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 transition"
+              />
+            </div>
 
-            <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input" />
+            {/* EMAIL */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Adresse email</label>
+              <input
+                type="email"
+                placeholder="ton@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 transition"
+              />
+            </div>
 
-            <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} required className="input" />
+            {/* PASSWORD */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Mot de passe</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Choisis un mot de passe"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 transition"
+              />
+              <label className="flex items-center gap-2 mt-1 cursor-pointer text-sm text-white/30 hover:text-white/50 transition">
+                <input
+                  type="checkbox"
+                  checked={showPassword}
+                  onChange={(e) => setShowPassword(e.target.checked)}
+                  className="accent-[#C8A84E]"
+                />
+                Afficher le mot de passe
+              </label>
+            </div>
 
+            {/* BOUTON */}
             <button
               type="submit"
               disabled={loading || cooldown > 0}
-              className={`py-3 rounded-xl font-bold transition ${
+              className={`bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl transition-all mt-2 ${
                 loading || cooldown > 0
-                  ? 'bg-gray-500 cursor-not-allowed'
-                  : 'bg-[#C8A84E] hover:scale-105'
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] hover:scale-105'
               }`}
             >
               {loading
@@ -150,19 +209,31 @@ export default function InscriptionPage() {
 
           </form>
 
+          {/* MESSAGE */}
           {message && (
-            <div className={`mt-6 p-4 rounded-xl text-sm ${
-              isError ? 'bg-red-500/10 text-red-300' : 'bg-green-500/10 text-green-300'
+            <div className={`mt-6 p-4 rounded-xl text-sm font-medium ${
+              isError
+                ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+                : 'bg-green-500/10 text-green-300 border border-green-500/20'
             }`}>
               {message}
             </div>
           )}
 
+          {/* FOOTER */}
           <p className="text-center text-sm text-white/30 mt-6">
-            Déjà un compte ? <Link href="/connexion" className="text-[#C8A84E]">Se connecter</Link>
+            Déjà un compte ?{' '}
+            <Link href="/connexion" className="text-[#C8A84E] font-semibold hover:text-white transition">
+              Se connecter
+            </Link>
           </p>
 
         </div>
+
+        <p className="text-center text-white/20 text-xs mt-8">
+          © 2026 Ephemer — Fait avec 💜
+        </p>
+
       </div>
     </AppLayout>
   )
