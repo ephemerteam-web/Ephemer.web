@@ -20,13 +20,14 @@ export default function InscriptionPage() {
   const handleInscription = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const { data, error } = await supabase.auth.signUp({ email, password })
+  const { data, error } = await supabase.auth.signUp({ email, password })
 
-    if (error) {
-      setIsError(true)
-      setMessage('❌ Erreur : ' + error.message)
-      return
-    }
+if (error) {
+  setIsError(true)
+  setMessage('❌ Erreur : ' + error.message + ' | Code : ' + error.status + ' | ' + JSON.stringify(error))
+  return
+}
+
 
     if (data.user) {
       const { error: profileError } = await supabase
