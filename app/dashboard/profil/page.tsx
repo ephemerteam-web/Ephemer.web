@@ -1,169 +1,213 @@
-"use client"
+'use client'
 
-import { useState, useEffect } from "react"
-import { supabase } from "@/lib/supabase"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { supabase } from '@/lib/supabase'
+import AppLayout from '@/components/AppLayout'
 
-export default function ProfilPage() {
+export default function DashboardProfil() {
   const router = useRouter()
 
-  const [email, setEmail] = useState("")
-  const [nouvelEmail, setNouvelEmail] = useState("")
-  const [prenom, setPrenom] = useState("")
-  const [nom, setNom] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState("")
-  const [modifierEmail, setModifierEmail] = useState(false)
+  // États du formulaire
+  const [prenom, setPrenom] = useState('')
+  const [nom, setNom] = useState('')
+  const [dateNaissance, setDateNaissance] = useState('')
+  const [email, setEmail] = useState('') // Email vient de Supabase Auth (non modifiable)
 
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+
+  // ========================
+  // 1. CHARGER LES DONNÉES DU PROFIL
+  // ========================
   useEffect(() => {
-    const getUser = async () => {
+    async function loadProfile() {
+      setLoading(true)
+      setMessage(null)
+
+      // Récupérer l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push("/connexion"); return }
 
-      setEmail(user.email || "")
-      setPrenom(user.user_metadata?.prenom || "")
-      setNom(user.user_metadata?.nom || "")
+      if (!user) {
+        router.push('/connexion')
+        return
+      }
+
+      setEmail(user.email || '')
+
+      // Charger les infos depuis la table "profiles"
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Pas encore de profil → on laisse les champs vides
+          console.log('Aucun profil trouvé, création possible')
+        } else {
+          console.error('Erreur lors du chargement du profil:', error)
+          setMessage({ text: 'Erreur lors du chargement de ton profil', type: 'error' })
+        }
+      } else if (profile) {
+        setPrenom(profile.prenom || '')
+        setNom(profile.nom || '')
+        // Formatage de la date pour l'input type="date"
+        if (profile.date_naissance) {
+          setDateNaissance(profile.date_naissance)
+        }
+      }
+
+      setLoading(false)
     }
-    getUser()
-  }, [])
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setMessage("")
+    loadProfile()
+  }, [router])
 
-    const updateData: { data: { prenom: string; nom: string }; email?: string } = {
-      data: { prenom, nom }
+  // ========================
+  // 2. SAUVEGARDER / METTRE À JOUR LE PROFIL
+  // ========================
+  const handleSave = async () => {
+    setSaving(true)
+    setMessage(null)
+
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const profileData = {
+      id: user.id,
+      prenom: prenom.trim(),
+      nom: nom.trim(),
+      date_naissance: dateNaissance || null,
+      // email n'est pas mis à jour ici car il vient de auth.users
     }
 
-    if (modifierEmail && nouvelEmail && nouvelEmail !== email) {
-      updateData.email = nouvelEmail
-    }
-
-    const { error } = await supabase.auth.updateUser(updateData)
+    const { error } = await supabase
+      .from('profiles')
+      .upsert(profileData, { onConflict: 'id' }) // upsert = insert ou update
+      .select()
 
     if (error) {
-      setMessage("❌ Erreur : " + error.message)
+      console.error('Erreur sauvegarde profil:', error)
+      setMessage({ 
+        text: 'Erreur lors de la sauvegarde. Réessaie.', 
+        type: 'error' 
+      })
     } else {
-      if (modifierEmail && nouvelEmail && nouvelEmail !== email) {
-        setMessage("✅ Un email de confirmation a été envoyé à " + nouvelEmail + ". Clique sur le lien pour valider le changement.")
-        setModifierEmail(false)
-        setNouvelEmail("")
-      } else {
-        setMessage("✅ Profil mis à jour avec succès !")
-      }
+      setMessage({ 
+        text: '✅ Ton profil a été mis à jour avec succès !', 
+        type: 'success' 
+      })
     }
-    setLoading(false)
+
+    setSaving(false)
   }
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push("/connexion")
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <p className="text-white">Chargement de ton profil...</p>
+        </div>
+      </AppLayout>
+    )
   }
 
   return (
-    <div className="p-6">
-      <div className="max-w-lg mx-auto">
+    <AppLayout>
+      <div className="max-w-2xl mx-auto p-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Mon Profil</h1>
+          <p className="text-white/60">Gère tes informations personnelles</p>
+        </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-
-          <div className="flex flex-col items-center mb-8">
-            <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#C8A84E] to-[#D4B85C] flex items-center justify-center text-[#0B1120] text-2xl font-bold mb-3">
-              {prenom ? prenom[0].toUpperCase() : "?"}
+        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+          {/* Avatar (placeholder pour plus tard) */}
+          <div className="flex justify-center mb-8">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#C8A84E] to-[#D4B85C] rounded-2xl flex items-center justify-center text-4xl shadow-lg">
+              👤
             </div>
-            <h1 className="text-xl font-bold text-white">Mon Profil</h1>
-            <p className="text-sm text-white/40">{email}</p>
           </div>
 
-          <form onSubmit={handleSave} className="flex flex-col gap-5">
+          <div className="space-y-6">
+            {/* Email (non modifiable) */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Email</label>
+              <input
+                type="email"
+                value={email}
+                disabled
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/50 cursor-not-allowed"
+              />
+              <p className="text-xs text-white/40">Cet email ne peut pas être modifié ici</p>
+            </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Prénom</label>
+            {/* Prénom */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Prénom</label>
               <input
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
-                className="w-full px-4 py-2 border border-white/10 bg-white/5 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
                 placeholder="Ton prénom"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Nom</label>
+            {/* Nom */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Nom</label>
               <input
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
-                className="w-full px-4 py-2 border border-white/10 bg-white/5 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
-                placeholder="Ton nom"
+                placeholder="Ton nom de famille"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-white/70 mb-1">Email actuel</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="email"
-                  value={email}
-                  disabled
-                  className="w-full px-4 py-2 border border-white/10 bg-white/5 text-white/40 rounded-xl cursor-not-allowed"
-                />
-                <button
-                  type="button"
-                  onClick={() => setModifierEmail(!modifierEmail)}
-                  className="text-xs text-[#C8A84E] hover:text-white whitespace-nowrap underline"
-                >
-                  {modifierEmail ? "Annuler" : "Modifier"}
-                </button>
-              </div>
+            {/* Date de naissance */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Date de naissance</label>
+              <input
+                type="date"
+                value={dateNaissance}
+                onChange={(e) => setDateNaissance(e.target.value)}
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
+              />
             </div>
 
-            {modifierEmail && (
-              <div className="bg-[#C8A84E]/10 p-4 rounded-xl border border-[#C8A84E]/20">
-                <label className="block text-sm font-medium text-[#C8A84E] mb-1">
-                  Nouvel email
-                </label>
-                <input
-                  type="email"
-                  value={nouvelEmail}
-                  onChange={(e) => setNouvelEmail(e.target.value)}
-                  className="w-full px-4 py-2 border border-[#C8A84E]/30 bg-white/5 text-white rounded-xl focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
-                  placeholder="nouveau@email.com"
-                  required
-                />
-                <p className="text-xs text-[#C8A84E]/70 mt-2">
-                  📬 Un email de confirmation sera envoyé à cette adresse. Ton email actuel reste actif jusqu'à confirmation.
-                </p>
+            {/* Message de retour */}
+            {message && (
+              <div className={`p-4 rounded-2xl text-sm font-medium border ${
+                message.type === 'success'
+                  ? 'bg-green-500/10 text-green-300 border-green-500/20'
+                  : 'bg-red-500/10 text-red-300 border-red-500/20'
+              }`}>
+                {message.text}
               </div>
             )}
 
-            {message && (
-              <p className="text-sm text-center py-2 px-4 rounded-xl bg-[#C8A84E]/10 text-[#C8A84E]">
-                {message}
-              </p>
-            )}
-
+            {/* Boutons */}
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+              onClick={handleSave}
+              disabled={saving}
+              className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Sauvegarde..." : "💾 Sauvegarder"}
+              {saving ? 'Enregistrement en cours...' : '💾 Enregistrer mes informations'}
             </button>
 
-          </form>
-
-          <div className="mt-6 pt-6 border-t border-white/10">
             <button
-              onClick={handleLogout}
-              className="w-full py-3 border border-red-500/30 text-red-300 rounded-xl hover:bg-red-500/10 transition text-sm font-medium"
+              onClick={() => router.push('/dashboard')}
+              className="w-full text-sm text-white/40 hover:text-[#C8A84E] transition py-2"
             >
-              🚪 Se déconnecter
+              ← Retour au dashboard
             </button>
           </div>
-
         </div>
       </div>
-    </div>
+    </AppLayout>
   )
 }
