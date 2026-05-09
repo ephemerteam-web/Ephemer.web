@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants'
@@ -8,6 +8,7 @@ import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants'
 export default function NouveauContact() {
   const router = useRouter()
 
+  // === États du formulaire ===
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')
@@ -19,6 +20,84 @@ export default function NouveauContact() {
   const [estFavori, setEstFavori] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
+
+  // === NOUVEAUX États pour le Contact Picker ===
+  const [isMobile, setIsMobile] = useState(false)
+  const [supporteContactPicker, setSupporteContactPicker] = useState(false)
+  const [importEnCours, setImportEnCours] = useState(false)
+
+  // Détection du mobile + support de l'API Contacts Picker
+  useEffect(() => {
+    const userAgent = navigator.userAgent.toLowerCase()
+    const estMobile = /android|iphone|ipad|ipod|blackberry|windows phone/.test(userAgent)
+    setIsMobile(estMobile)
+
+    // Vérifie si le navigateur supporte l'API Contacts Picker
+    if ('contacts' in navigator && 'select' in (navigator as any).contacts) {
+      setSupporteContactPicker(true)
+    }
+  }, [])
+
+  // Fonction principale : Importer les contacts depuis le téléphone
+  const importerDepuisTelephone = async () => {
+    setImportEnCours(true)
+    setErreur('')
+
+    try {
+      // Ouvre le sélecteur de contacts du téléphone
+      const contactsSelectionnes = await (navigator as any).contacts.select(
+        ['name', 'email', 'tel'], 
+        { multiple: true }
+      )
+
+      if (!contactsSelectionnes || contactsSelectionnes.length === 0) {
+        setErreur("Aucun contact n'a été sélectionné.")
+        return
+      }
+
+      // On prend le premier contact pour l'instant (on pourra améliorer plus tard)
+      const contact = contactsSelectionnes[0]
+
+      // Remplissage automatique des champs
+      if (contact.name && contact.name.length > 0) {
+        const nomComplet = contact.name[0]
+        const parties = nomComplet.trim().split(/\s+/)
+        setPrenom(parties[0] || '')
+        setNom(parties.slice(1).join(' ') || '')
+      }
+
+      if (contact.email && contact.email.length > 0) {
+        setEmail(contact.email[0])
+      }
+
+      if (contact.tel && contact.tel.length > 0) {
+        let numero = contact.tel[0]
+          .replace(/\s+/g, '')           // Supprime les espaces
+          .replace(/\+33/, '')           // Enlève le +33
+          .replace(/^0/, '')             // Enlève le 0 du début si présent
+          
+        setTelephoneNumero(numero)
+        
+        // On force l'indicatif à +33 si c'est un numéro français
+        if (contact.tel[0].includes('+33') || (contact.tel[0].startsWith('0') && numero.length >= 9)) {
+          setTelephoneIndicatif('+33')
+        }
+      }
+
+      setErreur(`✅ ${contactsSelectionnes.length} contact(s) importé(s) avec succès ! Vous pouvez les modifier avant d'enregistrer.`)
+      
+    } catch (error: any) {
+      console.error('Contact Picker Error:', error)
+      
+      if (error.name === 'AbortError') {
+        setErreur("Import annulé. Vous pouvez réessayer.")
+      } else {
+        setErreur("Impossible d'accéder aux contacts. Cette fonctionnalité marche mieux sur Android Chrome.")
+      }
+    } finally {
+      setImportEnCours(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,8 +127,8 @@ export default function NouveauContact() {
       })
 
     if (error) {
-      setErreur('Une erreur est survenue. Réessaie !')
-      console.log(error)
+      setErreur('Une erreur est survenue lors de l\'enregistrement. Réessaie !')
+      console.error(error)
     } else {
       router.push('/dashboard/contacts')
       router.refresh()
@@ -66,8 +145,35 @@ export default function NouveauContact() {
           👤 Nouveau contact
         </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* === Bouton Import Contact Picker (visible seulement sur mobile) === */}
+        {isMobile && supporteContactPicker && (
+          <div className="mb-8">
+            <button
+              onClick={importerDepuisTelephone}
+              disabled={importEnCours}
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-600 hover:to-teal-500 
+                         text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 
+                         transition-all duration-200 shadow-lg disabled:opacity-70 text-base"
+            >
+              {importEnCours ? '⏳ Ouverture du carnet d\'adresses...' : '📱 Importer depuis mes contacts téléphone'}
+            </button>
+            <p className="text-center text-xs text-white/50 mt-3">
+              Le téléphone va ouvrir votre carnet d'adresses • Vous choisissez qui importer
+            </p>
+          </div>
+        )}
 
+        {isMobile && !supporteContactPicker && (
+          <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/30 rounded-2xl">
+            <p className="text-amber-400 text-sm">
+              ⚠️ L'import automatique depuis les contacts n'est pas supporté par votre navigateur.<br />
+              Utilisez le formulaire ci-dessous.
+            </p>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Ton formulaire existant reste exactement pareil */}
           <div>
             <label className="text-sm font-semibold text-white/70">Prénom *</label>
             <input
@@ -186,16 +292,19 @@ export default function NouveauContact() {
             </div>
           </div>
 
-          {erreur && <p className="text-red-400 text-sm">{erreur || MESSAGES_UI.erreur_genérique}</p>}
+          {erreur && (
+            <p className={`text-sm ${erreur.includes('✅') ? 'text-emerald-400' : 'text-red-400'}`}>
+              {erreur}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={chargement}
             className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
           >
-            {chargement ? 'Enregistrement...' : '💾 Enregistrer le contact'}
+            {chargement ? 'Enregistrement en cours...' : '💾 Enregistrer le contact'}
           </button>
-
         </form>
       </div>
     </div>

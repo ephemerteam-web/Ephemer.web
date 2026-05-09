@@ -4,6 +4,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { SAINTS } from '@/lib/saints'
+import Link from 'next/link';
+import { useUserProfile } from '@/lib/hooks/useUserProfile'
+
+
 
 type Contact = {
   id: string
@@ -18,13 +22,14 @@ export default function Dashboard() {
   const [prenom, setPrenom] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [contacts, setContacts] = useState<Contact[]>([])
+  const { profile, loading: profileLoading } = useUserProfile()
+
 
   useEffect(() => {
     const init = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/connexion'); return }
       setUserName(session.user.email?.split('@')[0] ?? null)
-      setPrenom(session.user.user_metadata?.prenom ?? null)
       const { data } = await supabase
         .from('contacts')
         .select('id, nom, prenom, date_naissance')
@@ -111,9 +116,10 @@ export default function Dashboard() {
         <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Tableau de bord</h2>
 
         {/* Bienvenue */}
-        {prenom ? (
+        {profile?.prenom ? (
+
           <p className="text-indigo-200 text-sm mb-6">
-            Bienvenue, <span className="font-semibold">{prenom}</span> 👋
+            Bienvenue, <span className="font-semibold">{profile.prenom}</span> 👋
           </p>
         ) : userName && (
           <p className="text-indigo-200 text-sm mb-6">
@@ -300,16 +306,28 @@ export default function Dashboard() {
 
         {/* Footer */}
 <div className="mt-12 pt-6 border-t border-white/10 text-center space-y-3">
-  <p className="text-indigo-300 text-sm">Made with 💜 • Version 0.2</p>
-  
-  <a
-    href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-  >
-    <span>💬</span>
-    Contacter le support
-  </a>
+  <p className="text-indigo-300 text-sm">
+    Made with 💜 • Version Alpha 0.2
+  </p>
+
+  <div className="flex justify-center gap-4 flex-wrap">
+    <a
+      href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      <span>💬</span>
+      Contacter le support
+    </a>
+
+    <Link
+      href="/confidentialite"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      🔒 Politique de confidentialité
+    </Link>
+  </div>
 </div>
+
 
       </div>
 

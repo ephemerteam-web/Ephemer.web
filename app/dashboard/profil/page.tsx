@@ -5,28 +5,30 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import AppLayout from '@/components/AppLayout'
 
+import { INDICATIFS_PAYS, MESSAGES_UI } from '@/lib/constants'
+
 export default function DashboardProfil() {
   const router = useRouter()
 
-  // États du formulaire
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')
-  const [email, setEmail] = useState('') // Email vient de Supabase Auth (non modifiable)
+  const [email, setEmail] = useState('')
+  const [telephoneIndicatif, setTelephoneIndicatif] = useState('+33')
+  const [telephoneNumero, setTelephoneNumero] = useState('')
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
 
   // ========================
-  // 1. CHARGER LES DONNÉES DU PROFIL
+  // 1. CHARGER LE PROFIL
   // ========================
   useEffect(() => {
     async function loadProfile() {
       setLoading(true)
       setMessage(null)
 
-      // Récupérer l'utilisateur connecté
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
@@ -36,28 +38,21 @@ export default function DashboardProfil() {
 
       setEmail(user.email || '')
 
-      // Charger les infos depuis la table "profiles"
       const { data: profile, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single()
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          // Pas encore de profil → on laisse les champs vides
-          console.log('Aucun profil trouvé, création possible')
-        } else {
-          console.error('Erreur lors du chargement du profil:', error)
-          setMessage({ text: 'Erreur lors du chargement de ton profil', type: 'error' })
-        }
+      if (error && error.code !== 'PGRST116') {
+        console.error('Erreur chargement profil:', error)
+        setMessage({ text: MESSAGES_UI.erreur_genérique, type: 'error' })
       } else if (profile) {
         setPrenom(profile.prenom || '')
         setNom(profile.nom || '')
-        // Formatage de la date pour l'input type="date"
-        if (profile.date_naissance) {
-          setDateNaissance(profile.date_naissance)
-        }
+        setTelephoneIndicatif(profile.telephone_indicatif || '+33')
+        setTelephoneNumero(profile.telephone_numero || '')
+        if (profile.date_naissance) setDateNaissance(profile.date_naissance)
       }
 
       setLoading(false)
@@ -67,7 +62,7 @@ export default function DashboardProfil() {
   }, [router])
 
   // ========================
-  // 2. SAUVEGARDER / METTRE À JOUR LE PROFIL
+  // 2. SAUVEGARDER
   // ========================
   const handleSave = async () => {
     setSaving(true)
@@ -76,63 +71,47 @@ export default function DashboardProfil() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    const profileData = {
-      id: user.id,
-      prenom: prenom.trim(),
-      nom: nom.trim(),
-      date_naissance: dateNaissance || null,
-      // email n'est pas mis à jour ici car il vient de auth.users
-    }
-
     const { error } = await supabase
       .from('profiles')
-      .upsert(profileData, { onConflict: 'id' }) // upsert = insert ou update
-      .select()
+      .upsert({
+        id: user.id,
+        prenom: prenom.trim() || null,
+        nom: nom.trim() || null,
+        date_naissance: dateNaissance || null,
+        telephone_indicatif: telephoneIndicatif,
+        telephone_numero: telephoneNumero.trim() || null,
+      }, { onConflict: 'id' })
 
     if (error) {
-      console.error('Erreur sauvegarde profil:', error)
-      setMessage({ 
-        text: 'Erreur lors de la sauvegarde. Réessaie.', 
-        type: 'error' 
-      })
+      setMessage({ text: MESSAGES_UI.erreur_genérique, type: 'error' })
     } else {
-      setMessage({ 
-        text: '✅ Ton profil a été mis à jour avec succès !', 
-        type: 'success' 
-      })
+      setMessage({ text: '✅ Ton profil a été mis à jour avec succès !', type: 'success' })
     }
 
     setSaving(false)
   }
 
   if (loading) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <p className="text-white">Chargement de ton profil...</p>
-        </div>
-      </AppLayout>
-    )
+    return <AppLayout><div className="p-8 text-white">Chargement...</div></AppLayout>
   }
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto p-8">
+      <div className="max-w-2xl mx-auto p-6 md:p-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Mon Profil</h1>
           <p className="text-white/60">Gère tes informations personnelles</p>
         </div>
 
         <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
-          {/* Avatar (placeholder pour plus tard) */}
           <div className="flex justify-center mb-8">
-            <div className="w-24 h-24 bg-gradient-to-br from-[#C8A84E] to-[#D4B85C] rounded-2xl flex items-center justify-center text-4xl shadow-lg">
+            <div className="w-24 h-24 bg-gradient-to-br from-[#C8A84E] to-[#D4B85C] rounded-2xl flex items-center justify-center text-5xl">
               👤
             </div>
           </div>
 
           <div className="space-y-6">
-            {/* Email (non modifiable) */}
+            {/* Email */}
             <div className="flex flex-col gap-1.5">
               <label className="text-sm font-semibold text-white/70">Email</label>
               <input
@@ -141,7 +120,6 @@ export default function DashboardProfil() {
                 disabled
                 className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white/50 cursor-not-allowed"
               />
-              <p className="text-xs text-white/40">Cet email ne peut pas être modifié ici</p>
             </div>
 
             {/* Prénom */}
@@ -151,8 +129,7 @@ export default function DashboardProfil() {
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
-                placeholder="Ton prénom"
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent"
               />
             </div>
 
@@ -163,8 +140,7 @@ export default function DashboardProfil() {
                 type="text"
                 value={nom}
                 onChange={(e) => setNom(e.target.value)}
-                placeholder="Ton nom de famille"
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent"
               />
             </div>
 
@@ -175,35 +151,67 @@ export default function DashboardProfil() {
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
-                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent transition"
+                className="bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent"
               />
             </div>
 
-            {/* Message de retour */}
+            {/* Téléphone - Version améliorée */}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-white/70">Téléphone</label>
+              <div className="flex gap-3">
+                <select
+                  value={telephoneIndicatif}
+                  onChange={(e) => setTelephoneIndicatif(e.target.value)}
+                  className="bg-zinc-900 border border-white/20 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent appearance-none cursor-pointer min-w-[180px]"
+                >
+                  {INDICATIFS_PAYS.map((item) => (
+                    <option 
+                      key={item.code} 
+                      value={item.code}
+                      className="bg-zinc-900 text-white py-2"
+                    >
+                      {item.pays}
+                    </option>
+                  ))}
+                </select>
+
+                <input
+                  type="tel"
+                  value={telephoneNumero}
+                  onChange={(e) => setTelephoneNumero(e.target.value)}
+                  placeholder={MESSAGES_UI.placeholder_telephone}
+                  className="flex-1 bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-white/40 mt-1">
+                {MESSAGES_UI.info_telephone}
+              </p>
+            </div>
+
+            {/* Message */}
             {message && (
-              <div className={`p-4 rounded-2xl text-sm font-medium border ${
-                message.type === 'success'
-                  ? 'bg-green-500/10 text-green-300 border-green-500/20'
-                  : 'bg-red-500/10 text-red-300 border-red-500/20'
+              <div className={`p-4 rounded-2xl text-sm border ${
+                message.type === 'success' 
+                  ? 'bg-green-500/10 text-green-400 border-green-500/30' 
+                  : 'bg-red-500/10 text-red-400 border-red-500/30'
               }`}>
                 {message.text}
               </div>
             )}
 
-            {/* Boutons */}
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-2xl hover:scale-[1.02] transition-all disabled:opacity-70"
             >
-              {saving ? 'Enregistrement en cours...' : '💾 Enregistrer mes informations'}
+              {saving ? 'Enregistrement...' : '💾 Enregistrer mes informations'}
             </button>
 
             <button
-              onClick={() => router.push('/dashboard')}
-              className="w-full text-sm text-white/40 hover:text-[#C8A84E] transition py-2"
+              disabled
+              className="w-full py-3 text-red-400/60 text-sm border border-red-500/20 rounded-2xl cursor-not-allowed"
             >
-              ← Retour au dashboard
+              🗑️ Supprimer mon compte (bientôt disponible)
             </button>
           </div>
         </div>

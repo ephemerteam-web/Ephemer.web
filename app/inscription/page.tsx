@@ -55,25 +55,34 @@ export default function InscriptionPage() {
   }
 
   const getErrorMessage = (errorMessage: string) => {
-    const lowerMessage = errorMessage.toLowerCase()
+  const lowerMessage = errorMessage.toLowerCase()
 
-    if (
-      lowerMessage.includes('email rate limit') ||
-      lowerMessage.includes('rate limit')
-    ) {
-      return "⏳ Trop de tentatives d'inscription. Attends 30 à 60 secondes avant de réessayer."
-    }
-
-    if (
-      lowerMessage.includes('already registered') ||
-      lowerMessage.includes('already been registered') ||
-      lowerMessage.includes('user already registered')
-    ) {
-      return "❌ Cet email est déjà utilisé. Essaie de te connecter."
-    }
-
-    return `❌ ${errorMessage}`
+  if (
+    lowerMessage.includes('email rate limit') ||
+    lowerMessage.includes('rate limit')
+  ) {
+    return "⏳ Trop de tentatives. Attends quelques secondes avant de réessayer."
   }
+
+  if (
+    lowerMessage.includes('already registered') ||
+    lowerMessage.includes('already been registered') ||
+    lowerMessage.includes('user already registered')
+  ) {
+    return "ACCOUNT_EXISTS"
+  }
+
+  if (lowerMessage.includes('invalid email')) {
+    return "❌ L'adresse email n'est pas valide."
+  }
+
+  if (lowerMessage.includes('password')) {
+    return "❌ Le mot de passe doit contenir au moins 6 caractères."
+  }
+
+  return "❌ Une erreur est survenue. Réessaie."
+}
+
 
   const handleInscription = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -243,16 +252,32 @@ export default function InscriptionPage() {
           </form>
 
           {message && (
-            <div
-              className={`mt-4 p-3 rounded-xl text-sm ${
-                isError
-                  ? 'bg-red-500/10 text-red-300 border border-red-500/20'
-                  : 'bg-green-500/10 text-green-300 border border-green-500/20'
-              }`}
-            >
-              {message}
-            </div>
-          )}
+  <div
+    className={`mt-4 p-4 rounded-xl text-sm ${
+      isError
+        ? 'bg-red-500/10 text-red-300 border border-red-500/20'
+        : 'bg-green-500/10 text-green-300 border border-green-500/20'
+    }`}
+  >
+
+    {/* CAS EMAIL DÉJÀ EXISTANT */}
+    {message === 'ACCOUNT_EXISTS' ? (
+      <div className="flex flex-col gap-2">
+        <span>❌ Cet email est déjà utilisé.</span>
+        <Link
+          href="/connexion"
+          className="text-[#C8A84E] underline text-sm"
+        >
+          👉 Se connecter maintenant
+        </Link>
+      </div>
+    ) : (
+      <span>{message}</span>
+    )}
+
+  </div>
+)}
+
 
           <p className="text-center text-sm text-white/40 mt-6">
             Déjà un compte ?{' '}

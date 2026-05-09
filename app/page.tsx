@@ -1,4 +1,10 @@
+"use client"
+
 import Link from "next/link"
+import { useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
+
 
 // ============================================================
 // PAGE D'ACCUEIL EphemER.NAME
@@ -6,6 +12,22 @@ import Link from "next/link"
 // ============================================================
 
 export default function Accueil() {
+  const router = useRouter()
+
+  useEffect(() => {
+    const checkUser = async () => {
+
+      // On demande à Supabase : "y a-t-il un utilisateur connecté ?"
+      const { data } = await supabase.auth.getSession()
+
+      // Si OUI → on redirige vers le dashboard
+      if (data.session) {
+        router.push("/dashboard")
+      }
+    }
+
+    checkUser()
+  }, [])
   return (
     // ==========================================
     // CONTENEUR PRINCIPAL
@@ -102,13 +124,7 @@ export default function Accueil() {
 
         {/* Liens de navigation (Connexion) */}
         <div className="flex items-center gap-4">
-          <Link 
-            href="/connexion" 
-            className="text-sm text-white/60 hover:text-[#C8A84E] transition-colors duration-200"
-          >
-            Se connecter
-          </Link>
-          <Link 
+                    <Link 
             href="/inscription" 
             className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
           >
@@ -203,30 +219,28 @@ export default function Accueil() {
         {/* ==========================================
             BOUTONS D'ACTION
             ========================================== */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center">
-          
-          {/* BOUTON PRINCIPAL "Commencer" */}
-          {/* Effet de brillance au survol avec un dégradé doré */}
-          <Link href="/inscription">
-            <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
-              {/* Effet de brillance qui traverse le bouton au survol */}
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              <span className="relative z-10 flex items-center gap-2">
-                ✨ Commencer gratuitement
-              </span>
-            </button>
-          </Link>
+        <div className="flex flex-col items-center gap-4">
 
-          {/* BOUTON SECONDAIRE "Se connecter" */}
-          {/* Style minimal avec bordure fine */}
-          <Link href="/connexion">
-            <button className="group text-white/60 hover:text-white px-8 py-4 rounded-full border border-white/10 hover:border-[#C8A84E]/30 hover:bg-white/5 transition-all duration-300 flex items-center gap-2">
-              Se connecter
-              {/* Flèche qui se déplace au survol */}
-              <span className="transition-transform duration-300 group-hover:translate-x-1">→</span>
-            </button>
-          </Link>
-        </div>
+  {/* CTA principal */}
+  <Link href="/inscription">
+    <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
+      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+      <span className="relative z-10 flex items-center gap-2">
+        ✨ Commencer gratuitement
+      </span>
+    </button>
+  </Link>
+
+  {/* Lien secondaire discret */}
+  <Link 
+    href="/connexion"
+    className="text-white/40 hover:text-white text-sm transition-colors duration-200"
+  >
+    Déjà un compte ? Se connecter →
+  </Link>
+
+</div>
+
 
         {/* ==========================================
             3 ARGUMENTS VISUELS (cartes)
@@ -271,14 +285,36 @@ export default function Accueil() {
         </div>
 
         {/* ==========================================
-            FOOTER DISCRET
-            Tout en bas de la page
-            ========================================== */}
-        <div className="mt-16 pb-8 text-center">
-          <p className="text-white/15 text-xs tracking-wider uppercase">
-            © 2025 Ephemer.name — Votre compagnon nocturne
-          </p>
-        </div>
+    FOOTER DISCRET
+    ========================================== */}
+<div className="mt-16 pb-8 text-center space-y-4">
+
+  <p className="text-white/15 text-xs tracking-wider uppercase">
+    © 2026 Ephemer.name — Votre compagnon nocturne
+  </p>
+
+  {/* Liens footer */}
+  <div className="flex justify-center gap-6 flex-wrap text-xs">
+
+    {/* Lien confidentialité */}
+    <Link 
+      href="/confidentialite"
+      className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200"
+    >
+      🔒 Confidentialité
+    </Link>
+
+    {/* Support email */}
+    <a
+      href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+      className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200"
+    >
+      💬 Support
+    </a>
+
+  </div>
+</div>
+
 
       </div>
     </main>
