@@ -15,6 +15,10 @@ type Contact = {
   prenom: string
   date_naissance: string | null
 }
+type Profile = {
+  prenom: string
+}
+
 
 export default function Dashboard() {
   const router = useRouter()
@@ -22,7 +26,8 @@ export default function Dashboard() {
   const [prenom, setPrenom] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [contacts, setContacts] = useState<Contact[]>([])
-  const { profile, loading: profileLoading } = useUserProfile()
+  const [profile, setProfile] = useState<Profile | null>(null)
+
 
 
   useEffect(() => {
