@@ -32,13 +32,12 @@ type DatesPossibles = {
 
 type ChoixDateEnvoi = "jourj" | "j1" | "j7" | "custom";
 
-// ✅ Map des event types qui ont une logique de calcul automatique
-// (les autres comme "mariage", "naissance", "autre" seront traités comme "jour_special")
-const EVENT_TYPE_MAP: Partial<Record<string, TypeEvenement>> = {
+const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
   anniversaire: "anniversaire",
   fete_prenomale: "fete_prenomale",
   jour_special: "jour_special",
 };
+
 
 // ✅ Liste des events qui nécessitent une date manuelle
 const EVENTS_AVEC_DATE_MANUELLE = ["jour_special", "mariage", "naissance", "autre"];
