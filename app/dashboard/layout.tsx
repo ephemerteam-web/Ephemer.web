@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { DrawerProvider } from '@/lib/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
 import NotificationBell from '@/components/NotificationBell'
+import { Analytics } from "@vercel/analytics/next"
 
 
 export default function DashboardLayout({

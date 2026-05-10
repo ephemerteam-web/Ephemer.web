@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-
+import InstallPWAButton from "@/components/InstallPWAButton"   // ← AJOUTÉ POUR LE BOUTON PWA
 
 // ============================================================
 // PAGE D'ACCUEIL EphemER.NAME
@@ -36,14 +36,14 @@ export default function Accueil() {
     // overflow-hidden = cache tout ce qui dépasse (les étoiles décoratives)
     // ==========================================
     <main className="min-h-screen bg-[#0B1120] flex flex-col items-center relative overflow-hidden">
-      
+
       {/* ==========================================
           ÉTOILES EN ARRIÈRE-PLAN
           Des petits points dorés positionnés en absolu
           pour créer un ciel étoilé subtil
           pointer-events-none = la souris les ignore (on peut cliquer à travers)
           ========================================== */}
-      
+
       {/* Groupe d'étoiles en haut à gauche */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Étoile 1 - Grande et brillante */}
@@ -84,7 +84,7 @@ export default function Accueil() {
           backdrop-blur = effet "verre dépoli" derrière
           ========================================== */}
       <nav className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between z-10">
-        
+
         {/* LOGO - Lune + Texte */}
         <Link href="/" className="flex items-center gap-3 group">
           {/* Icône Lune (SVG inline pour un rendu net) */}
@@ -110,7 +110,7 @@ export default function Accueil() {
             {/* Petite étoile à l'intérieur */}
             <circle cx="15" cy="9" r="1" fill="currentColor" />
           </svg>
-          
+
           {/* Texte du logo */}
           <span className="text-xl font-semibold tracking-tight">
             {/* "Ephemer" en blanc */}
@@ -124,7 +124,7 @@ export default function Accueil() {
 
         {/* Liens de navigation (Connexion) */}
         <div className="flex items-center gap-4">
-                    <Link 
+          <Link 
             href="/inscription" 
             className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
           >
@@ -138,7 +138,7 @@ export default function Accueil() {
           C'est la partie principale qu'on voit en premier
           ========================================== */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 z-10 max-w-4xl mx-auto text-center">
-        
+
         {/* Badge "Rappels intelligents" en haut du hero */}
         <div className="mb-10 inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-5 py-2 backdrop-blur-sm">
           {/* Point vert qui pulse (clignote doucement) */}
@@ -153,7 +153,7 @@ export default function Accueil() {
         <div className="mb-8 relative">
           {/* Lueur dorée derrière le logo */}
           <div className="absolute inset-0 bg-[#C8A84E]/10 blur-3xl rounded-full scale-150" />
-          
+
           <svg 
             className="w-24 h-24 md:w-32 md:h-32 relative z-10 drop-shadow-2xl" 
             viewBox="0 0 120 120" 
@@ -195,7 +195,6 @@ export default function Accueil() {
         </div>
 
         {/* TITRE PRINCIPAL */}
-        {/* tracking-tight = lettres un peu rapprochées (plus élégant) */}
         <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-6">
           {/* "Ephemer" en blanc pur */}
           <span className="inline-block">
@@ -221,26 +220,28 @@ export default function Accueil() {
             ========================================== */}
         <div className="flex flex-col items-center gap-4">
 
-  {/* CTA principal */}
-  <Link href="/inscription">
-    <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
-      <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-      <span className="relative z-10 flex items-center gap-2">
-        ✨ Commencer gratuitement
-      </span>
-    </button>
-  </Link>
+          {/* === BOUTON SIMULATION PWA AJOUTÉ ICI === */}
+          <InstallPWAButton />
 
-  {/* Lien secondaire discret */}
-  <Link 
-    href="/connexion"
-    className="text-white/40 hover:text-white text-sm transition-colors duration-200"
-  >
-    Déjà un compte ? Se connecter →
-  </Link>
+          {/* CTA principal (ton bouton original) */}
+          <Link href="/inscription">
+            <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
+              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+              <span className="relative z-10 flex items-center gap-2">
+                ✨ Commencer gratuitement
+              </span>
+            </button>
+          </Link>
 
-</div>
+          {/* Lien secondaire discret */}
+          <Link 
+            href="/connexion"
+            className="text-white/40 hover:text-white text-sm transition-colors duration-200"
+          >
+            Déjà un compte ? Se connecter →
+          </Link>
 
+        </div>
 
         {/* ==========================================
             3 ARGUMENTS VISUELS (cartes)
@@ -314,7 +315,6 @@ export default function Accueil() {
 
   </div>
 </div>
-
 
       </div>
     </main>

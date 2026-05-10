@@ -103,14 +103,14 @@ export async function POST(request: Request) {
     `.trim();
 
     // Appel à l'API Mammouth
-    const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat", {
+    const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${process.env.MAMMOUTH_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "mixtral-medium",
+        model: "gpt-4.1",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
       }),
