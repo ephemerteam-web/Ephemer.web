@@ -32,6 +32,9 @@ type DatesPossibles = {
 
 type ChoixDateEnvoi = "jourj" | "j1" | "j7" | "custom";
 
+const testType: TypeEvenement = "jour_special";
+
+
 const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
   anniversaire: "anniversaire",
   fete_prenomale: "fete_prenomale",
