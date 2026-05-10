@@ -30,32 +30,25 @@ export default function ConnexionPage() {
 
     if (error) {
       setIsError(true)
-      setMessage('❌ Erreur : ' + error.message)
+      setMessage('❌ ' + error.message)
       setLoading(false)
       return
     }
 
     if (!data.user) {
       setIsError(true)
-      setMessage("❌ Impossible de récupérer l'utilisateur connecté.")
+      setMessage("❌ Impossible de récupérer l'utilisateur.")
       setLoading(false)
       return
     }
 
     const userId = data.user.id
 
-    const { data: profile, error: profileError } = await supabase
+    const { data: profile } = await supabase
       .from('profiles')
-      .select('id, prenom, nom, date_naissance')
+      .select('prenom, nom, date_naissance')
       .eq('id', userId)
       .maybeSingle()
-
-    if (profileError) {
-      setIsError(true)
-      setMessage('❌ Connexion réussie, mais impossible de lire le profil : ' + profileError.message)
-      setLoading(false)
-      return
-    }
 
     const profilIncomplet =
       !profile ||
@@ -66,17 +59,13 @@ export default function ConnexionPage() {
     setIsError(false)
 
     if (profilIncomplet) {
-      setMessage('✅ Connexion réussie ! Complète ton profil.')
-      setTimeout(() => {
-        router.push('/completer-profil')
-      }, 800)
+      setMessage('✅ Complète ton profil')
+      setTimeout(() => router.push('/completer-profil'), 800)
       return
     }
 
-    setMessage('✅ Connexion réussie ! Redirection...')
-    setTimeout(() => {
-      router.push('/dashboard')
-    }, 800)
+    setMessage('✅ Connexion réussie')
+    setTimeout(() => router.push('/dashboard'), 800)
   }
 
   const handleMotDePasseOublie = async () => {
@@ -85,7 +74,7 @@ export default function ConnexionPage() {
 
     if (!email) {
       setIsError(true)
-      setMessage("❌ Entre d'abord ton adresse email.")
+      setMessage("❌ Entre ton email")
       return
     }
 
@@ -95,53 +84,55 @@ export default function ConnexionPage() {
 
     if (error) {
       setIsError(true)
-      setMessage('❌ Erreur : ' + error.message)
+      setMessage('❌ ' + error.message)
     } else {
-      setIsError(false)
-      setMessage('📧 Email envoyé ! Vérifie ta boîte mail.')
+      setMessage('📧 Email envoyé')
     }
   }
 
   return (
     <AppLayout>
-      <div className="min-h-screen flex items-center justify-center px-4">
-        <div className="w-full max-w-md relative">
+      <div className="min-h-screen flex flex-col justify-center px-4 pb-10">
 
-          {/* CARTE */}
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm relative">
+        <div className="w-full max-w-md mx-auto">
 
-            {/* FLECHE RETOUR */}
+          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-sm relative">
+
+            {/* RETOUR */}
             <Link
               href="/"
-              className="absolute top-5 left-5 text-white/40 hover:text-white transition text-sm"
+              className="absolute top-4 left-4 text-white/40 text-lg"
             >
               ←
             </Link>
 
             {/* HEADER */}
-            <div className="text-center mb-8">
-              <div className="text-5xl mb-3">🌙</div>
-              <h1 className="text-3xl font-black text-white">Bon retour !</h1>
-              <p className="text-white/40 mt-2 text-sm">
-                Connecte-toi pour retrouver tes événements
+            <div className="text-center mb-8 mt-2">
+              <div className="text-4xl mb-2">🌙</div>
+              <h1 className="text-2xl sm:text-3xl font-black text-white">
+                Bon retour
+              </h1>
+              <p className="text-white/50 text-sm mt-2">
+                Connecte-toi à ton espace
               </p>
             </div>
 
-            {/* FORM */}
             <form onSubmit={handleConnexion} className="flex flex-col gap-5">
 
               {/* EMAIL */}
               <div>
                 <label className="text-sm text-white/70">
-                  Adresse email
+                  Email
                 </label>
                 <input
                   type="email"
+                  inputMode="email"
+                  autoComplete="email"
                   placeholder="ton@email.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-1 bg-white text-black border border-white/20 rounded-xl px-4 py-3 w-full placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  className="mt-2 w-full bg-white text-black rounded-2xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
                 />
               </div>
 
@@ -150,31 +141,33 @@ export default function ConnexionPage() {
                 <label className="text-sm text-white/70">
                   Mot de passe
                 </label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Ton mot de passe"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className="mt-1 bg-white text-black border border-white/20 rounded-xl px-4 py-3 w-full placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
-                />
-              </div>
+                <div className="relative mt-2">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="w-full bg-white text-black rounded-2xl px-4 py-4 pr-12 text-base focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  />
 
-              {/* SHOW PASSWORD */}
-              <label className="text-xs text-white/60 flex gap-2 items-center">
-                <input
-                  type="checkbox"
-                  checked={showPassword}
-                  onChange={(e) => setShowPassword(e.target.checked)}
-                />
-                Afficher le mot de passe
-              </label>
+                  {/* TOGGLE VISIBILITÉ */}
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-600"
+                  >
+                    {showPassword ? '🙈' : '👁'}
+                  </button>
+                </div>
+              </div>
 
               {/* FORGOT PASSWORD */}
               <button
                 type="button"
                 onClick={handleMotDePasseOublie}
-                className="text-sm text-[#C8A84E] hover:underline text-right"
+                className="text-sm text-[#C8A84E] text-right"
               >
                 Mot de passe oublié ?
               </button>
@@ -183,9 +176,9 @@ export default function ConnexionPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-black py-3 rounded-xl font-bold transition disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.01]"
+                className="w-full mt-2 bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-black py-4 rounded-2xl text-lg font-bold active:scale-[0.98] transition disabled:opacity-50"
               >
-                {loading ? 'Connexion...' : 'Me connecter'}
+                {loading ? 'Connexion...' : 'Se connecter'}
               </button>
 
             </form>
@@ -193,7 +186,7 @@ export default function ConnexionPage() {
             {/* MESSAGE */}
             {message && (
               <div
-                className={`mt-4 p-3 rounded-xl text-sm ${
+                className={`mt-5 p-4 rounded-2xl text-sm ${
                   isError
                     ? 'bg-red-500/10 text-red-300 border border-red-500/20'
                     : 'bg-green-500/10 text-green-300 border border-green-500/20'
@@ -203,19 +196,21 @@ export default function ConnexionPage() {
               </div>
             )}
 
-            {/* SIGNUP LINK */}
+            {/* SIGNUP */}
             <p className="text-center text-sm text-white/40 mt-6">
               Pas encore de compte ?{' '}
-              <Link href="/inscription" className="text-[#C8A84E] hover:underline">
+              <Link href="/inscription" className="text-[#C8A84E]">
                 S'inscrire
               </Link>
             </p>
 
           </div>
+
+          <p className="text-center text-white/20 text-xs mt-6">
+            © 2026 Ephemer
+          </p>
+
         </div>
-
-        <p className="text-center text-white/20 text-xs mt-8">© 2026 Ephemer — Fait avec 💜</p>
-
       </div>
     </AppLayout>
   )

@@ -1,74 +1,139 @@
 // app/api/generate-message/route.ts
-// Cette route reçoit une requête du navigateur, appelle l'IA Mammouth, et renvoie le message généré.
-
 import { NextResponse } from "next/server";
+import {
+  TYPES_RELATION,
+  TYPES_EVENEMENT,
+  TONS_MESSAGE,
+  MESSAGES_UI
+} from "@/lib/constants";
 
-// POST = type de requête utilisé quand on envoie des données au serveur
+// Type pour les objets avec `value` et `label`
+type LabelValueItem = { value: string; label: string };
+
+// Fonction utilitaire pour récupérer le label à partir de la valeur
+function getLabelFromValue(
+  array: readonly LabelValueItem[],
+  value: string
+): string {
+  const item = array.find((item) => item.value === value);
+  return item ? item.label : array[0]?.label || value;
+}
+
+// Sets pour validation rapide
+const VALID_EVENT_TYPES = new Set(TYPES_EVENEMENT.map(e => e.value));
+const VALID_RELATIONS = new Set(TYPES_RELATION.map(r => r.value));
+const VALID_TONES = new Set(TONS_MESSAGE.map(t => t.value));
+
+// 👇 NOUVEAU : Fonction pour formater une date en français (ex: "15 octobre 2023")
+function formatDateForPrompt(dateString: string): string {
+  const date = new Date(dateString);
+  if (isNaN(date.getTime())) return dateString; // Fallback si date invalide
+  return date.toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
 export async function POST(request: Request) {
   try {
-    // 1. On récupère les données envoyées par le navigateur (nom du contact, ton souhaité, etc.)
-    const { firstName, lastName, age, relation, tone, eventType } = await request.json();
+    const body = await request.json();
+    const {
+      firstName = "",
+      lastName = "",
+      age = null,
+      eventType = TYPES_EVENEMENT[0].value,
+      relation = TYPES_RELATION[0].value,
+      tone = TONS_MESSAGE[0].value,
+      customMessage = "",
+      // 👇 NOUVEAU : Récupération des champs pour les dates spéciales
+      eventDate = null,
+      eventDescription = null,
+    } = body;
 
-    // 2. On vérifie que la clé API est bien configurée côté serveur
-    const apiKey = process.env.MAMMOUTH_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "Clé API Mammouth manquante sur le serveur." },
-        { status: 500 }
-      );
+    // Validation des entrées
+    const validatedEventType = VALID_EVENT_TYPES.has(eventType) ? eventType : TYPES_EVENEMENT[0].value;
+    const validatedRelation = VALID_RELATIONS.has(relation) ? relation : TYPES_RELATION[0].value;
+    const validatedTone = VALID_TONES.has(tone) ? tone : TONS_MESSAGE[0].value;
+
+    // 👇 NOUVEAU : Validation spécifique pour les dates spéciales
+    if (validatedEventType === "jour_special") {
+      if (!eventDate) {
+        return NextResponse.json(
+          { error: "La date de l'événement est obligatoire pour un jour spécial." },
+          { status: 400 }
+        );
+      }
+      // Vérifie que la date est valide et dans le futur
+      const dateObj = new Date(eventDate);
+      if (isNaN(dateObj.getTime()) || dateObj < new Date()) {
+        return NextResponse.json(
+          { error: "La date doit être valide et dans le futur." },
+          { status: 400 }
+        );
+      }
     }
 
-    // 3. On construit le "prompt" (= les instructions données à l'IA)
-    const systemPrompt = `Tu es un assistant expert en rédaction de messages personnels chaleureux et authentiques. 
-Tu écris en français. Tes messages sont courts (2 à 4 phrases max), naturels, et adaptés au ton demandé.
-Ne mets jamais de guillemets autour du message. Ne signe pas le message.`;
+    // Récupération des labels
+    const eventLabel = getLabelFromValue(TYPES_EVENEMENT, validatedEventType);
+    const relationLabel = getLabelFromValue(TYPES_RELATION, validatedRelation);
+    const toneLabel = getLabelFromValue(TONS_MESSAGE, validatedTone);
 
-    const userPrompt = `Rédige un message de ${eventType || "anniversaire"} pour ${firstName} ${lastName || ""}.
-- Relation : ${relation || "ami"}
-- Âge ${eventType === "anniversaire" ? "fêté" : ""} : ${age || "non précisé"} ans
-- Ton souhaité : ${tone || "chaleureux"}
+    // 👇 NOUVEAU : Construction du prompt avec gestion des dates spéciales
+    let prompt = `
+      Rédige un message ${toneLabel} pour ${firstName} ${lastName ? ` ${lastName}` : ''}
+    `;
 
-Écris uniquement le message, rien d'autre.`;
+    if (validatedEventType === "jour_special" && eventDate) {
+      // Cas spécial : événement personnalisé
+      const formattedDate = formatDateForPrompt(eventDate);
+      prompt += `à l'occasion de ⭐ ${eventDescription || "cet événement spécial"}.`;
+      prompt += `\nCélébré le ${formattedDate}.`;
+    } else {
+      // Cas classique : anniversaire, fête prénomale, etc.
+      prompt += `à l'occasion de son ${eventLabel}.`;
+    }
 
-    // 4. On appelle l'API Mammouth (compatible OpenAI)
-    const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat/completions", {
+    prompt += `
+      ${age ? `Il/Elle a ${age} ans.` : ''}
+      Relation : ${relationLabel}.
+      ${customMessage ? `Inclure ce message personnalisé : "${customMessage}".` : ''}
+      Format : Texte court (1-2 phrases max), naturel et ${toneLabel}.
+      Langue : Français.
+    `.trim();
+
+    // Appel à l'API Mammouth
+    const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.MAMMOUTH_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini", // modèle rapide et économique
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.9, // 0 = très prévisible, 1 = très créatif
-        max_tokens: 300,
+        model: "mixtral-medium",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.7,
       }),
     });
 
-    // 5. Si Mammouth renvoie une erreur, on la remonte
     if (!mammouthResponse.ok) {
       const errorText = await mammouthResponse.text();
       console.error("Erreur Mammouth:", errorText);
       return NextResponse.json(
-        { error: "Erreur lors de l'appel à l'IA Mammouth.", details: errorText },
+        { error: MESSAGES_UI.erreur_genérique, details: errorText },
         { status: 500 }
       );
     }
 
-    // 6. On extrait le message généré de la réponse
     const data = await mammouthResponse.json();
     const message = data.choices?.[0]?.message?.content?.trim() || "";
 
-    // 7. On renvoie le message au navigateur
     return NextResponse.json({ message });
 
   } catch (error) {
     console.error("Erreur inattendue:", error);
     return NextResponse.json(
-      { error: "Erreur serveur inattendue." },
+      { error: MESSAGES_UI.erreur_genérique },
       { status: 500 }
     );
   }
