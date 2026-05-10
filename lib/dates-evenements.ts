@@ -14,6 +14,8 @@ export type TypeEvenement =
   | 'fete_des_meres'
   | 'fete_des_peres'
   | 'paques'
+  | 'jour_special'
+
 
 // 🛠️ Petite fonction utilitaire : nettoie un prénom
 // "Hélène" → "helene" (pour comparer avec saints.ts)
@@ -114,4 +116,5 @@ export const LABELS_EVENEMENTS: Record<TypeEvenement, string> = {
   fete_des_meres: '💐 Fête des Mères',
   fete_des_peres: '👔 Fête des Pères',
   paques: '🐰 Pâques',
+  jour_special: '⭐ Jour spécial',
 }
