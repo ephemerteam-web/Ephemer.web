@@ -133,7 +133,7 @@ export default function DrawerGlobal() {
                 onClick={() => {
                   const id = contactAffiche.id
                   fermerDrawer()
-                  router.push(`/dashboard/contacts/${id}/edit`)
+                  router.push(`/dashboard/contacts/${id}/edit/`)
                 }}
                 className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 rounded-xl transition border border-indigo-400/50"
               >
