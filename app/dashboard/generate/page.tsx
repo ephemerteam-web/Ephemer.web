@@ -22,6 +22,7 @@ type Contact = {
   relation: string;
   date_naissance: string | null;
   email?: string | null;
+  note?: string | null; // ← AJOUT
 };
 
 type DatesPossibles = {
@@ -45,17 +46,7 @@ const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
 // ✅ Liste des events qui nécessitent une date manuelle
 const EVENTS_AVEC_DATE_MANUELLE = ["jour_special", "mariage", "naissance", "autre"];
 
-// ============================================================
-// 🔧 FONCTIONS UTILITAIRES
-// ============================================================
-function formaterDate(d: Date): string {
-  return d.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+
 
 // ============================================================
 // 🎨 COMPOSANT PRINCIPAL
@@ -63,7 +54,42 @@ function formaterDate(d: Date): string {
 function GenerateForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
+// ============================================================
+// 🔧 FONCTIONS UTILITAIRES
+// ============================================================
+// ===== FONCTIONS =====
+  function appliquerContact(contact: Contact) {
+    setSelectedContactId(String(contact.id));
+    setSelectedContact(contact);
+    setFirstName(contact.prenom);
+    setLastName(contact.nom);
+    setRelation(contact.relation || "ami");
 
+    if (contact.date_naissance) {
+      const naissance = new Date(contact.date_naissance);
+      const aujourdhui = new Date();
+      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
+      const anniversaireCetteAnnee = new Date(
+        aujourdhui.getFullYear(),
+        naissance.getMonth(),
+        naissance.getDate()
+      );
+      if (anniversaireCetteAnnee < aujourdhui) {
+        ageCalcule += 1;
+      }
+      setAge(String(ageCalcule));
+    } else {
+      setAge("");
+    }
+  }
+  function formaterDate(d: Date): string {
+  return d.toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
   // ===== STATES =====
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -104,12 +130,12 @@ function GenerateForm() {
 
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, prenom, nom, relation, date_naissance, email")
+        .select("id, prenom, nom, relation, date_naissance, email, note")
         .eq("user_id", session.user.id)
         .order("prenom");
 
       if (error) {
-        console.error("Erreur chargement contacts :", error);
+        console.warn("Erreur chargement contacts :", error);
         return;
       }
 
@@ -135,31 +161,7 @@ function GenerateForm() {
     loadContactsAndPrefill();
   }, [searchParams]);
 
-  // ===== FONCTIONS =====
-  function appliquerContact(contact: Contact) {
-    setSelectedContactId(String(contact.id));
-    setSelectedContact(contact);
-    setFirstName(contact.prenom);
-    setLastName(contact.nom);
-    setRelation(contact.relation || "ami");
-
-    if (contact.date_naissance) {
-      const naissance = new Date(contact.date_naissance);
-      const aujourdhui = new Date();
-      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
-      const anniversaireCetteAnnee = new Date(
-        aujourdhui.getFullYear(),
-        naissance.getMonth(),
-        naissance.getDate()
-      );
-      if (anniversaireCetteAnnee < aujourdhui) {
-        ageCalcule += 1;
-      }
-      setAge(String(ageCalcule));
-    } else {
-      setAge("");
-    }
-  }
+  
 
   async function handleGenerate() {
     setLoading(true);
@@ -180,6 +182,7 @@ function GenerateForm() {
           eventType,
           eventDate: needsManualDate ? eventDate : null,
           eventDescription: needsManualDate ? eventDescription : null,
+          note: selectedContact?.note || null,
         }),
       });
 
@@ -327,6 +330,28 @@ function GenerateForm() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
+async function handleShare() {
+  if (!message) return;
+
+  try {
+    // navigator.share = fonction native du navigateur qui ouvre le menu de partage du téléphone
+    if (navigator.share) {
+      await navigator.share({
+        title: "Message Ephemer",
+        text: message,
+      });
+      return;
+    }
+
+    // Fallback = solution de secours si le navigateur ne supporte pas le partage natif
+    await navigator.clipboard.writeText(message);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    alert("Le partage direct n'est pas disponible ici. Le message a été copié.");
+  } catch (err) {
+    console.error("Erreur lors du partage :", err);
+  }
+}
 
   // ===== RENDU =====
   return (
@@ -354,7 +379,7 @@ function GenerateForm() {
               >
                 <option value="">-- Sélectionner un contact --</option>
                 {contacts.map((contact) => (
-                  <option key={contact.id} value={contact.id}>
+                  <option key={contact.id} value={String(contact.id)} className="text-black">
                     {contact.prenom} {contact.nom} ({contact.relation})
                   </option>
                 ))}
@@ -614,13 +639,24 @@ function GenerateForm() {
                   </div>
                 </div>
 
-                <button
-                  onClick={handleProgrammer}
-                  disabled={programmation.loading || !getDateEnvoiChoisie()}
-                  className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-                >
-                  {programmation.loading ? "Programmation..." : "✅ Programmer cet envoi"}
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+  <button
+    onClick={handleProgrammer}
+    disabled={programmation.loading || !getDateEnvoiChoisie()}
+    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+  >
+    {programmation.loading ? "Programmation..." : "✅ Programmer"}
+  </button>
+
+  <button
+    onClick={handleShare}
+    disabled={!message}
+    className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl border border-white/10 transition disabled:opacity-50"
+  >
+    📤 Partager
+  </button>
+</div>
+
 
                 {programmation.message && (
                   <p className={`text-xs font-medium rounded-lg px-3 py-2 ${

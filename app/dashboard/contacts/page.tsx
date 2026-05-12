@@ -29,6 +29,11 @@ export default function ContactsPage() {
   const { ouvrirDrawer } = useDrawer()
   const [contacts, setContacts] = useState<ContactAvecLien[]>([])
   const [loading, setLoading] = useState(true)
+  const [recherche, setRecherche] = useState('')
+  const [triPar, setTriPar] = useState<'nom' | 'prenom'>('nom')
+  const [filtreRelation, setFiltreRelation] = useState<string>('tous')
+  const [rechercheDebounce, setRechercheDebounce] = useState('')
+
 
   useEffect(() => {
     const init = async () => {
@@ -86,6 +91,30 @@ export default function ContactsPage() {
     </div>
   )
 
+const contactsFiltres = contacts
+  .filter((contact) => {
+    const texte = `${contact.prenom} ${contact.nom}`.toLowerCase()
+    const matchRecherche = texte.includes(recherche.toLowerCase())
+
+    const matchRelation =
+      filtreRelation === 'tous' || contact.relation === filtreRelation
+
+    return matchRecherche && matchRelation
+  })
+ .sort((a, b) => {
+  // ⭐ Favoris en premier
+  if (a.est_favori && !b.est_favori) return -1
+  if (!a.est_favori && b.est_favori) return 1
+
+  // 🔤 Tri normal
+  if (triPar === 'nom') {
+    return a.nom.localeCompare(b.nom)
+  } else {
+    return a.prenom.localeCompare(b.prenom)
+  }
+})
+
+
   return (
     <div className="p-6 md:p-8">
       <div className="max-w-2xl mx-auto">
@@ -104,6 +133,47 @@ export default function ContactsPage() {
             + Nouveau
           </Link>
         </div>
+<div className="mb-4 space-y-3">
+
+  {/* 🔍 Recherche */}
+  <input
+    type="text"
+    placeholder="Rechercher un contact..."
+    value={recherche}
+    onChange={(e) => setRecherche(e.target.value)}
+    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+  />
+
+  <div className="flex gap-2 flex-wrap">
+
+    {/* 🔤 Tri */}
+    <select
+  value={triPar}
+  onChange={(e) => setTriPar(e.target.value as 'nom' | 'prenom')}
+  className="rounded-xl bg-[#0B1120] border border-white/10 px-3 py-2 text-white"
+
+    >
+      <option value="nom">Tri : Nom</option>
+      <option value="prenom">Tri : Prénom</option>
+    </select>
+
+    {/* 🎯 Filtre relation */}
+    <select
+  value={filtreRelation}
+  onChange={(e) => setFiltreRelation(e.target.value)}
+  className="rounded-xl bg-[#0B1120] border border-white/10 px-3 py-2 text-white"
+>
+
+      <option value="tous">Toutes relations</option>
+      {TYPES_RELATION.map((type) => (
+        <option key={type.value} value={type.value}>
+          {type.label}
+        </option>
+      ))}
+    </select>
+
+  </div>
+</div>
 
         {contacts.length === 0 ? (
           <div className="text-center mt-16">
@@ -118,7 +188,7 @@ export default function ContactsPage() {
           </div>
         ) : (
           <div className="grid gap-3">
-            {contacts.map((contact) => (
+            {contactsFiltres.map((contact) => (
               <div
                 key={contact.id}
                 onClick={() => ouvrirDrawer(contact)}
@@ -143,23 +213,35 @@ export default function ContactsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap justify-end">
                   {contact.est_favori && <span className="text-lg">⭐</span>}
                   {contact.estLie && (
                     <span className="text-xs bg-green-500/20 text-green-300 border border-green-500/30 font-medium px-2 py-1 rounded-full">
                       🤝 Lié
                     </span>
                   )}
-                  {contact.date_naissance && <span className="text-gray-400">🎂</span>}
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      router.push(`/dashboard/contacts/${contact.id}/edit`)
-                    }}
-                    className="text-xs text-[#C8A84E]/70 hover:text-white font-medium border border-[#C8A84E]/30 px-3 py-1 rounded-lg hover:bg-[#C8A84E]/10 transition"
-                  >
-                    ✏️ Modifier
-                  </button>
+                 {contact.date_naissance && <span className="text-gray-400">🎂</span>}
+
+<button
+  onClick={(e) => {
+    e.stopPropagation()
+    router.push(`/dashboard/generate?contactId=${contact.id}`)
+  }}
+  className="text-xs text-indigo-300 hover:text-white font-medium border border-indigo-400/30 px-3 py-1 rounded-lg hover:bg-indigo-500/10 transition"
+>
+  ✨ Générer
+</button>
+
+<button
+  onClick={(e) => {
+    e.stopPropagation()
+    router.push(`/dashboard/contacts/${contact.id}/edit`)
+  }}
+  className="text-xs text-[#C8A84E]/70 hover:text-white font-medium border border-[#C8A84E]/30 px-3 py-1 rounded-lg hover:bg-[#C8A84E]/10 transition"
+>
+  ✏️ Modifier
+</button>
+
                 </div>
               </div>
             ))}

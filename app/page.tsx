@@ -220,9 +220,6 @@ export default function Accueil() {
             ========================================== */}
         <div className="flex flex-col items-center gap-4">
 
-          {/* === BOUTON SIMULATION PWA AJOUTÉ ICI === */}
-          <InstallPWAButton />
-
           {/* CTA principal (ton bouton original) */}
           <Link href="/inscription">
             <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
@@ -240,6 +237,7 @@ export default function Accueil() {
           >
             Déjà un compte ? Se connecter →
           </Link>
+
 
         </div>
 
@@ -285,10 +283,14 @@ export default function Accueil() {
 
         </div>
 
-        {/* ==========================================
+       {/* ==========================================
     FOOTER DISCRET
     ========================================== */}
-<div className="mt-16 pb-8 text-center space-y-4">
+<div className="mt-16 pb-10 text-center space-y-5">
+  {/* === BOUTON SIMULATION PWA === */}
+  <div className="flex justify-center">
+    <InstallPWAButton />
+  </div>
 
   <p className="text-white/15 text-xs tracking-wider uppercase">
     © 2026 Ephemer.name — Votre compagnon nocturne
@@ -296,7 +298,8 @@ export default function Accueil() {
 
   {/* Liens footer */}
   <div className="flex justify-center gap-6 flex-wrap text-xs">
-
+   
+  
     {/* Lien confidentialité */}
     <Link 
       href="/confidentialite"
