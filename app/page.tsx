@@ -125,10 +125,10 @@ export default function Accueil() {
         {/* Liens de navigation (Connexion) */}
         <div className="flex items-center gap-4">
           <Link 
-            href="/inscription" 
+            href="/connexion" 
             className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
           >
-            S'inscrire
+            Se connecter
           </Link>
         </div>
       </nav>
