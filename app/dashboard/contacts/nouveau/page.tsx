@@ -10,11 +10,16 @@ type ContactTelephone = {
   nomComplet: string
   prenom: string
   nom: string
+  dateNaissance: string
+  relation: string
   email: string
-  telephoneIndicatif: string | null
-  telephoneNumero: string | null
+  telephoneIndicatif: string
+  telephoneNumero: string
+  note: string
+  estFavori: boolean
   selectionne: boolean
 }
+
 
 export default function NouveauContact() {
   const router = useRouter()
@@ -31,6 +36,8 @@ export default function NouveauContact() {
   const [estFavori, setEstFavori] = useState(false)
   const [chargement, setChargement] = useState(false)
   const [erreur, setErreur] = useState('')
+  const [contactEnEdition, setContactEnEdition] = useState<ContactTelephone | null>(null)
+
 
   // États pour l’import téléphone
   const [isMobile, setIsMobile] = useState(false)
@@ -102,16 +109,20 @@ export default function NouveauContact() {
             ? nettoyerNumeroTelephone(telephoneBrut)
             : null
 
-          return {
-            id: `${Date.now()}-${index}`,
-            nomComplet,
-            prenom: noms.prenom,
-            nom: noms.nom,
-            email: emailContact,
-            telephoneIndicatif: telephoneNettoye?.indicatif || null,
-            telephoneNumero: telephoneNettoye?.numero || null,
-            selectionne: true,
-          }
+         return {
+  id: `${Date.now()}-${index}`,
+  nomComplet,
+  prenom: noms.prenom,
+  nom: noms.nom,
+  dateNaissance: '',
+  relation: 'ami',
+  email: emailContact,
+  telephoneIndicatif: telephoneNettoye?.indicatif || '+33',
+  telephoneNumero: telephoneNettoye?.numero || '',
+  note: '',
+  estFavori: false,
+  selectionne: true,
+}
         }
       )
 
@@ -146,7 +157,19 @@ export default function NouveauContact() {
       )
     )
   }
+const sauvegarderContactEdite = () => {
+  if (!contactEnEdition) return
 
+  setContactsTelephone((contactsActuels) =>
+    contactsActuels.map((contact) =>
+      contact.id === contactEnEdition.id ? contactEnEdition : contact
+    )
+  )
+
+  setContactEnEdition(null)
+}
+
+  
   const importerContactsSelectionnes = async () => {
     setImportEnCours(true)
     setErreur('')
@@ -169,19 +192,20 @@ export default function NouveauContact() {
       }
 
       const contactsPourSupabase = contactsSelectionnes.map((contact) => ({
-        user_id: userData.user.id,
-        prenom: contact.prenom || 'Sans prénom',
-        nom: contact.nom || null,
-        date_naissance: null,
-        relation: 'ami',
-        email: contact.email || null,
-        telephone_indicatif: contact.telephoneNumero
-          ? contact.telephoneIndicatif
-          : null,
-        telephone_numero: contact.telephoneNumero || null,
-        note: null,
-        est_favori: false,
-      }))
+  user_id: userData.user.id,
+  prenom: contact.prenom || 'Sans prénom',
+  nom: contact.nom || null,
+  date_naissance: contact.dateNaissance || null,
+  relation: contact.relation || 'ami',
+  email: contact.email || null,
+  telephone_indicatif: contact.telephoneNumero
+    ? contact.telephoneIndicatif
+    : null,
+  telephone_numero: contact.telephoneNumero || null,
+  note: contact.note || null,
+  est_favori: contact.estFavori,
+}))
+
 
       const { error } = await supabase.from('contacts').insert(contactsPourSupabase)
 
@@ -366,6 +390,17 @@ export default function NouveauContact() {
                           Aucun téléphone ou email détecté
                         </p>
                       )}
+                      <button
+  type="button"
+  onClick={(e) => {
+    e.preventDefault()
+    setContactEnEdition(contact)
+  }}
+  className="mt-3 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white active:scale-95"
+>
+  Modifier
+</button>
+
                     </div>
                   </div>
                 </label>
@@ -550,6 +585,218 @@ export default function NouveauContact() {
           </button>
         </form>
       </div>
+      {contactEnEdition && (
+  <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 sm:items-center">
+    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0B1120] p-5 shadow-2xl sm:rounded-3xl">
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold text-white">
+            Modifier le contact
+          </h2>
+          <p className="text-sm text-white/50">
+            Complète les informations avant import.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setContactEnEdition(null)}
+          className="rounded-full bg-white/10 px-3 py-2 text-white"
+        >
+          ✕
+        </button>
+      </div>
+
+      <div className="space-y-5">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Prénom *
+          </label>
+          <input
+            type="text"
+            value={contactEnEdition.prenom}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                prenom: e.target.value,
+              })
+            }
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Nom
+          </label>
+          <input
+            type="text"
+            value={contactEnEdition.nom}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                nom: e.target.value,
+              })
+            }
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Date de naissance
+          </label>
+          <input
+            type="date"
+            value={contactEnEdition.dateNaissance}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                dateNaissance: e.target.value,
+              })
+            }
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Relation
+          </label>
+          <select
+            value={contactEnEdition.relation}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                relation: e.target.value,
+              })
+            }
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          >
+            <option value="ami">👫 Ami(e)</option>
+            <option value="famille">👨‍👩‍👧 Famille</option>
+            <option value="pro">💼 Professionnel</option>
+            <option value="autre">✨ Autre</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Email
+          </label>
+          <input
+            type="email"
+            value={contactEnEdition.email}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                email: e.target.value,
+              })
+            }
+            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Téléphone
+          </label>
+
+          <div className="flex gap-3">
+            <select
+              value={contactEnEdition.telephoneIndicatif}
+              onChange={(e) =>
+                setContactEnEdition({
+                  ...contactEnEdition,
+                  telephoneIndicatif: e.target.value,
+                })
+              }
+              className="w-28 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            >
+              {INDICATIFS_PAYS.map((i) => (
+                <option key={i.code} value={i.code}>
+                  {i.code}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="tel"
+              value={contactEnEdition.telephoneNumero}
+              onChange={(e) =>
+                setContactEnEdition({
+                  ...contactEnEdition,
+                  telephoneNumero: e.target.value.replace(/[^0-9]/g, ''),
+                })
+              }
+              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-white/70">
+            Note / À propos
+          </label>
+          <textarea
+            value={contactEnEdition.note}
+            onChange={(e) =>
+              setContactEnEdition({
+                ...contactEnEdition,
+                note: e.target.value,
+              })
+            }
+            rows={4}
+            className="w-full resize-y rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+          />
+        </div>
+
+        <div
+          onClick={() =>
+            setContactEnEdition({
+              ...contactEnEdition,
+              estFavori: !contactEnEdition.estFavori,
+            })
+          }
+          className={`flex cursor-pointer items-center justify-between rounded-3xl border p-5 transition-all active:scale-[0.985] ${
+            contactEnEdition.estFavori
+              ? 'border-[#C8A84E] bg-[#C8A84E]/10'
+              : 'border-white/10 bg-white/5'
+          }`}
+        >
+          <div>
+            <p className="font-semibold text-white">⭐ Contact favori</p>
+            <p className="text-xs text-white/50">
+              Apparaîtra en premier dans ta liste
+            </p>
+          </div>
+
+          <div
+            className={`relative h-7 w-12 rounded-full transition-colors ${
+              contactEnEdition.estFavori ? 'bg-[#C8A84E]' : 'bg-gray-600'
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all ${
+                contactEnEdition.estFavori ? 'translate-x-6' : 'translate-x-0.5'
+              }`}
+            />
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={sauvegarderContactEdite}
+          disabled={!contactEnEdition.prenom.trim()}
+          className="w-full rounded-3xl bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] py-5 text-lg font-bold text-[#0B1120] shadow-xl active:scale-[0.985] disabled:opacity-50"
+        >
+          Enregistrer les modifications
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   )
 }
