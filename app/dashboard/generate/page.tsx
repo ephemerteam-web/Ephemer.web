@@ -529,15 +529,23 @@ async function handleShare() {
           <div className="space-y-6">
             {message && (
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-[#C8A84E]">💌 Message généré</h3>
-                  <button
-                    onClick={handleCopy}
-                    className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition"
-                  >
-                    {copied ? "✅ Copié !" : "Copier"}
-                  </button>
-                </div>
+                  <div className="flex justify-between items-start mb-2">
+                    <h3 className="font-semibold text-[#C8A84E]">💌 Message généré</h3>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleCopy}
+                        className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition"
+                      >
+                        {copied ? "✅ Copié !" : "Copier"}
+                      </button>
+                      <button
+                        onClick={handleShare}
+                        className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition"
+                      >
+                        📤 Partager
+                      </button>
+                    </div>
+                  </div>
                 <p className="text-white/90 whitespace-pre-wrap">{message}</p>
               </div>
             )}
@@ -639,23 +647,13 @@ async function handleShare() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-  <button
+                <button
     onClick={handleProgrammer}
     disabled={programmation.loading || !getDateEnvoiChoisie()}
     className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
   >
     {programmation.loading ? "Programmation..." : "✅ Programmer"}
   </button>
-
-  <button
-    onClick={handleShare}
-    disabled={!message}
-    className="w-full bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl border border-white/10 transition disabled:opacity-50"
-  >
-    📤 Partager
-  </button>
-</div>
 
 
                 {programmation.message && (

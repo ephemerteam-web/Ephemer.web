@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       // 👇 NOUVEAU : Récupération des champs pour les dates spéciales
       eventDate = null,
       eventDescription = null,
-      notes = null,
+      note = null,
     } = body;
 
     // Validation des entrées
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     prompt += `
       ${age ? `Il/Elle a ${age} ans.` : ''}
       Relation : ${relationLabel}.
-      ${notes ? `Informations personnelles sur ${firstName} (utilise-les pour personnaliser le message) : ${notes}.` : ''}
+      ${note ? `Informations personnelles sur ${firstName} (utilise-les pour personnaliser le message) : ${note}.` : ''}
       ${customMessage ? `Inclure ce message personnalisé : "${customMessage}".` : ''}
       Format : Texte court (1-2 phrases max), naturel et ${toneLabel}.
       Langue : Français.
