@@ -161,7 +161,8 @@ export default function ContactsPage() {
             <AppSelect
               options={triOptions}
               value={triPar}
-              onChange={(value) => setTriPar(value)}
+              onChange={(value) => setTriPar(value as 'nom' | 'prenom')}
+
 
             />
 

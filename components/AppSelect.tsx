@@ -1,4 +1,15 @@
-export default function AppSelect({ options, value, onChange }) {
+type Option = {
+  value: string
+  label: string
+}
+
+type AppSelectProps = {
+  options: Option[]
+  value: string
+  onChange: (value: string) => void
+}
+
+export default function AppSelect({ options, value, onChange }: AppSelectProps) {
   return (
     <select
       value={value}
@@ -19,5 +30,5 @@ export default function AppSelect({ options, value, onChange }) {
         </option>
       ))}
     </select>
-  );
+  )
 }
