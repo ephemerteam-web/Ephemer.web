@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import { TYPES_RELATION } from '@/lib/constants'
-import { useDrawer } from '@/lib/DrawerContext'
+import { useDrawer } from '@/components/DrawerContext'
 import AppSelect from "@/components/AppSelect"
 
 type Contact = {

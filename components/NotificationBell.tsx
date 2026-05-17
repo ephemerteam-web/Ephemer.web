@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { calculerDateEvenement, TypeEvenement } from '@/lib/dates-evenements'
 import { SAINTS } from '@/lib/saints'
-import { useDrawer } from '@/lib/DrawerContext'
+import { useDrawer } from '@/components/DrawerContext'
 
 type NotificationInsert = {
   user_id: string

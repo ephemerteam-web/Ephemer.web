@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useDrawer } from '@/lib/DrawerContext'
+import { useDrawer } from '@/components/DrawerContext'
 import { TYPES_RELATION } from '@/lib/constants'
 
 export default function DrawerGlobal() {

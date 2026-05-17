@@ -4,7 +4,10 @@ import Link from "next/link"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase"
-import InstallPWAButton from "@/components/InstallPWAButton"   // ← AJOUTÉ POUR LE BOUTON PWA
+import InstallPWAButton from "@/components/InstallPWAButton"
+import { useState } from "react"
+import AuthDrawer from "@/components/AuthDrawer"   
+
 
 // ============================================================
 // PAGE D'ACCUEIL EphemER.NAME
@@ -13,7 +16,8 @@ import InstallPWAButton from "@/components/InstallPWAButton"   // ← AJOUTÉ PO
 
 export default function Accueil() {
   const router = useRouter()
-
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const [drawerMode, setDrawerMode] = useState<"inscription" | "connexion">("inscription")
   useEffect(() => {
     const checkUser = async () => {
 
@@ -124,12 +128,12 @@ export default function Accueil() {
 
         {/* Liens de navigation (Connexion) */}
         <div className="flex items-center gap-4">
-          <Link 
-            href="/connexion" 
-            className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
-          >
-            Se connecter
-          </Link>
+          <button
+        onClick={() => { setDrawerMode("connexion"); setDrawerOpen(true) }}
+        className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
+      >
+        Se connecter
+      </button>
         </div>
       </nav>
 
@@ -221,22 +225,21 @@ export default function Accueil() {
         <div className="flex flex-col items-center gap-4">
 
           {/* CTA principal (ton bouton original) */}
-          <Link href="/inscription">
-            <button className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold px-10 py-4 rounded-full hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition-all duration-500 hover:scale-105 overflow-hidden">
-              <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-              <span className="relative z-10 flex items-center gap-2">
-                ✨ Commencer gratuitement
-              </span>
-            </button>
-          </Link>
+          <button
+   onClick={() => { setDrawerMode("inscription"); setDrawerOpen(true) }}
+   className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] px-8 py-4 rounded-2xl text-[#0B1120] font-bold text-lg hover:shadow-[0_0_30px_rgba(200,168,78,0.4)] transition-all duration-300 hover:scale-105"
+>
+   ✨ Commencer gratuitement
+</button>
+
 
           {/* Lien secondaire discret */}
-          <Link 
-            href="/connexion"
-            className="text-white/40 hover:text-white text-sm transition-colors duration-200"
-          >
-            Déjà un compte ? Se connecter →
-          </Link>
+          <button
+        onClick={() => { setDrawerMode("connexion"); setDrawerOpen(true) }}
+        className="text-white/40 hover:text-white text-sm transition-colors duration-200"
+      >
+        Déjà un compte ? Se connecter →
+      </button>
 
 
         </div>
@@ -320,6 +323,12 @@ export default function Accueil() {
 </div>
 
       </div>
+    <AuthDrawer
+        isOpen={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        mode={drawerMode}
+        onSwitchMode={() => setDrawerMode(m => m === "inscription" ? "connexion" : "inscription")}
+      />
     </main>
   )
 }

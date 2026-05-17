@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
-import { DrawerProvider } from '@/lib/DrawerContext'
+import { DrawerProvider } from '@/components/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
 import NotificationBell from '@/components/NotificationBell'
 import { Analytics } from "@vercel/analytics/next"
