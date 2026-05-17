@@ -14,7 +14,7 @@ export default function AppSelect({ options, value, onChange }: AppSelectProps) 
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-3 py-2 rounded-lg bg-white/5 text-white border border-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-[#0B1120] text-white"
     >
       <option value="" disabled className="bg-[#0B1120] text-white">
         -- Sélectionner --

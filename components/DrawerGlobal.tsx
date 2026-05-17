@@ -127,8 +127,18 @@ export default function DrawerGlobal() {
 
             </div>
 
-            {/* Bouton modifier */}
-            <div className="p-6 border-t border-white/10 sticky bottom-0 bg-indigo-950/95">
+            {/* Boutons */}
+            <div className="p-6 border-t border-white/10 sticky bottom-0 bg-indigo-950/95 flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  const id = contactAffiche.id
+                  fermerDrawer()
+                  router.push(`/dashboard/generate?contactId=${id}`)
+                }}
+                className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition"
+              >
+                ✨ Générer un message
+              </button>
               <button
                 onClick={() => {
                   const id = contactAffiche.id

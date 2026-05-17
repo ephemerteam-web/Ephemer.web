@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { programmerMessage } from "@/lib/rappels";
+import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
 import {
   TYPES_RELATION,
@@ -368,22 +369,18 @@ async function handleShare() {
               <label className="block text-sm font-medium text-white/60 mb-1">
                 👤 Contact <span className="text-red-400">*</span>
               </label>
-              <select
+              <AppSelect
+                options={contacts.map((contact) => ({
+                  value: String(contact.id),
+                  label: `${contact.prenom} ${contact.nom} (${contact.relation})`,
+                }))}
                 value={selectedContactId}
-                onChange={(e) => {
-                  const contact = contacts.find((c) => String(c.id) === e.target.value);
+                onChange={(id) => {
+                  const contact = contacts.find((c) => String(c.id) === id);
                   if (contact) appliquerContact(contact);
-                  setSelectedContactId(e.target.value);
+                  setSelectedContactId(id);
                 }}
-                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-              >
-                <option value="">-- Sélectionner un contact --</option>
-                {contacts.map((contact) => (
-                  <option key={contact.id} value={String(contact.id)} className="text-black">
-                    {contact.prenom} {contact.nom} ({contact.relation})
-                  </option>
-                ))}
-              </select>
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -430,36 +427,28 @@ async function handleShare() {
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Relation <span className="text-red-400">*</span>
               </label>
-              <select
+              <AppSelect
+                options={TYPES_RELATION.map((type) => ({ value: type.value, label: type.label }))}
                 value={relation}
-                onChange={(e) => setRelation(e.target.value)}
-                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-              >
-                {TYPES_RELATION.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
+                onChange={setRelation}
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Type d'événement <span className="text-red-400">*</span>
               </label>
-              <select
+              <AppSelect
+                options={TYPES_EVENEMENT.map((type) => ({ value: type.value, label: type.label }))}
                 value={eventType}
-                onChange={(e) => {
-                  setEventType(e.target.value);
-                  if (!EVENTS_AVEC_DATE_MANUELLE.includes(e.target.value)) {
+                onChange={(value) => {
+                  setEventType(value);
+                  if (!EVENTS_AVEC_DATE_MANUELLE.includes(value)) {
                     setEventDate("");
                     setEventDescription("");
                   }
                 }}
-                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-              >
-                {TYPES_EVENEMENT.map((type) => (
-                  <option key={type.value} value={type.value}>{type.label}</option>
-                ))}
-              </select>
+              />
             </div>
 
             {needsManualDate && (
@@ -497,15 +486,11 @@ async function handleShare() {
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Ton du message <span className="text-red-400">*</span>
               </label>
-              <select
+              <AppSelect
+                options={TONS_MESSAGE.map((ton) => ({ value: ton.value, label: ton.label }))}
                 value={tone}
-                onChange={(e) => setTone(e.target.value)}
-                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-              >
-                {TONS_MESSAGE.map((ton) => (
-                  <option key={ton.value} value={ton.value}>{ton.label}</option>
-                ))}
-              </select>
+                onChange={setTone}
+              />
             </div>
 
             <button
@@ -531,22 +516,23 @@ async function handleShare() {
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">
                   <div className="flex justify-between items-start mb-2">
                     <h3 className="font-semibold text-[#C8A84E]">💌 Message généré</h3>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={handleCopy}
-                        className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition"
-                      >
-                        {copied ? "✅ Copié !" : "Copier"}
-                      </button>
-                      <button
-                        onClick={handleShare}
-                        className="text-xs bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg transition"
-                      >
-                        📤 Partager
-                      </button>
-                    </div>
                   </div>
-                <p className="text-white/90 whitespace-pre-wrap">{message}</p>
+                <p className="text-white/90 whitespace-pre-wrap mb-4">{message}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={handleCopy}
+                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                  >
+                    {copied ? "✅ Copié !" : "Copier"}
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    disabled={!message}
+                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                  >
+                    📤 Partager
+                  </button>
+                </div>
               </div>
             )}
 
@@ -558,15 +544,11 @@ async function handleShare() {
                   <label className="block text-sm font-medium text-white/60 mb-1">
                     Destinataire <span className="text-red-400">*</span>
                   </label>
-                  <select
+                  <AppSelect
+                    options={DESTINATAIRES_RAPPEL.map((opt) => ({ value: opt.value, label: opt.label }))}
                     value={destinataire}
-                    onChange={(e) => setDestinataire(e.target.value as "moi" | "contact" | "les_deux")}
-                    className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-                  >
-                    {DESTINATAIRES_RAPPEL.map((opt) => (
-                      <option key={opt.value} value={opt.value}>{opt.label}</option>
-                    ))}
-                  </select>
+                    onChange={(value) => setDestinataire(value as "moi" | "contact" | "les_deux")}
+                  />
                 </div>
 
                 <div>

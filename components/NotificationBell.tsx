@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { calculerDateEvenement, TypeEvenement } from '@/lib/dates-evenements'
-import { SAINTS } from '@/lib/saints'   // ← Nouveau
+import { SAINTS } from '@/lib/saints'
+import { useDrawer } from '@/lib/DrawerContext'
 
 type NotificationInsert = {
   user_id: string
@@ -19,6 +20,7 @@ type Notification = {
   message: string
   lue: boolean
   created_at: string
+  contact_id: number
 }
 
 const EVENT_TYPES: TypeEvenement[] = ['anniversaire', 'fete_prenomale']
@@ -54,6 +56,7 @@ export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [loading, setLoading] = useState(true)
+  const { ouvrirDrawer } = useDrawer()
 
   const genererNotifications = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession()
@@ -189,7 +192,7 @@ export default function NotificationBell() {
 
     const { data, error } = await supabase
       .from('notifications')
-      .select('id, message, lue, created_at')
+      .select('id, message, lue, created_at, contact_id')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
       .limit(30)
@@ -212,6 +215,31 @@ export default function NotificationBell() {
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, lue: true } : n))
     )
+  }
+
+  async function handleNotificationClick(notif: Notification) {
+    marquerLue(notif.id)
+    setOuvert(false)
+
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('*')
+      .eq('id', notif.contact_id)
+      .single()
+
+    if (!contact) return
+
+    const { data: { session } } = await supabase.auth.getSession()
+    let estLie = false
+    if (session && contact.email) {
+      const { data: resultat } = await supabase.rpc('est_contact_lie', {
+        mon_user_id: session.user.id,
+        email_du_contact: contact.email,
+      })
+      estLie = resultat === true
+    }
+
+    ouvrirDrawer({ ...contact, estLie })
   }
 
   const nbNonLues = notifications.filter(n => !n.lue).length
@@ -249,7 +277,7 @@ export default function NotificationBell() {
                 {notifications.map((notif) => (
                   <div
                     key={notif.id}
-                    onClick={() => marquerLue(notif.id)}
+                    onClick={() => handleNotificationClick(notif)}
                     className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${notif.lue ? 'opacity-70' : 'bg-purple-900/10'}`}
                   >
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
