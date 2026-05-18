@@ -27,6 +27,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [contacts, setContacts] = useState<Contact[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
+  const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
+
 
 
 
@@ -330,6 +332,13 @@ export default function Dashboard() {
     >
       🔒 Politique de confidentialité
     </Link>
+    <Link 
+  href="/conditions"
+  className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200"
+>
+  📄 Conditions
+</Link>
+
   </div>
 </div>
 

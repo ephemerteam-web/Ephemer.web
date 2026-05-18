@@ -20,6 +20,9 @@ export default function DashboardProfil() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
 
   // ========================
   // 1. CHARGER LE PROFIL
@@ -94,6 +97,47 @@ export default function DashboardProfil() {
   if (loading) {
     return <AppLayout><div className="p-8 text-white">Chargement...</div></AppLayout>
   }
+
+  // Ajoute cette fonction avec tes autres fonctions (avant le return)
+const handleDeleteAccount = async () => {
+  setDeleting(true)
+  setMessage(null)
+
+  try {
+    // Récupérer la session pour avoir le token
+    const { data: { session } } = await supabase.auth.getSession()
+
+    if (!session) {
+      setMessage({ text: 'Session expirée, reconnecte-toi', type: 'error' })
+      return
+    }
+
+    // Appeler notre API Route avec le token
+    const response = await fetch('/api/delete-account', {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+    })
+
+    const result = await response.json()
+
+    if (!response.ok) {
+      throw new Error(result.error || 'Erreur inconnue')
+    }
+
+    // Déconnexion locale et redirection
+    await supabase.auth.signOut()
+    router.push('/?deleted=true') // On pourra afficher un message sur la home
+
+  } catch (error: any) {
+    setMessage({
+      text: `Erreur : ${error.message}`,
+      type: 'error'
+    })
+    setDeleting(false)
+  }
+}
 
   return (
     <AppLayout>
@@ -207,12 +251,42 @@ export default function DashboardProfil() {
               {saving ? 'Enregistrement...' : '💾 Enregistrer mes informations'}
             </button>
 
-            <button
-              disabled
-              className="w-full py-3 text-red-400/60 text-sm border border-red-500/20 rounded-2xl cursor-not-allowed"
-            >
-              🗑️ Supprimer mon compte (bientôt disponible)
-            </button>
+            {/* Zone de danger */}
+{!showDeleteConfirm ? (
+  // Bouton initial
+  <button
+    onClick={() => setShowDeleteConfirm(true)}
+    className="w-full py-3 text-red-400 text-sm border border-red-500/30 rounded-2xl hover:bg-red-500/10 transition-all"
+  >
+    🗑️ Supprimer mon compte
+  </button>
+) : (
+  // Confirmation - s'affiche quand on clique sur le bouton rouge
+  <div className="border border-red-500/30 rounded-2xl p-5 bg-red-500/5">
+    <p className="text-red-400 font-semibold mb-1">⚠️ Es-tu sûr(e) ?</p>
+    <p className="text-white/50 text-sm mb-4">
+      Cette action est <strong className="text-white/70">irréversible</strong>. 
+      Ton compte, tes contacts et toutes tes données seront supprimés définitivement.
+    </p>
+    <div className="flex gap-3">
+      <button
+        onClick={() => setShowDeleteConfirm(false)}
+        disabled={deleting}
+        className="flex-1 py-2.5 text-white/70 border border-white/20 rounded-xl hover:bg-white/10 transition-all text-sm"
+      >
+        Annuler
+      </button>
+      <button
+        onClick={handleDeleteAccount}
+        disabled={deleting}
+        className="flex-1 py-2.5 bg-red-500/80 text-white rounded-xl hover:bg-red-500 transition-all text-sm font-semibold disabled:opacity-50"
+      >
+        {deleting ? 'Suppression...' : 'Oui, supprimer'}
+      </button>
+    </div>
+  </div>
+)}
+
           </div>
         </div>
       </div>
