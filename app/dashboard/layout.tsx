@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase-browser'
 import { DrawerProvider } from '@/components/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
 import NotificationBell from '@/components/NotificationBell'

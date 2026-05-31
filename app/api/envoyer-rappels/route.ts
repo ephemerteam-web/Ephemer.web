@@ -1,19 +1,8 @@
 // app/api/envoyer-rappels/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
 import { resend } from '@/lib/resend';
 import { genererEmailRappel } from '@/lib/email-templates';
-
-// 🔑 CLIENT SUPABASE SÉCURISÉ
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-// 🛡️ Vérification stricte au démarrage (évite les erreurs silencieuses en production)
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('❌ Variables d\'environnement Supabase manquantes : NEXT_PUBLIC_SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
 const EMAIL_TEST = 'ephemer.team@gmail.com';
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -41,7 +30,7 @@ export async function GET(request: NextRequest) {
     console.log(`🔧 Mode force : ${force ? 'OUI (tous les rappels programmés)' : 'NON (date_envoi <= aujourd\'hui)'}`);
 
     // 1️⃣ Récupération des rappels + infos du contact
-    let query = supabase
+    let query = supabaseAdmin
       .from('rappels')
       .select(`
         *,
@@ -69,7 +58,7 @@ export async function GET(request: NextRequest) {
 
     // ✅ SÉCURITÉ 2 : PostgreSQL n'accepte pas .in([]) vide
     if (userIds.length > 0) {
-      const { data: profils, error: errorProfils } = await supabase
+      const { data: profils, error: errorProfils } = await supabaseAdmin
         .from('profiles')
         .select('id, prenom, nom, email')
         .in('id', userIds);
@@ -134,7 +123,7 @@ export async function GET(request: NextRequest) {
         if (errorEmail) throw errorEmail;
 
         // ✅ Mise à jour du statut dans Supabase
-        const { error: updateError } = await supabase
+        const { error: updateError } = await supabaseAdmin
           .from('rappels')
           .update({ statut: 'envoye', sent_at: new Date().toISOString() })
           .eq('id', rappel.id);

@@ -365,12 +365,104 @@ export const SAINTS: Sainte[] = [
   { date: "11-29", nomSaint: "Sainte Saturnine", prenoms: ["saturnine", "saturninus", "saturnina"] },
   { date: "11-30", nomSaint: "Saint André", prenoms: ["andre", "andrew", "andrew", "andrew", "andrew", "andy"]},
 
-  // DÉCEMBRE
+    // DÉCEMBRE
+  { date: "12-01", nomSaint: "Sainte Florence", prenoms: ["florence", "flora", "flore", "florine", "floriane"] },
+  { date: "12-02", nomSaint: "Sainte Viviane", prenoms: ["viviane", "vivienne", "vivien", "viviana"] },
+  { date: "12-03", nomSaint: "Saint François-Xavier", prenoms: ["francois-xavier", "xavier", "xaviera"] },
   { date: "12-04", nomSaint: "Sainte Barbara", prenoms: ["barbara", "barbe", "babeth"] },
+  { date: "12-05", nomSaint: "Saint Gérald", prenoms: ["gerald", "geraldine", "gerry"] },
   { date: "12-06", nomSaint: "Saint Nicolas", prenoms: ["nicolas", "nicole", "nicolette", "nico", "nick"] },
+  { date: "12-07", nomSaint: "Saint Ambroise", prenoms: ["ambroise", "ambrosia"] },
+  { date: "12-08", nomSaint: "Immaculée Conception", prenoms: ["conception", "immaculee"] },
+  { date: "12-09", nomSaint: "Sainte Pierre Fourier", prenoms: ["fourier"] },
+  { date: "12-10", nomSaint: "Saint Romaric", prenoms: ["romaric", "romarick"] },
+  { date: "12-11", nomSaint: "Saint Daniel", prenoms: ["daniel", "danielle", "danny", "dany", "dan"] },
+  { date: "12-12", nomSaint: "Sainte Jeanne F.C.", prenoms: ["jeanne-francoise"] },
   { date: "12-13", nomSaint: "Sainte Lucie", prenoms: ["lucie", "lucia", "lucy", "luce"] },
+  { date: "12-14", nomSaint: "Sainte Odile", prenoms: ["odile", "odilia", "odilon"] },
+  { date: "12-15", nomSaint: "Sainte Ninon", prenoms: ["ninon", "nina"] },
+  { date: "12-16", nomSaint: "Sainte Alice", prenoms: ["alice", "alicia", "alyssa"] },
+  { date: "12-17", nomSaint: "Saint Gaël", prenoms: ["gael", "gaelle", "gwenael"] },
+  { date: "12-18", nomSaint: "Saint Gatien", prenoms: ["gatien", "gatienne"] },
+  { date: "12-19", nomSaint: "Saint Urbain", prenoms: ["urbain", "urbaine"] },
+  { date: "12-20", nomSaint: "Saint Abraham", prenoms: ["abraham", "abram"] },
+  { date: "12-21", nomSaint: "Saint Pierre Canisius", prenoms: ["canisius"] },
+  { date: "12-22", nomSaint: "Sainte Françoise-Xavière", prenoms: ["francoise-xaviere"] },
+  { date: "12-23", nomSaint: "Saint Armand", prenoms: ["armand", "armande", "armandine"] },
+  { date: "12-24", nomSaint: "Sainte Adèle", prenoms: ["adele", "adela", "adelina", "adeline"] },
   { date: "12-25", nomSaint: "Noël", prenoms: ["noel", "noelle", "noella"] },
   { date: "12-26", nomSaint: "Saint Étienne", prenoms: ["etienne", "stephane", "stephanie", "steve", "stefan"] },
+  { date: "12-27", nomSaint: "Saint Jean", prenoms: ["jean", "jeannot", "john", "johnny", "ian"] },
+  { date: "12-28", nomSaint: "Saints Innocents", prenoms: ["innocent"] },
+  { date: "12-29", nomSaint: "Saint David", prenoms: ["david", "davy", "dave"] },
+  { date: "12-30", nomSaint: "Saint Roger", prenoms: ["roger", "rogerine"] },
   { date: "12-31", nomSaint: "Saint Sylvestre", prenoms: ["sylvestre", "sylvain", "sylvie", "sylvia"] },
 ]
+
+// ============================================================
+// 🚀 OPTIMISATION : INDEX RAPIDES (Maps)
+// ============================================================
+// Une Map, c'est comme un dictionnaire : on cherche par "clé"
+// et on obtient la réponse instantanément (O(1) au lieu de O(n))
+// Ces index sont construits UNE SEULE FOIS au chargement du fichier.
+
+/**
+ * Index par DATE (format "MM-JJ")
+ * Exemple : SAINTS_PAR_DATE.get("01-01") → { date: "01-01", nomSaint: "Sainte Marie", ... }
+ */
+export const SAINTS_PAR_DATE: Map<string, Sainte> = new Map(
+  SAINTS.map(saint => [saint.date, saint])
+)
+
+/**
+ * Index par PRÉNOM (en minuscules, sans accents)
+ * Comme un prénom peut être une "variante" (ex: "marion" pour "Sainte Marie"),
+ * on associe CHAQUE prénom de la liste à sa fête.
+ * Exemple : SAINTS_PAR_PRENOM.get("marion") → { date: "01-01", nomSaint: "Sainte Marie", ... }
+ */
+export const SAINTS_PAR_PRENOM: Map<string, Sainte> = new Map(
+  SAINTS.flatMap(saint =>
+    saint.prenoms.map(prenom => [prenom.toLowerCase().trim(), saint] as [string, Sainte])
+  )
+)
+
+// ============================================================
+// 🔍 FONCTIONS DE RECHERCHE RAPIDES
+// ============================================================
+
+/**
+ * Normalise un prénom : minuscules + suppression des accents + trim
+ * Ex : "Geneviève" → "genevieve"
+ */
+function normaliserPrenom(prenom: string): string {
+  return prenom
+    .toLowerCase()
+    .normalize('NFD')                // décompose les accents (é → e + ´)
+    .replace(/[\u0300-\u036f]/g, '') // supprime les accents
+    .trim()
+}
+
+/**
+ * Trouve la fête d'un prénom donné.
+ * Retourne `undefined` si le prénom n'existe pas dans la base.
+ *
+ * @example
+ *   trouverSaintParPrenom("Marie")     → { date: "01-01", nomSaint: "Sainte Marie", ... }
+ *   trouverSaintParPrenom("Geneviève") → { date: "01-03", nomSaint: "Sainte Geneviève", ... }
+ *   trouverSaintParPrenom("Xyz")       → undefined
+ */
+export function trouverSaintParPrenom(prenom: string): Sainte | undefined {
+  return SAINTS_PAR_PRENOM.get(normaliserPrenom(prenom))
+}
+
+/**
+ * Trouve la fête d'un jour donné.
+ * @param date - format "MM-JJ" (ex: "03-19")
+ *
+ * @example
+ *   trouverSaintParDate("01-01") → { date: "01-01", nomSaint: "Sainte Marie", ... }
+ */
+export function trouverSaintParDate(date: string): Sainte | undefined {
+  return SAINTS_PAR_DATE.get(date)
+}
 

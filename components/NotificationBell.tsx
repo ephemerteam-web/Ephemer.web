@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase-browser'
 import { calculerDateEvenement, TypeEvenement } from '@/lib/dates-evenements'
 import { SAINTS } from '@/lib/saints'
 import { useDrawer } from '@/components/DrawerContext'

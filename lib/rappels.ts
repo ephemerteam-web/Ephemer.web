@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase } from './supabase-browser'
 import { calculerDateEvenement, TypeEvenement } from './dates-evenements'
 
 // ============================================================

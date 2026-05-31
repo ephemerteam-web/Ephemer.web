@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'

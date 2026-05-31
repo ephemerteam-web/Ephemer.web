@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase-browser"
 import InstallPWAButton from "@/components/InstallPWAButton"
 import { useState } from "react"
 import AuthDrawer from "@/components/AuthDrawer"   

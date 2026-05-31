@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase-browser";
 import { programmerMessage } from "@/lib/rappels";
 import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";

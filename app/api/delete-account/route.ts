@@ -1,14 +1,11 @@
 // Ce fichier tourne sur le SERVEUR (jamais visible par l'utilisateur)
 // C'est lui qui a le droit de supprimer un compte
 
-import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 
-// On crée un client Supabase "super-admin" avec la clé secrète
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!, // La clé secrète, safe ici car côté serveur
-)
+
+
 
 export async function DELETE(request: Request) {
   try {
