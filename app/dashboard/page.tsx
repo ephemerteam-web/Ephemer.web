@@ -332,15 +332,24 @@ export default function Dashboard() {
     >
       🔒 Politique de confidentialité
     </Link>
-    <Link 
-  href="/conditions"
-  className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200"
->
-  📄 Conditions
-</Link>
 
+    <Link 
+      href="/conditions"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      📄 Conditions
+    </Link>
+
+    {/* NOUVEAU : Bouton Patch Notes */}
+    <Link 
+      href="/patchnote"
+      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      📜 Quoi de neuf ?
+    </Link>
   </div>
 </div>
+
 
 
       </div>

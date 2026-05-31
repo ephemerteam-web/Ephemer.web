@@ -89,30 +89,13 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
       icon: <GoogleIcon />,
       className: "bg-white text-[#1a1a1a] hover:bg-gray-100 border border-gray-200"
     },
-    {
-      id: "apple" as const,
-      label: "Continuer avec Apple",
-      icon: <AppleIcon />,
-      className: "bg-black text-white hover:bg-gray-900 border border-white/20"
-    },
-    {
+      {
       id: "facebook" as const,
       label: "Continuer avec Facebook",
       icon: <FacebookIcon />,
       className: "bg-[#1877F2] text-white hover:bg-[#1565D8]"
     },
-    {
-      id: "linkedin_oidc" as const,
-      label: "Continuer avec LinkedIn",
-      icon: <LinkedInIcon />,
-      className: "bg-[#0A66C2] text-white hover:bg-[#0958A8]"
-    },
-    {
-      id: "twitter" as const,
-      label: "Continuer avec X",
-      icon: <XIcon />,
-      className: "bg-[#14171A] text-white hover:bg-black border border-white/10"
-    },
+  
   ]
 
   if (!isOpen) return null
