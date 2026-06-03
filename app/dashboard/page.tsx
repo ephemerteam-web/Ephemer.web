@@ -33,19 +33,48 @@ export default function Dashboard() {
 
 
   useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/connexion'); return }
-      setUserName(session.user.email?.split('@')[0] ?? null)
-      const { data } = await supabase
-        .from('contacts')
-        .select('id, nom, prenom, date_naissance')
-        .eq('user_id', session.user.id)
-      if (data) setContacts(data as Contact[])
-      setLoading(false)
+  const init = async () => {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) { 
+      router.push('/connexion'); 
+      return 
     }
-    init()
-  }, [router])
+    
+    setUserName(session.user.email?.split('@')[0] ?? null)
+
+    // Récupération des contacts (inchangé)
+    const { data } = await supabase
+      .from('contacts')
+      .select('id, nom, prenom, date_naissance')
+      .eq('user_id', session.user.id)
+    
+    if (data) setContacts(data as Contact[])
+
+    // NOUVELLE LOGIQUE : on va chercher le prénom dans la table "profiles"
+    // (chaque utilisateur a une ligne dans cette table liée à son ID)
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('prenom')
+      .eq('id', session.user.id) // on cherche le profil de l'utilisateur connecté
+
+    // On vérifie qu'il n'y a pas d'erreur, que des données existent, 
+    // et que le prénom n'est pas vide
+    if (!profileError && profileData && profileData.length > 0) {
+      const fetchedPrenom = String(profileData[0].prenom || '')
+      if (fetchedPrenom.trim() !== '') {
+        setProfile({ prenom: fetchedPrenom })
+      } else {
+        setProfile(null)
+      }
+    } else {
+      setProfile(null)
+    }
+
+    setLoading(false)
+  }
+  init()
+}, [router])
+
 
   const feteDuJour = useMemo(() => {
     const today = new Date()
