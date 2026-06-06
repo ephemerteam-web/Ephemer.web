@@ -1,17 +1,23 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import { programmerMessage } from "@/lib/rappels";
 import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
+import { formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/anniversaires";
 import {
   TYPES_RELATION,
   TONS_MESSAGE,
   TYPES_EVENEMENT,
-  DESTINATAIRES_RAPPEL,
+  EVENT_TYPE_MAP,
+  necessiteDateManuelle,
 } from "@/lib/constants";
+import { genererMessage } from "@/lib/api-messages";
+import ProgrammerRappel from "@/components/ProgrammerRappel";
+
+
 
 // ============================================================
 // 📌 TYPES
@@ -27,34 +33,41 @@ type Contact = {
 };
 
 type DatesPossibles = {
-  jourj: Date;
+  jourJ: Date;
   j1: Date;
   j7: Date;
 };
 
-type ChoixDateEnvoi = "jourj" | "j1" | "j7" | "custom";
+type ChoixDateEnvoi = "jourJ" | "j1" | "j7" | "custom";
 
-const testType: TypeEvenement = "jour_special";
+// ============================================================
+// 🔧 HELPER : prochaine occurrence annuelle d'une date
+// ============================================================
+// Prend une date (ex: 15/03/2015) et retourne la prochaine fois
+// que ce jour/mois reviendra (ex: 15/03/2026 si on est en avril 2025)
+function prochaineOccurrenceAnnuelle(dateOriginale: Date): Date {
+  const aujourdhui = new Date();
+  aujourdhui.setHours(0, 0, 0, 0);
 
+  const prochaine = new Date(
+    aujourdhui.getFullYear(),
+    dateOriginale.getMonth(),
+    dateOriginale.getDate()
+  );
 
-const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
-  anniversaire: "anniversaire",
-  fete_prenomale: "fete_prenomale",
-  jour_special: "jour_special",
-};
+  // Si la date est déjà passée cette année → on prend l'an prochain
+  if (prochaine < aujourdhui) {
+    prochaine.setFullYear(prochaine.getFullYear() + 1);
+  }
 
-
-// ✅ Liste des events qui nécessitent une date manuelle
-const EVENTS_AVEC_DATE_MANUELLE = ["jour_special", "mariage", "naissance", "autre"];
-
-
+  return prochaine;
+}
 
 // ============================================================
 // 🎨 COMPOSANT PRINCIPAL
 // ============================================================
 function GenerateForm() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 // ============================================================
 // 🔧 FONCTIONS UTILITAIRES
 // ============================================================
@@ -83,14 +96,7 @@ function GenerateForm() {
       setAge("");
     }
   }
-  function formaterDate(d: Date): string {
-  return d.toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
+  
   // ===== STATES =====
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -107,26 +113,20 @@ function GenerateForm() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-
-  // States pour la programmation
-  const [destinataire, setDestinataire] = useState<"moi" | "contact" | "les_deux">("moi");
-  const [programmation, setProgrammation] = useState<{
-    loading: boolean;
-    message: string;
-    isError: boolean;
-  }>({ loading: false, message: "", isError: false });
-  const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourj");
+  const [session, setSession] = useState<any | null>(null);
+  const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourJ");
   const [dateCustom, setDateCustom] = useState<string>("");
   const [eventDate, setEventDate] = useState<string>("");
   const [eventDescription, setEventDescription] = useState<string>("");
 
   // ✅ Helper : est-ce un événement avec date manuelle ?
-  const needsManualDate = EVENTS_AVEC_DATE_MANUELLE.includes(eventType);
+  const needsManualDate = necessiteDateManuelle(eventType);
 
   // ===== EFFETS =====
   useEffect(() => {
     async function loadContactsAndPrefill() {
       const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
       if (!session) return;
 
       const { data, error } = await supabase
@@ -165,86 +165,73 @@ function GenerateForm() {
   
 
   async function handleGenerate() {
-    setLoading(true);
-    setError("");
-    setMessage("");
-    setCopied(false);
+  setLoading(true);
+  setError("");
+  setMessage("");
+  setCopied(false);
 
-    try {
-      const response = await fetch("/api/generate-message", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          firstName,
-          lastName,
-          age: age ? parseInt(age) : null,
-          relation,
-          tone,
-          eventType,
-          eventDate: needsManualDate ? eventDate : null,
-          eventDescription: needsManualDate ? eventDescription : null,
-          note: selectedContact?.note || null,
-        }),
-      });
+  try {
+    // ✅ On calcule la date réelle de l'événement pour l'envoyer à l'IA
+    let dateEvenementPourIA: string | null = null;
 
-      // ✅ Lecture sécurisée du JSON (même si la réponse est vide ou invalide)
-      let responseData: { message?: string; error?: string } = {};
-      try {
-        responseData = await response.json();
-      } catch (parseErr) {
-        console.error("Réponse non-JSON:", parseErr);
-      }
-
-      if (!response.ok) {
-        const errorMessage = responseData.error || "Erreur de l'API";
-        throw new Error(String(errorMessage));
-      }
-
-      if (!responseData.message) {
-        throw new Error("Aucun message reçu du serveur");
-      }
-
-      setMessage(responseData.message);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Impossible de générer le message.";
-      setError(errorMessage);
-      console.error("Erreur dans handleGenerate:", err);
-    } finally {
-      setLoading(false);
+    if (needsManualDate && eventDate) {
+      // Événement manuel (jour_special) : on prend la date saisie
+      dateEvenementPourIA = eventDate;
+    } else if (datesPossibles) {
+      // Événement automatique (anniversaire, fête...) : on prend le jour J calculé
+      dateEvenementPourIA = datesPossibles.jourJ.toISOString().split("T")[0];
     }
+
+    const messageGenere = await genererMessage({
+      firstName,
+      lastName,
+      age: age ? parseInt(age) : null,
+      relation,
+      tone,
+      eventType,
+      eventDate: dateEvenementPourIA,           // ✅ toujours renseigné si possible
+      eventDescription: needsManualDate ? eventDescription : null,
+      note: selectedContact?.note || null,
+      eventDateOrigin: selectedContact?.date_naissance ?? null,
+    });
+
+    setMessage(messageGenere);
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Impossible de générer le message.";
+    setError(errorMessage);
+    console.error("Erreur dans handleGenerate:", err);
+  } finally {
+    setLoading(false);
   }
+}
+
+
 
   // ✅ Calcul des dates possibles (typage strict)
   const datesPossibles: DatesPossibles | null = (() => {
-    if (!selectedContact) return null;
+  if (!selectedContact) return null;
 
-    // Cas 1 : Événement avec date manuelle (jour_special, mariage, naissance, autre)
-    if (needsManualDate && eventDate) {
-      const dateEvenement = new Date(eventDate);
-      const j1 = new Date(dateEvenement);
-      j1.setDate(j1.getDate() - 1);
-      const j7 = new Date(dateEvenement);
-      j7.setDate(j7.getDate() - 7);
-      return { jourj: dateEvenement, j1, j7 };
-    }
+  // Cas 1 : Événement avec date manuelle
+// → On calcule la prochaine occurrence annuelle (même si date passée)
+if (needsManualDate && eventDate) {
+  const dateSaisie = new Date(eventDate);
+  const prochaineDate = prochaineOccurrenceAnnuelle(dateSaisie);
+  return calculerDatesJ7J1JourJ(prochaineDate);
+}
 
-    // Cas 2 : Événements automatiques (anniversaire, fête prénomale)
-    const typeEvt = EVENT_TYPE_MAP[eventType];
-    if (!typeEvt) return null;
 
-    const dateEvenement = calculerDateEvenement(typeEvt, {
-      prenom: selectedContact.prenom,
-      date_naissance: selectedContact.date_naissance,
-    });
-    if (!dateEvenement) return null;
+  // Cas 2 : Événements automatiques
+  const typeEvt = EVENT_TYPE_MAP[eventType];
+  if (!typeEvt) return null;
 
-    const j1 = new Date(dateEvenement);
-    j1.setDate(j1.getDate() - 1);
-    const j7 = new Date(dateEvenement);
-    j7.setDate(j7.getDate() - 7);
+  const dateEvenement = calculerDateEvenement(typeEvt, {
+    prenom: selectedContact.prenom,
+    date_naissance: selectedContact.date_naissance,
+  });
+  if (!dateEvenement) return null;
 
-    return { jourj: dateEvenement, j1, j7 };
-  })();
+  return calculerDatesJ7J1JourJ(dateEvenement);
+})();
 
   const dateMin = new Date().toISOString().split("T")[0];
 
@@ -255,74 +242,11 @@ function GenerateForm() {
     if (choixDate === "custom") {
       return dateCustom ? new Date(dateCustom) : null;
     }
-    if (choixDate === "jourj") return datesPossibles.jourj;
+    if (choixDate === "jourJ") return datesPossibles.jourJ;
     if (choixDate === "j1") return datesPossibles.j1;
     if (choixDate === "j7") return datesPossibles.j7;
 
     return null;
-  }
-
-  async function handleProgrammer() {
-    if (!selectedContact || !getDateEnvoiChoisie()) return;
-
-    if (needsManualDate && (!eventDate || !eventDescription)) {
-      setProgrammation({
-        loading: false,
-        message: "Pour cet événement, la date et la description sont obligatoires.",
-        isError: true,
-      });
-      return;
-    }
-
-    setProgrammation({ loading: true, message: "", isError: false });
-
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user) {
-        throw new Error("Vous devez être connecté pour programmer un message");
-      }
-
-      const dateEnvoi = getDateEnvoiChoisie()!;
-
-      // ✅ CORRIGÉ : Mapping safe vers TypeEvenement
-      // Les events "mariage", "naissance", "autre" deviennent "jour_special"
-      const typeEvenementSafe: TypeEvenement = needsManualDate
-        ? "jour_special"
-        : (EVENT_TYPE_MAP[eventType] || "jour_special");
-
-      await programmerMessage({
-        userId: session.user.id,
-        contactId: selectedContact.id.toString(),
-        contact: {
-          prenom: selectedContact.prenom,
-          nom: selectedContact.nom,
-          email: selectedContact.email || null,
-          date_naissance: selectedContact.date_naissance || null,
-        },
-        typeEvenement: typeEvenementSafe,
-        message: message || "Message généré automatiquement",
-        destinataire,
-        emailUtilisateur: session.user.email || "",
-        dateOverride: dateEnvoi,
-        ton: tone,
-        eventDate: needsManualDate ? eventDate : undefined,
-        eventDescription: needsManualDate ? eventDescription : undefined,
-      });
-
-      setProgrammation({
-        loading: false,
-        message: "✅ Rappel programmé avec succès !",
-        isError: false,
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Erreur lors de la programmation";
-      setProgrammation({
-        loading: false,
-        message: errorMessage,
-        isError: true,
-      });
-      console.error("Erreur dans handleProgrammer:", err);
-    }
   }
 
   function handleCopy() {
@@ -443,11 +367,11 @@ async function handleShare() {
                 value={eventType}
                 onChange={(value) => {
                   setEventType(value);
-                  if (!EVENTS_AVEC_DATE_MANUELLE.includes(value)) {
-                    setEventDate("");
-                    setEventDescription("");
+                  if (!necessiteDateManuelle(value)) {
+                  setEventDate("");
+                  setEventDescription("");
                   }
-                }}
+              }}
               />
             </div>
 
@@ -461,7 +385,6 @@ async function handleShare() {
                     type="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    min={new Date().toISOString().split("T")[0]}
                     className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
                     required
                   />
@@ -513,142 +436,84 @@ async function handleShare() {
           {/* COLONNE DROITE : RÉSULTAT */}
           <div className="space-y-6">
             {message && (
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-[#C8A84E]">💌 Message généré</h3>
-                  </div>
-                <p className="text-white/90 whitespace-pre-wrap mb-4">{message}</p>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={handleCopy}
-                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-                  >
-                    {copied ? "✅ Copié !" : "Copier"}
-                  </button>
-                  <button
-                    onClick={handleShare}
-                    disabled={!message}
-                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-                  >
-                    📤 Partager
-                  </button>
-                </div>
-              </div>
-            )}
+  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+    <div className="flex justify-between items-start mb-2">
+      <h3 className="font-semibold text-[#C8A84E]">💌 Message généré (modifiable)</h3>
+    </div>
 
-            {message && selectedContact && datesPossibles && (
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-4">
-                <h3 className="font-semibold text-[#C8A84E]">⏰ Programmer un rappel</h3>
+    <textarea
+      value={message}
+      onChange={(e) => setMessage(e.target.value)}
+      className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-xl p-4 text-white/90 resize-y focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 text-sm leading-relaxed"
+      placeholder="Votre message personnalisé..."
+    />
 
-                <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1">
-                    Destinataire <span className="text-red-400">*</span>
-                  </label>
-                  <AppSelect
-                    options={DESTINATAIRES_RAPPEL.map((opt) => ({ value: opt.value, label: opt.label }))}
-                    value={destinataire}
-                    onChange={(value) => setDestinataire(value as "moi" | "contact" | "les_deux")}
-                  />
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-white/60 mb-2">Date d'envoi du message</p>
-                  <div className="space-y-2">
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
-                      <input
-                        type="radio"
-                        name="choixDate"
-                        checked={choixDate === "jourj"}
-                        onChange={() => setChoixDate("jourj")}
-                        className="mt-1 accent-[#C8A84E]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">🎉 Jour J</p>
-                        <p className="text-xs text-white/50 capitalize">{formaterDate(datesPossibles.jourj)}</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
-                      <input
-                        type="radio"
-                        name="choixDate"
-                        checked={choixDate === "j1"}
-                        onChange={() => setChoixDate("j1")}
-                        className="mt-1 accent-[#C8A84E]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">📅 La veille (J-1)</p>
-                        <p className="text-xs text-white/50 capitalize">{formaterDate(datesPossibles.j1)}</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
-                      <input
-                        type="radio"
-                        name="choixDate"
-                        checked={choixDate === "j7"}
-                        onChange={() => setChoixDate("j7")}
-                        className="mt-1 accent-[#C8A84E]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">📆 Une semaine avant (J-7)</p>
-                        <p className="text-xs text-white/50 capitalize">{formaterDate(datesPossibles.j7)}</p>
-                      </div>
-                    </label>
-
-                    <label className="flex items-start gap-3 cursor-pointer p-2 rounded-lg hover:bg-white/10 transition">
-                      <input
-                        type="radio"
-                        name="choixDate"
-                        checked={choixDate === "custom"}
-                        onChange={() => setChoixDate("custom")}
-                        className="mt-1 accent-[#C8A84E]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-white">🗓️ Choisir une autre date</p>
-                        {choixDate === "custom" && (
-                          <input
-                            type="date"
-                            value={dateCustom}
-                            min={dateMin}
-                            onChange={(e) => setDateCustom(e.target.value)}
-                            className="mt-2 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
-                          />
-                        )}
-                      </div>
-                    </label>
-
-                    {getDateEnvoiChoisie() && (
-                      <div className="mt-2 bg-white/10 border border-[#C8A84E]/30 rounded-lg px-3 py-2">
-                        <p className="text-xs text-[#C8A84E] font-semibold">
-                          ✉️ Envoi prévu le :{" "}
-                          <span className="capitalize">{formaterDate(getDateEnvoiChoisie()!)}</span>
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <button
-    onClick={handleProgrammer}
-    disabled={programmation.loading || !getDateEnvoiChoisie()}
-    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-  >
-    {programmation.loading ? "Programmation..." : "✅ Programmer"}
-  </button>
+    <div className="grid grid-cols-2 gap-3 mt-4">
+      <button
+        onClick={handleCopy}
+        className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+      >
+        {copied ? "✅ Copié !" : "Copier"}
+      </button>
+      <button
+        onClick={handleShare}
+        disabled={!message}
+        className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+      >
+        📤 Partager
+      </button>
+    </div>
+  </div>
+)}
 
 
-                {programmation.message && (
-                  <p className={`text-xs font-medium rounded-lg px-3 py-2 ${
-                    programmation.isError
-                      ? "bg-red-500/10 text-red-300"
-                      : "bg-green-500/10 text-green-300"
-                  }`}>
-                    {programmation.message}
-                  </p>
-                )}
-              </div>
-            )}
+{/* 🔍 DEBUG TEMPORAIRE - à supprimer après */}
+<div className="bg-yellow-500/10 border border-yellow-500/40 rounded-lg p-3 text-xs text-yellow-200 space-y-1">
+  <p>🔍 Debug affichage ProgrammerRappel :</p>
+  <p>• message : {message ? "✅ OK" : "❌ vide"}</p>
+  <p>• selectedContact : {selectedContact ? `✅ ${selectedContact.prenom}` : "❌ null"}</p>
+  <p>• datesPossibles : {datesPossibles ? "✅ OK" : "❌ null"}</p>
+  <p>• session : {session ? "✅ OK" : "❌ null"}</p>
+  <p>• eventType : {eventType}</p>
+</div>
+
+            {message && selectedContact && session && (
+  <>
+    <>
+  <ProgrammerRappel
+    session={session}
+    selectedContact={selectedContact}
+    message={message}
+    tone={tone}
+    eventType={eventType}
+    datesPossibles={datesPossibles ?? undefined}
+  />
+
+  {!datesPossibles && (
+    <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
+      ℹ️ Pas de date automatique pour cet événement.
+      {eventType === "fete_prenomale" && (
+        <p className="mt-1">
+          Le prénom <strong>{selectedContact.prenom}</strong> n'a pas été trouvé
+          dans notre calendrier des saints.
+        </p>
+      )}
+      {eventType === "anniversaire" && !selectedContact.date_naissance && (
+        <p className="mt-1">
+          Ce contact n'a pas de <strong>date de naissance</strong> renseignée.
+        </p>
+      )}
+      <p className="mt-2">
+        👉 Utilise <strong>📆 Date personnalisée</strong> ci-dessus pour choisir manuellement.
+      </p>
+    </div>
+  )}
+</>
+
+  </>
+)}
+
+
           </div>
         </div>
       </div>

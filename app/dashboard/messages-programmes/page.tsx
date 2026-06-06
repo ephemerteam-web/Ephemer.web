@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
+import AccordionGroup from "@/components/AccordionGroup"; // ✅ adapte le chemin si besoin
 
 type MessageProgramme = {
   id: number;
@@ -14,7 +15,10 @@ type MessageProgramme = {
   source: string;
   ton: string | null;
   email_destinataire: string | null;
-  contacts: { prenom: string; nom: string } | { prenom: string; nom: string }[] | null;
+  contacts:
+    | { prenom: string; nom: string }
+    | { prenom: string; nom: string }[]
+    | null;
 };
 
 const LABELS: Record<string, string> = {
@@ -45,27 +49,58 @@ function getRelativeDate(dateISO: string): string {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   target.setHours(0, 0, 0, 0);
-  
+
   const diffMs = target.getTime() - today.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
-  
+
   if (diffDays < 0) return `Il y a ${Math.abs(diffDays)} jour(s)`;
   if (diffDays === 0) return "📅 Aujourd'hui";
   if (diffDays === 1) return "📅 Demain";
   return `📅 Dans ${diffDays} jours`;
 }
 
+function groupByEventType(messages: MessageProgramme[]) {
+  return messages.reduce((acc, message) => {
+    const key = message.type_evenement || "autre";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(message);
+    return acc;
+  }, {} as Record<string, MessageProgramme[]>);
+}
+
+function formatDateFR(dateISO: string) {
+  return new Date(dateISO).toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function keyAvenir(type: string) {
+  return `avenir:${type}`;
+}
+function keyHistorique(type: string) {
+  return `hist:${type}`;
+}
+
 export default function MessagesProgrammesPage() {
   const router = useRouter();
+
   const [messages, setMessages] = useState<MessageProgramme[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [annulationId, setAnnulationId] = useState<number | null>(null);
   const [reactivationId, setReactivationId] = useState<number | null>(null);
+
   const [erreur, setErreur] = useState<string | null>(null);
-  const [historiqueVisible, setHistoriqueVisible] = useState(false);
+
+  // ✅ clés distinctes pour éviter le "mélange" avenir/historique
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadMessages();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadMessages() {
@@ -94,8 +129,32 @@ export default function MessagesProgrammesPage() {
       return;
     }
 
-    setMessages((data as MessageProgramme[]) || []);
+    const list = (data as MessageProgramme[]) || [];
+    setMessages(list);
+
+    // ✅ ouverture auto UNIQUEMENT pour "À venir"
+    const now = new Date();
+    const aVenir = list.filter(
+      (m) => m.statut === "programme" && new Date(m.date_envoi) >= now
+    );
+    const groupedAVenir = groupByEventType(aVenir);
+
+    const firstType = Object.keys(groupedAVenir)[0];
+    if (firstType) {
+      setOpenGroups((prev) => ({
+        ...prev,
+        [keyAvenir(firstType)]: true,
+      }));
+    }
+
     setLoading(false);
+  }
+
+  function toggleGroup(groupKey: string) {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [groupKey]: !prev[groupKey],
+    }));
   }
 
   async function handleAnnuler(id: number) {
@@ -103,6 +162,7 @@ export default function MessagesProgrammesPage() {
     if (!confirme) return;
 
     setAnnulationId(id);
+
     const { error } = await supabase
       .from("rappels")
       .update({ statut: "annule" })
@@ -114,6 +174,7 @@ export default function MessagesProgrammesPage() {
     } else {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, statut: "annule" } : m)));
     }
+
     setAnnulationId(null);
   }
 
@@ -122,6 +183,7 @@ export default function MessagesProgrammesPage() {
     if (!confirme) return;
 
     setReactivationId(id);
+
     const { error } = await supabase
       .from("rappels")
       .update({ statut: "programme" })
@@ -133,12 +195,24 @@ export default function MessagesProgrammesPage() {
     } else {
       setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, statut: "programme" } : m)));
     }
+
     setReactivationId(null);
   }
 
   const now = new Date();
-  const aVenir = messages.filter((m) => m.statut === "programme" && new Date(m.date_envoi) >= now);
-  const historique = messages.filter((m) => m.statut !== "programme" || new Date(m.date_envoi) < now);
+
+  const aVenir = useMemo(() => {
+    return messages.filter((m) => m.statut === "programme" && new Date(m.date_envoi) >= now);
+  }, [messages, now]);
+
+  const historique = useMemo(() => {
+    return messages.filter((m) => m.statut !== "programme" || new Date(m.date_envoi) < now);
+  }, [messages, now]);
+
+  const groupedAVenir = useMemo(() => groupByEventType(aVenir), [aVenir]);
+  const groupedHistorique = useMemo(() => groupByEventType(historique), [historique]);
+
+  const allMessagesCount = messages.length;
 
   return (
     <div className="p-4 md:p-8">
@@ -146,8 +220,9 @@ export default function MessagesProgrammesPage() {
         <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-3xl font-bold text-white">📅 Messages programmés</h1>
-            <p className="text-white/40 mt-1">Tes envois automatiques à venir et passés.</p>
+            <p className="text-white/40 mt-1">Regroupés par événement. À venir + historique.</p>
           </div>
+
           <button
             onClick={() => router.push("/dashboard/generate")}
             className="bg-[#C8A84E] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#D4B85C] transition shrink-0"
@@ -159,7 +234,10 @@ export default function MessagesProgrammesPage() {
         {erreur && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-300 p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
             <p className="font-medium">⚠️ {erreur}</p>
-            <button onClick={() => loadMessages()} className="text-sm font-semibold underline hover:text-red-100 shrink-0">
+            <button
+              onClick={() => loadMessages()}
+              className="text-sm font-semibold underline hover:text-red-100 shrink-0"
+            >
               Réessayer
             </button>
           </div>
@@ -167,59 +245,104 @@ export default function MessagesProgrammesPage() {
 
         {loading && <div className="text-center py-20 text-white/40">Chargement...</div>}
 
-        {!loading && !erreur && messages.length === 0 && (
+        {!loading && !erreur && allMessagesCount === 0 && (
           <div className="bg-white/5 border border-dashed border-[#C8A84E]/20 rounded-2xl p-12 text-center">
             <div className="text-5xl mb-4">💌</div>
             <p className="text-white/60 font-medium">Aucun message programmé.</p>
-            <button onClick={() => router.push("/dashboard/generate")} className="mt-4 bg-[#C8A84E] text-[#0B1120] font-bold text-sm px-5 py-2 rounded-xl hover:bg-[#D4B85C] transition">
+            <button
+              onClick={() => router.push("/dashboard/generate")}
+              className="mt-4 bg-[#C8A84E] text-[#0B1120] font-bold text-sm px-5 py-2 rounded-xl hover:bg-[#D4B85C] transition"
+            >
               Créer mon premier message →
             </button>
           </div>
         )}
 
+        {/* ✅ À VENIR */}
         {aVenir.length > 0 && (
           <section className="mb-8">
             <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
               🔜 À envoyer ({aVenir.length})
             </h2>
-            <div className="flex flex-col gap-3">
-              {aVenir.map((m) => (
-                <MessageCard
-                  key={m.id}
-                  message={m}
-                  onAnnuler={handleAnnuler}
-                  onReactiver={handleReactiver}
-                  estEnCours={annulationId === m.id}
-                  estReactivationEnCours={reactivationId === m.id}
-                />
-              ))}
+
+            <div className="flex flex-col gap-4">
+              {Object.entries(groupedAVenir).map(([type, msgs]) => {
+                const groupKey = keyAvenir(type);
+                const open = !!openGroups[groupKey];
+                const label = LABELS[type] ?? type;
+
+                return (
+                  <AccordionGroup
+                    key={groupKey}
+                    title={label}
+                    count={msgs.length}
+                    open={open}
+                    onToggle={() => toggleGroup(groupKey)}
+                  >
+                    {msgs
+                      .slice()
+                      .sort(
+                        (x, y) =>
+                          new Date(x.date_envoi).getTime() - new Date(y.date_envoi).getTime()
+                      )
+                      .map((m) => (
+                        <MessageCard
+                          key={m.id}
+                          message={m}
+                          onAnnuler={handleAnnuler}
+                          onReactiver={handleReactiver}
+                          estEnCours={annulationId === m.id}
+                          estReactivationEnCours={reactivationId === m.id}
+                        />
+                      ))}
+                  </AccordionGroup>
+                );
+              })}
             </div>
           </section>
         )}
 
+        {/* ✅ HISTORIQUE */}
         {historique.length > 0 && (
           <section>
-            <button
-              onClick={() => setHistoriqueVisible(!historiqueVisible)}
-              className="w-full flex items-center justify-between py-3 px-1 text-sm font-bold text-white/50 uppercase tracking-wider hover:text-[#C8A84E] transition group"
-            >
-              <span>{historiqueVisible ? "📁 Masquer" : "📂 Déplier"} l'historique ({historique.length})</span>
-              <span className={`transform transition-transform duration-300 ${historiqueVisible ? "rotate-180" : ""} group-hover:text-[#C8A84E]`}>▼</span>
-            </button>
-            {historiqueVisible && (
-              <div className="flex flex-col gap-3 opacity-75 mt-1">
-                {historique.map((m) => (
-                  <MessageCard
-                    key={m.id}
-                    message={m}
-                    onAnnuler={handleAnnuler}
-                    onReactiver={handleReactiver}
-                    estEnCours={false}
-                    estReactivationEnCours={false}
-                  />
-                ))}
-              </div>
-            )}
+            <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
+              📁 Historique ({historique.length})
+            </h2>
+
+            <div className="flex flex-col gap-4">
+              {Object.entries(groupedHistorique).map(([type, msgs]) => {
+                const groupKey = keyHistorique(type);
+                const open = !!openGroups[groupKey];
+                const label = LABELS[type] ?? type;
+
+                return (
+                  <AccordionGroup
+                    key={groupKey}
+                    title={label}
+                    count={msgs.length}
+                    open={open}
+                    onToggle={() => toggleGroup(groupKey)}
+                  >
+                    {msgs
+                      .slice()
+                      .sort(
+                        (x, y) =>
+                          new Date(y.date_envoi).getTime() - new Date(x.date_envoi).getTime()
+                      )
+                      .map((m) => (
+                        <MessageCard
+                          key={m.id}
+                          message={m}
+                          onAnnuler={handleAnnuler}
+                          onReactiver={handleReactiver}
+                          estEnCours={false}
+                          estReactivationEnCours={false}
+                        />
+                      ))}
+                  </AccordionGroup>
+                );
+              })}
+            </div>
           </section>
         )}
       </div>
@@ -242,25 +365,29 @@ function MessageCard({
 }) {
   const [expanded, setExpanded] = useState(false);
 
-  const dateFR = new Date(m.date_envoi).toLocaleDateString("fr-FR", {
-    weekday: "long", day: "numeric", month: "long", year: "numeric",
-  });
-
   const contactNom = extractContactName(m.contacts);
   const joursRestants = getRelativeDate(m.date_envoi);
+
   const estAnnulable = m.statut === "programme" && new Date(m.date_envoi) > new Date();
   const estAnnule = m.statut === "annule";
+  const dateFR = formatDateFR(m.date_envoi);
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 transition hover:bg-white/10">
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 transition hover:bg-white/10 active:scale-[0.995]">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
             <span className="font-semibold text-white">{contactNom}</span>
+
             <span className="text-xs px-2 py-0.5 rounded-full bg-[#C8A84E]/20 text-[#C8A84E]">
               {LABELS[m.type_evenement] ?? m.type_evenement}
             </span>
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUT_STYLE[m.statut] ?? "bg-white/10 text-white/40"}`}>
+
+            <span
+              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                STATUT_STYLE[m.statut] ?? "bg-white/10 text-white/40"
+              }`}
+            >
               {m.statut === "programme" ? "⏳ Programmé" : m.statut === "envoye" ? "✅ Envoyé" : "❌ Annulé"}
             </span>
           </div>
@@ -268,8 +395,11 @@ function MessageCard({
           <p className="text-sm text-white/50">
             {dateFR} • <span className="text-[#C8A84E] font-medium">{joursRestants}</span>
           </p>
+
           {m.ton && <p className="text-xs text-white/40 mt-0.5">🎨 Ton : {m.ton}</p>}
-          {m.email_destinataire && <p className="text-xs text-white/40 mt-0.5">✉️ {m.email_destinataire}</p>}
+          {m.email_destinataire && (
+            <p className="text-xs text-white/40 mt-0.5">✉️ {m.email_destinataire}</p>
+          )}
         </div>
 
         <div className="flex gap-2 shrink-0 flex-wrap">

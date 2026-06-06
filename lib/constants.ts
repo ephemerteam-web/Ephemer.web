@@ -74,6 +74,7 @@ export const TONS_MESSAGE = [
   { value: 'familier', label: '😊 Familier / Chaleureux' },
   { value: 'humoristique', label: '😂 Humoristique / Blagueur' },
   { value: 'poetique', label: '✨ Poétique / Romantique' },
+  { value: 'beauf', label: '✨ Humoristique / Lourd' },
 ] as const
 
 // ============================================
@@ -146,3 +147,32 @@ export const COULEURS = {
   warning: '#f59e0b',
   error: '#ef4444',
 } as const
+
+// ============================================
+// 🎯 ÉVÉNEMENTS NÉCESSITANT UNE DATE MANUELLE
+// ============================================
+// Ces événements n'ont pas de date automatique calculable
+// → l'utilisateur doit saisir la date lui-même
+export const EVENTS_AVEC_DATE_MANUELLE = [
+  'jour_special',
+  'mariage',
+  'naissance',
+  'autre',
+] as const
+// Helper : vérifie si un type d'événement nécessite une date manuelle
+export function necessiteDateManuelle(eventType: string): boolean {
+  return (EVENTS_AVEC_DATE_MANUELLE as readonly string[]).includes(eventType)
+}
+
+
+// ============================================
+// 🗺️ MAPPING TYPE D'ÉVÉNEMENT (UI → BDD)
+// ============================================
+// Convertit la valeur du <select> vers le type utilisé par calculerDateEvenement
+import type { TypeEvenement } from './dates-evenements'
+
+export const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
+  anniversaire: 'anniversaire',
+  fete_prenomale: 'fete_prenomale',
+  jour_special: 'jour_special',
+}

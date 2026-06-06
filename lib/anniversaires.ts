@@ -40,14 +40,45 @@ export function calculerProchainAnniversaire(dateNaissance: string) {
   }
 }
 
-// Formate une date en français (ex: "15 mars 2025")
-export function formaterDateFR(date: Date): string {
-  return date.toLocaleDateString('fr-FR', {
+// Formate une date en français
+// Si avecJourSemaine = true → "lundi 15 mars 2025"
+// Sinon → "15 mars 2025"
+export function formaterDateFR(
+  date: Date,
+  avecJourSemaine: boolean = false
+): string {
+  const options: Intl.DateTimeFormatOptions = {
     day: 'numeric',
     month: 'long',
     year: 'numeric',
-  })
+  }
+  if (avecJourSemaine) {
+    options.weekday = 'long'
+  }
+  return date.toLocaleDateString('fr-FR', options)
 }
+
+// ============================================
+// 📅 CALCUL DES DATES J-7, J-1, JOUR J
+// ============================================
+// À partir d'une date d'événement, retourne les 3 dates possibles
+// d'envoi d'un message (J-7, J-1, le jour J).
+export function calculerDatesJ7J1JourJ(dateEvenement: Date): {
+  jourJ: Date
+  j1: Date
+  j7: Date
+} {
+  const jourJ = new Date(dateEvenement)
+
+  const j1 = new Date(dateEvenement)
+  j1.setDate(j1.getDate() - 1)
+
+  const j7 = new Date(dateEvenement)
+  j7.setDate(j7.getDate() - 7)
+
+  return { jourJ, j1, j7 }
+}
+
 
 // --- NOUVEAU : FONCTIONS LIÉES AUX FÊTES ---
 

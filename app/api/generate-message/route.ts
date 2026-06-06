@@ -7,32 +7,36 @@ import {
   MESSAGES_UI
 } from "@/lib/constants";
 
-// Type pour les objets avec `value` et `label`
 type LabelValueItem = { value: string; label: string };
 
-// Fonction utilitaire pour récupérer le label à partir de la valeur
-function getLabelFromValue(
-  array: readonly LabelValueItem[],
-  value: string
-): string {
+function getLabelFromValue(array: readonly LabelValueItem[], value: string): string {
   const item = array.find((item) => item.value === value);
   return item ? item.label : array[0]?.label || value;
 }
 
-// Sets pour validation rapide
 const VALID_EVENT_TYPES = new Set(TYPES_EVENEMENT.map(e => e.value));
 const VALID_RELATIONS = new Set(TYPES_RELATION.map(r => r.value));
 const VALID_TONES = new Set(TONS_MESSAGE.map(t => t.value));
 
-// 👇 NOUVEAU : Fonction pour formater une date en français (ex: "15 octobre 2023")
 function formatDateForPrompt(dateString: string): string {
   const date = new Date(dateString);
-  if (isNaN(date.getTime())) return dateString; // Fallback si date invalide
+  if (isNaN(date.getTime())) return dateString;
   return date.toLocaleDateString("fr-FR", {
     day: "numeric",
     month: "long",
     year: "numeric",
   });
+}
+
+function calculerAnneesEcoulees(dateOrigine: string | null, dateRappel?: string | null): number | null {
+  if (!dateOrigine) return null;
+  const date = new Date(dateOrigine);
+  if (isNaN(date.getTime())) return null;
+
+  const reference = dateRappel ? new Date(dateRappel) : new Date();
+
+  const annees = reference.getFullYear() - date.getFullYear();
+  return annees > 0 ? annees : null;
 }
 
 export async function POST(request: Request) {
@@ -46,18 +50,16 @@ export async function POST(request: Request) {
       relation = TYPES_RELATION[0].value,
       tone = TONS_MESSAGE[0].value,
       customMessage = "",
-      // 👇 NOUVEAU : Récupération des champs pour les dates spéciales
       eventDate = null,
       eventDescription = null,
       note = null,
+      eventDateOrigin = null,
     } = body;
 
-    // Validation des entrées
     const validatedEventType = VALID_EVENT_TYPES.has(eventType) ? eventType : TYPES_EVENEMENT[0].value;
     const validatedRelation = VALID_RELATIONS.has(relation) ? relation : TYPES_RELATION[0].value;
     const validatedTone = VALID_TONES.has(tone) ? tone : TONS_MESSAGE[0].value;
 
-    // 👇 NOUVEAU : Validation spécifique pour les dates spéciales
     if (validatedEventType === "jour_special") {
       if (!eventDate) {
         return NextResponse.json(
@@ -65,46 +67,61 @@ export async function POST(request: Request) {
           { status: 400 }
         );
       }
-      // Vérifie que la date est valide et dans le futur
       const dateObj = new Date(eventDate);
-      if (isNaN(dateObj.getTime()) || dateObj < new Date()) {
+      if (isNaN(dateObj.getTime())) {
         return NextResponse.json(
-          { error: "La date doit être valide et dans le futur." },
+          { error: "La date saisie n'est pas valide." },
           { status: 400 }
         );
       }
     }
 
-    // Récupération des labels
     const eventLabel = getLabelFromValue(TYPES_EVENEMENT, validatedEventType);
     const relationLabel = getLabelFromValue(TYPES_RELATION, validatedRelation);
     const toneLabel = getLabelFromValue(TONS_MESSAGE, validatedTone);
 
-    // 👇 NOUVEAU : Construction du prompt avec gestion des dates spéciales
-    let prompt = `
-      Rédige un message ${toneLabel} pour ${firstName} ${lastName ? ` ${lastName}` : ''}
-    `;
+    const dateOrigine = eventDateOrigin ?? null;
 
-    if (validatedEventType === "jour_special" && eventDate) {
-      // Cas spécial : événement personnalisé
-      const formattedDate = formatDateForPrompt(eventDate);
-      prompt += `à l'occasion de ⭐ ${eventDescription || "cet événement spécial"}.`;
-      prompt += `\nCélébré le ${formattedDate}.`;
-    } else {
-      // Cas classique : anniversaire, fête prénomale, etc.
-      prompt += `à l'occasion de son ${eventLabel}.`;
+    // ✅ CORRECTION PRINCIPALE : on ne calcule les années écoulées
+    // que pour les anniversaires et fêtes prénomales
+    let anneesEcoulees: number | null = null;
+    if (validatedEventType === "anniversaire" || validatedEventType === "fete_prenomale") {
+      anneesEcoulees = calculerAnneesEcoulees(dateOrigine, eventDate);
     }
 
-    prompt += `
-      ${age ? `Il/Elle a ${age} ans.` : ''}
-      Relation : ${relationLabel}.
-      ${note ? `Informations personnelles sur ${firstName} (utilise-les pour personnaliser le message) : ${note}.` : ''}
-      ${customMessage ? `Inclure ce message personnalisé : "${customMessage}".` : ''}
-      Format : Texte court (1-2 phrases max), naturel et ${toneLabel}.
-      Langue : Français.
-    `.trim();
+    let prompt = `Rédige un message ${toneLabel} pour ${firstName}${lastName ? ` ${lastName}` : ""}`;
 
-    // Appel à l'API Mammouth
+    if (validatedEventType === "jour_special" && eventDate) {
+      const formattedDate = formatDateForPrompt(eventDate);
+      prompt += ` à l'occasion de : "${eventDescription || "cet événement spécial"}".`;
+      prompt += `\nCet événement a eu lieu le ${formattedDate}.`;
+    } else {
+      prompt += ` à l'occasion de son ${eventLabel}.`;
+      if (eventDate) {
+        prompt += `\nDate de l'événement : ${formatDateForPrompt(eventDate)}.`;
+      }
+      if (eventDescription) {
+        prompt += `\nContexte supplémentaire sur cet événement : "${eventDescription}".`;
+      }
+    }
+
+    if (anneesEcoulees !== null) {
+      prompt += `\nCela fait ${anneesEcoulees} an${anneesEcoulees > 1 ? "s" : ""} que cet événement est célébré.`;
+      prompt += `\nMentionne subtilement ce chiffre pour personnaliser le message.`;
+    }
+
+    prompt += `\n\nContexte événement : "${validatedEventType}" (${eventLabel}).`;
+    prompt += `\nUtilise ce type d'événement pour adapter le registre émotionnel du message.`;
+
+    prompt += `
+  ${age ? `Il/Elle a ${age} ans.` : ""}
+  Relation : ${relationLabel}.
+  ${note ? `Infos personnelles utiles : ${note}.` : ""}
+  ${customMessage ? `Inclure : "${customMessage}".` : ""}
+  Format : Texte court (1-2 phrases max), naturel et ${toneLabel}.
+  Langue : Français.
+`.trim();
+
     const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat/completions", {
       method: "POST",
       headers: {
