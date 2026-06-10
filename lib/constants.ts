@@ -32,6 +32,7 @@ export const INDICATIFS_PAYS = [
 export const TYPES_RELATION = [
   { value: 'ami', emoji: '👫', label: 'Ami(e)', couleur: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
   { value: 'famille', emoji: '👨‍👩‍👧', label: 'Famille', couleur: 'bg-pink-500/20 text-pink-300 border border-pink-500/30' },
+  { value: 'couple', emoji: '❤️', label: 'Couple / Amour', couleur: 'bg-rose-500/20 text-rose-300 border border-rose-500/30' },
   { value: 'pro', emoji: '💼', label: 'Professionnel', couleur: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
   { value: 'autre', emoji: '✨', label: 'Autre', couleur: 'bg-white/10 text-indigo-200 border border-white/20' },
 ] as const
@@ -41,7 +42,7 @@ export const TYPES_RELATION = [
 // ============================================
 export const TYPES_EVENEMENT = [
   { value: 'anniversaire', label: '🎂 Anniversaire' },
-  { value: 'fete_prenomale', label: '📖 Fête prénomale' },
+  { value: 'fete_prenomale', label: '📖 Fête (des saints)' },
   { value: 'jour_special', label: '⭐ Jour spécial (ex: date de rencontre)' },
   { value: 'mariage', label: '💍 Mariage' },
   { value: 'naissance', label: '👶 Naissance' },
@@ -55,7 +56,9 @@ export const TYPES_RAPPEL = [
   { value: 'j30', label: 'J-30 (1 mois avant)' },
   { value: 'j7', label: 'J-7 (1 semaine avant)' },
   { value: 'jourj', label: 'Jour J (le jour même)' },
+  { value: 'date_libre', label: '📅 Date personnalisée' },
 ] as const
+
 
 // ============================================
 // 📤 DESTINATAIRES DE RAPPELS
@@ -74,8 +77,10 @@ export const TONS_MESSAGE = [
   { value: 'familier', label: '😊 Familier / Chaleureux' },
   { value: 'humoristique', label: '😂 Humoristique / Blagueur' },
   { value: 'poetique', label: '✨ Poétique / Romantique' },
-  { value: 'beauf', label: '✨ Humoristique / Lourd' },
+  { value: 'beauf', label: '🍻 Humour potache mais bienveillant' },
+  { value: 'vieux_francais', label: '📜 Vieux français / Médiéval' },
 ] as const
+
 
 // ============================================
 // ✅ STATUTS DE RAPPELS
@@ -164,6 +169,29 @@ export function necessiteDateManuelle(eventType: string): boolean {
   return (EVENTS_AVEC_DATE_MANUELLE as readonly string[]).includes(eventType)
 }
 
+// ============================================
+// 🕰️ ÉVÉNEMENTS POUR LESQUELS ON PEUT MENTIONNER LES ANNÉES ÉCOULÉES
+// ============================================
+// Exemple :
+// - anniversaire : "35 ans"
+// - mariage : "10 ans de mariage"
+// - naissance : "1 an déjà"
+// 
+// On évite pour :
+// - fête prénomale : pas naturel de dire "cela fait X ans"
+// - autre : trop vague
+export const EVENTS_AVEC_ANNEES_ECOULEES = [
+  'anniversaire',
+  'mariage',
+  'naissance',
+  'jour_special',
+  'autre',
+] as const
+
+export function peutMentionnerAnneesEcoulees(eventType: string): boolean {
+  return (EVENTS_AVEC_ANNEES_ECOULEES as readonly string[]).includes(eventType)
+}
+
 
 // ============================================
 // 🗺️ MAPPING TYPE D'ÉVÉNEMENT (UI → BDD)
@@ -175,4 +203,8 @@ export const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
   anniversaire: 'anniversaire',
   fete_prenomale: 'fete_prenomale',
   jour_special: 'jour_special',
+  mariage: 'jour_special',
+  naissance: 'jour_special',
+  autre: 'jour_special',
 }
+

@@ -156,15 +156,21 @@ export default function ModifierContact() {
           <div>
             <label className="text-sm font-semibold text-white/70">Type de relation</label>
             <select
-              value={relation}
-              onChange={(e) => setRelation(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
-            >
-              <option value="ami" className="bg-[#0B1120]">👫 Ami(e)</option>
-              <option value="famille" className="bg-[#0B1120]">👨‍👩‍👧 Famille</option>
-              <option value="pro" className="bg-[#0B1120]">💼 Professionnel</option>
-              <option value="autre" className="bg-[#0B1120]">✨ Autre</option>
-            </select>
+  value={relation}
+  onChange={(e) => setRelation(e.target.value)}
+  className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+>
+  {TYPES_RELATION.map((typeRelation) => (
+    <option
+      key={typeRelation.value}
+      value={typeRelation.value}
+      className="bg-[#0B1120]"
+    >
+      {typeRelation.emoji} {typeRelation.label}
+    </option>
+  ))}
+</select>
+
           </div>
 
           <div>
@@ -173,7 +179,7 @@ export default function ModifierContact() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="exemple@email.com"
+              placeholder={MESSAGES_UI.placeholder_email}
               className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
             />
           </div>
@@ -196,12 +202,12 @@ export default function ModifierContact() {
                 type="tel"
                 value={telephoneNumero}
                 onChange={(e) => setTelephoneNumero(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="612345678"
+                placeholder={MESSAGES_UI.placeholder_telephone}
                 className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
               />
             </div>
             <p className="text-xs text-white/40 mt-1">
-              Sans le 0 du début (ex : 612345678 pour 06 12 34 56 78)
+             {MESSAGES_UI.info_telephone}
             </p>
           </div>
 
@@ -212,7 +218,7 @@ export default function ModifierContact() {
             <textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="Ex : aime le foot, fan de cuisine italienne, vit à Paris, deux enfants..."
+              placeholder={MESSAGES_UI.placeholder_note}
               rows={4}
               className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 resize-none"
             />
