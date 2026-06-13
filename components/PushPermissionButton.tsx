@@ -8,34 +8,41 @@ const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "REMPLACE_P
 
 export default function PushPermissionButton() {
   const [status, setStatus] = useState<"default" | "loading" | "granted" | "denied">("default");
+// 🔍 LIGNE DE TEST À SUPPRIMER ENSUITE
+console.log("Clé VAPID lue :", VAPID_PUBLIC_KEY.substring(0, 20) + "...");
 
-  const subscribeUser = async () => {
+   const subscribeUser = async () => {
     setStatus("loading");
     try {
-      // 1. Vérification de compatibilité navigateur
+      console.log("🔵 Étape 1 : vérification navigateur");
       if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
         throw new Error("Navigateur non compatible avec les push");
       }
 
-      // 2. Demande de permission à l'utilisateur (boîte native du navigateur)
+      console.log("🔵 Étape 2 : demande de permission");
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setStatus("denied");
         return;
       }
 
-      // 3. Attente du Service Worker prêt & génération du token de souscription
+      console.log("🔵 Étape 3a : enregistrement du Service Worker");
+      await navigator.serviceWorker.register("/sw.js");
+
+      console.log("🔵 Étape 3b : attente que le SW soit prêt");
       const reg = await navigator.serviceWorker.ready;
+
+      console.log("🔵 Étape 3c : souscription push");
       const subscription = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
       });
 
-      // 4. Vérification que l'utilisateur est bien connecté
+      console.log("🔵 Étape 4 : vérification connexion utilisateur");
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       if (authError || !user) throw new Error("Tu dois être connecté pour activer les rappels");
 
-      // 5. Sauvegarde sécurisée dans Supabase
+      console.log("🔵 Étape 5 : sauvegarde dans Supabase");
       const { error: dbError } = await supabase
         .from("user_push_subscriptions")
         .insert({
@@ -44,12 +51,15 @@ export default function PushPermissionButton() {
         });
 
       if (dbError) throw dbError;
+
+      console.log("✅ Étape 6 : terminé !");
       setStatus("granted");
     } catch (err) {
       console.error("❌ Échec activation push :", err);
       setStatus("denied");
     }
   };
+
 
   // 📱 Rendu conditionnel avec retours visuels
   if (status === "loading") {
@@ -59,7 +69,7 @@ export default function PushPermissionButton() {
     return <p className="text-green-400 text-xs mt-2">✅ Notifications activées</p>;
   }
   if (status === "denied") {
-    return <p className="text-red-400 text-xs mt-2">❌ Bloquées (vérifie tes paramètres navigateur)</p>;
+    return <p className="text-red-400 text-xs mt-2">❌ Bloquées (vérifie tes paramètres navigateur (blocage des notifications ?))</p>;
   }
 
   return (

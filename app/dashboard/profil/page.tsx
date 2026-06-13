@@ -97,6 +97,29 @@ export default function DashboardProfil() {
   if (loading) {
     return <AppLayout><div className="p-6 text-white">Chargement...</div></AppLayout>
   }
+const handleChangePassword = async () => {
+  setMessage(null)
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user?.email) {
+    setMessage({ text: 'Impossible de récupérer ton email', type: 'error' })
+    return
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+    redirectTo: `${window.location.origin}/reset-password`,
+  })
+
+  if (error) {
+    setMessage({ text: error.message, type: 'error' })
+  } else {
+    setMessage({ 
+      text: '📩 Un email de réinitialisation a été envoyé ! Vérifie ta boîte mail.', 
+      type: 'success' 
+    })
+  }
+}
 
   // Ajoute cette fonction avec tes autres fonctions (avant le return)
 const handleDeleteAccount = async () => {
@@ -250,6 +273,14 @@ const handleDeleteAccount = async () => {
             >
               {saving ? 'Enregistrement...' : '💾 Enregistrer mes informations'}
             </button>
+
+<button
+  onClick={handleChangePassword}
+  className="w-full py-3 text-blue-400 text-sm border border-blue-400/30 rounded-2xl hover:bg-blue-500/10 transition-all"
+>
+  🔐 Modifier mon mot de passe
+</button>
+
 
             {/* Zone de danger */}
 {!showDeleteConfirm ? (

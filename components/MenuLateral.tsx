@@ -87,10 +87,6 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
           </div>
         </div>
 {/* Juste avant la fermeture de ta balise </nav> ou </aside> */}
-<div className="mt-auto pt-4 px-4 border-t border-white/10">
-  <p className="text-xs text-white/50 mb-2">Rappels & Notifications</p>
-  <PushPermissionButton />
-</div>
 
         {/* NAVIGATION */}
         <nav className="flex flex-col py-2">
@@ -115,6 +111,10 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
             <span>Déconnexion</span>
           </button>
         </nav>
+        <div className="mt-auto pt-4 px-4 border-t border-white/10">
+  <p className="text-xs text-white/50 mb-2">Rappels & Notifications</p>
+  <PushPermissionButton />
+</div>
       </aside>
     </>
   )
