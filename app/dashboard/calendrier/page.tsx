@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { SAINTS } from '@/lib/saints'
+import { SAINTS, SAINTS_PAR_DATE } from '@/lib/saints'
 import { supabase } from '@/lib/supabase-browser'
 
 type Contact = {
@@ -46,11 +46,14 @@ export default function CalendrierPage() {
     setRecherche(value)
     if (value.trim().length > 0) {
       const valueNorm = normaliser(value)
-      setResultatsRecherche(
-        SAINTS.filter((saint) =>
-          saint.prenoms.some((p) => normaliser(p).includes(valueNorm))
-        )
-      )
+      const resultats: any[] = []
+SAINTS.forEach((saint) => {
+  if (saint.prenoms.some((p) => normaliser(p).includes(valueNorm))) {
+    resultats.push(saint)
+  }
+})
+setResultatsRecherche(resultats)
+
     } else {
       setResultatsRecherche([])
     }
@@ -68,9 +71,10 @@ export default function CalendrierPage() {
   }, [moisActuel])
 
   const obtenirSaintsDuJour = (jour: number, mois: number) => {
-    const dateKey = `${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`
-    return SAINTS.filter((s) => s.date === dateKey)
-  }
+  const dateKey = `${String(mois).padStart(2, '0')}-${String(jour).padStart(2, '0')}`
+  const saint = SAINTS_PAR_DATE.get(dateKey)
+  return saint ? [saint] : []
+}
 
   const prenomContacts = useMemo(
     () => new Set(contacts.map((c) => normaliser(c.prenom))),

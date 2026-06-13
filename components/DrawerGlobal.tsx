@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useDrawer } from '@/components/DrawerContext'
 import { TYPES_RELATION } from '@/lib/constants'
+import { trouverSaintParPrenom } from '@/lib/saints'
 
 export default function DrawerGlobal() {
   const router = useRouter()
@@ -14,6 +15,12 @@ export default function DrawerGlobal() {
       month: 'long',
       year: 'numeric',
     })
+  }
+
+  const formaterDateFete = (dateMMJJ: string) => {
+    const [mois, jour] = dateMMJJ.split('-').map(Number)
+    const date = new Date(2024, mois - 1, jour)
+    return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })
   }
 
   const couleurRelation = (relation: string) => {
@@ -87,6 +94,21 @@ export default function DrawerGlobal() {
                     ? formaterDate(contactAffiche.date_naissance)
                     : <span className="text-indigo-400 italic">Non renseignée</span>}
                 </p>
+              </div>
+              
+              {/* Fête des saints */}
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <p className="text-xs text-indigo-400 uppercase tracking-wider mb-2">🙏 Fête des saints</p>
+                {(() => {
+                  const sainte = trouverSaintParPrenom(contactAffiche.prenom)
+                  return sainte ? (
+                    <p className="text-white font-medium">
+                      {formaterDateFete(sainte.date)} — {sainte.nomSaint}
+                    </p>
+                  ) : (
+                    <span className="text-indigo-400 italic">Aucune fête trouvée pour ce prénom</span>
+                  )
+                })()}
               </div>
 
               <div className="bg-white/5 rounded-xl p-4 border border-white/10">

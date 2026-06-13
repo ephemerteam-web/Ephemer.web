@@ -118,6 +118,8 @@ function GenerateForm() {
   const [dateCustom, setDateCustom] = useState<string>("");
   const [eventDate, setEventDate] = useState<string>("");
   const [eventDescription, setEventDescription] = useState<string>("");
+  const [searchContact, setSearchContact] = useState("");
+
 
   // ✅ Helper : est-ce un événement avec date manuelle ?
   const needsManualDate = necessiteDateManuelle(eventType);
@@ -233,6 +235,12 @@ if (needsManualDate && eventDate) {
   return calculerDatesJ7J1JourJ(dateEvenement);
 })();
 
+// Liste des contacts filtrés par la barre de recherche
+const contactsFiltres = contacts.filter((contact) =>
+  `${contact.prenom} ${contact.nom} ${contact.relation}`
+    .toLowerCase()
+    .includes(searchContact.toLowerCase())
+);
   const dateMin = new Date().toISOString().split("T")[0];
 
   // ✅ CORRIGÉ : Typage strict (pas d'accès dynamique problématique)
@@ -289,23 +297,94 @@ async function handleShare() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* COLONNE GAUCHE : FORMULAIRE */}
           <div className="space-y-6">
+            
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                👤 Contact <span className="text-red-400">*</span>
-              </label>
-              <AppSelect
-                options={contacts.map((contact) => ({
-                  value: String(contact.id),
-                  label: `${contact.prenom} ${contact.nom} (${contact.relation})`,
-                }))}
-                value={selectedContactId}
-                onChange={(id) => {
-                  const contact = contacts.find((c) => String(c.id) === id);
-                  if (contact) appliquerContact(contact);
-                  setSelectedContactId(id);
-                }}
-              />
+  <label className="block text-sm font-medium text-white/60 mb-2">
+    👤 Contact <span className="text-red-400">*</span>
+  </label>
+
+  {/* Barre de recherche intégrée */}
+  <div className="relative mb-3">
+    <input
+      type="text"
+      placeholder="Tape le prénom, nom ou relation..."
+      value={searchContact}
+      onChange={(e) => setSearchContact(e.target.value)}
+      className="w-full border border-white/10 rounded-2xl px-5 py-3 text-sm bg-white/5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+    />
+    {searchContact && (
+      <button
+        type="button"
+        onClick={() => setSearchContact("")}
+        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+      >
+        ✕
+      </button>
+    )}
+  </div>
+
+  {/* Liste des contacts filtrés (style contacts page) */}
+  {!selectedContact && (
+    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 divide-y divide-white/10">
+      {contactsFiltres.length > 0 ? (
+        contactsFiltres.map((contact) => (
+          <button
+            key={contact.id}
+            type="button"
+            onClick={() => {
+              appliquerContact(contact);
+              setSelectedContactId(String(contact.id));
+              setSearchContact("");
+            }}
+            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/10 active:bg-white/15 transition"
+          >
+            <div>
+              <div className="font-medium text-white">
+                {contact.prenom} {contact.nom}
+              </div>
+              <div className="text-xs text-white/60 capitalize">{contact.relation}</div>
             </div>
+            <div className="text-[#C8A84E] text-sm">→</div>
+          </button>
+        ))
+      ) : (
+        <div className="px-4 py-6 text-center text-sm text-white/50">
+          Aucun contact trouvé
+        </div>
+      )}
+    </div>
+  )}
+
+  {/* Contact sélectionné (joli badge) */}
+  {selectedContact && (
+    <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+      <div>
+        <div className="font-semibold text-white">
+          {selectedContact.prenom} {selectedContact.nom}
+        </div>
+        <div className="text-xs text-white/60 capitalize">{selectedContact.relation}</div>
+      </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedContact(null);
+          setSelectedContactId("");
+          setFirstName("");
+          setLastName("");
+          setAge("");
+          setRelation("ami");
+          setSearchContact("");
+        }}
+        className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition flex items-center gap-1.5"
+      >
+        <span>Changer</span>
+      </button>
+    </div>
+  )}
+</div>
+
+
 
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -316,8 +395,7 @@ async function handleShare() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  disabled={!!selectedContact}
-                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white disabled:opacity-50"
+                                    className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white disabled:opacity-50"
                   placeholder="Jean"
                 />
               </div>
@@ -327,7 +405,6 @@ async function handleShare() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  disabled={!!selectedContact}
                   className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white disabled:opacity-50"
                   placeholder="Dupont"
                 />

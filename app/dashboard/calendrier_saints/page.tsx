@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { SAINTS } from '@/lib/saints'
+import { SAINTS_PAR_DATE, trouverSaintParPrenom } from '@/lib/saints'
 import { trouverFete, calculerProchaineFete, formaterDateFR } from '@/lib/anniversaires'
 
 type Contact = {
@@ -49,7 +49,7 @@ export default function CalendrierSaintsPage() {
           const fete = trouverFete(contact.prenom)
           if (fete) {
             const { prochaineFete, joursRestants } = calculerProchaineFete(fete.date)
-            const saint = SAINTS.find((s) => s.date === fete.date)
+            const saint = SAINTS_PAR_DATE.get(fete.date)
             list.push({
               nomSaint: fete.nomSaint,
               prenoms: saint?.prenoms || [],
