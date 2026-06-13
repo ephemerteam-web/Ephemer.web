@@ -4,8 +4,10 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
-import Link from 'next/link';
+import Link from 'next/link'
 import { useUserProfile } from '@/lib/hooks/useUserProfile'
+import IconeLuneIA from '@/components/IconeLuneIA'
+import FavorisRow from '@/components/FavorisRow'
 
 
 
@@ -14,11 +16,11 @@ type Contact = {
   nom: string
   prenom: string
   date_naissance: string | null
+  est_favori?: boolean 
 }
 type Profile = {
   prenom: string
 }
-
 
 export default function Dashboard() {
   const router = useRouter()
@@ -28,53 +30,47 @@ export default function Dashboard() {
   const [contacts, setContacts] = useState<Contact[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
-
-
+  const [aideOuverte, setAideOuverte] = useState(false)
+  const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | null>(null)
 
 
   useEffect(() => {
-  const init = async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) { 
-      router.push('/connexion'); 
-      return 
-    }
-    
-    setUserName(session.user.email?.split('@')[0] ?? null)
+    const init = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/connexion')
+        return
+      }
 
-    // Récupération des contacts (inchangé)
-    const { data } = await supabase
-      .from('contacts')
-      .select('id, nom, prenom, date_naissance')
-      .eq('user_id', session.user.id)
-    
-    if (data) setContacts(data as Contact[])
+      setUserName(session.user.email?.split('@')[0] ?? null)
 
-    // NOUVELLE LOGIQUE : on va chercher le prénom dans la table "profiles"
-    // (chaque utilisateur a une ligne dans cette table liée à son ID)
-    const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('prenom')
-      .eq('id', session.user.id) // on cherche le profil de l'utilisateur connecté
+      const { data } = await supabase
+        .from('contacts')
+        .select('id, nom, prenom, date_naissance, est_favori')
+        .eq('user_id', session.user.id)
 
-    // On vérifie qu'il n'y a pas d'erreur, que des données existent, 
-    // et que le prénom n'est pas vide
-    if (!profileError && profileData && profileData.length > 0) {
-      const fetchedPrenom = String(profileData[0].prenom || '')
-      if (fetchedPrenom.trim() !== '') {
-        setProfile({ prenom: fetchedPrenom })
+      if (data) setContacts(data as Contact[])
+
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('prenom')
+        .eq('id', session.user.id)
+
+      if (!profileError && profileData && profileData.length > 0) {
+        const fetchedPrenom = String(profileData[0].prenom || '')
+        if (fetchedPrenom.trim() !== '') {
+          setProfile({ prenom: fetchedPrenom })
+        } else {
+          setProfile(null)
+        }
       } else {
         setProfile(null)
       }
-    } else {
-      setProfile(null)
+
+      setLoading(false)
     }
-
-    setLoading(false)
-  }
-  init()
-}, [router])
-
+    init()
+  }, [router])
 
   const feteDuJour = useMemo(() => {
     const today = new Date()
@@ -118,11 +114,67 @@ export default function Dashboard() {
     passés.sort((a, b) => a.joursPassés - b.joursPassés)
     bientot.sort((a, b) => a.joursRestants - b.joursRestants)
 
-    return {
+        return {
       anniversairesAujourdhui: aujourd,
       anniversairesPassés: passés,
-      anniversairesBientot: bientot
+      anniversairesBientot: bientot,
     }
+  }, [contacts])
+
+  // ============================================
+  // ⭐ FAVORIS + leur prochain événement (anniv OU fête prénom)
+  // ============================================
+  const favoris = useMemo<any[]>(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const prochaineFetePrenom = (prenom: string): Date | null => {
+      const prenomNorm = prenom.trim().toLowerCase()
+      const saintTrouve = SAINTS.find((s) =>
+        s.prenoms.some((p) => p.trim().toLowerCase() === prenomNorm)
+      )
+      if (!saintTrouve) return null
+      const [mois, jour] = saintTrouve.date.split('-').map(Number)
+      let dateFete = new Date(today.getFullYear(), mois - 1, jour)
+      if (dateFete < today) dateFete.setFullYear(dateFete.getFullYear() + 1)
+      return dateFete
+    }
+
+    const prochainAnniv = (dateNaissance: string): Date => {
+      const [, mois, jour] = dateNaissance.split('-').map(Number)
+      let anniv = new Date(today.getFullYear(), mois - 1, jour)
+      if (anniv < today) anniv.setFullYear(anniv.getFullYear() + 1)
+      return anniv
+    }
+
+    const diffJours = (d: Date): number =>
+      Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+    return contacts
+      .filter((c) => c.est_favori)
+      .map((c) => {
+        const dateAnniv = c.date_naissance ? prochainAnniv(c.date_naissance) : null
+        const dateFete = prochaineFetePrenom(c.prenom)
+
+        let prochainEvent: { type: 'anniversaire' | 'fete_prenom'; date: Date; jours: number } | null = null
+
+        if (dateAnniv) {
+          prochainEvent = { type: 'anniversaire', date: dateAnniv, jours: diffJours(dateAnniv) }
+        }
+        if (dateFete) {
+          const joursFete = diffJours(dateFete)
+          if (!prochainEvent || joursFete < prochainEvent.jours) {
+            prochainEvent = { type: 'fete_prenom', date: dateFete, jours: joursFete }
+          }
+        }
+
+        return { ...c, prochainEvent }
+      })
+      .sort((a, b) => {
+        if (!a.prochainEvent) return 1
+        if (!b.prochainEvent) return -1
+        return a.prochainEvent.jours - b.prochainEvent.jours
+      })
   }, [contacts])
 
   if (loading) {
@@ -136,35 +188,67 @@ export default function Dashboard() {
     )
   }
 
-  const cartes = [
-  { id: 1, icon: '🎂', titre: 'Anniversaires', description: 'Vois vos prochains anniversaires', couleur: 'from-rose-500 to-pink-500', path: '/dashboard/anniversaires', disabled: false },
-  { id: 2, icon: '📒', titre: 'Contacts', description: 'Gère tous tes contacts', couleur: 'from-blue-500 to-cyan-500', path: '/dashboard/contacts', disabled: false },
-  { id: 3, icon: '📅', titre: 'Calendrier', description: 'Explore les fêtes des saints', couleur: 'from-purple-500 to-violet-500', path: '/dashboard/calendrier', disabled: false },
-  { id: 4, icon: '🙏', titre: 'Fêtes des Saints', description: 'Les fêtes de vos contacts', couleur: 'from-amber-500 to-orange-500', path: '/dashboard/calendrier_saints', disabled: false }
-]
+  const couleurAvatar = (texte: string | null | undefined): string => {
+    const base = texte ?? ''
+    const palettes = [
+      'from-rose-500 to-pink-500',
+      'from-indigo-500 to-violet-500',
+      'from-sky-500 to-cyan-500',
+      'from-amber-500 to-orange-500',
+      'from-emerald-500 to-teal-500',
+      'from-fuchsia-500 to-purple-500',
+    ]
+    let somme = 0
+    for (let i = 0; i < base.length; i++) somme += base.charCodeAt(i)
+    return palettes[somme % palettes.length]
+  }
 
+  // ============================================
+  // ⭐ FONCTION VEDETTE
+  // ============================================
+  const vedette = {
+    icon: '🤖',
+    titre: 'Générateur IA',
+    sous: 'Crée un message personnalisé pour SMS, email ou réseaux sociaux en quelques secondes.',
+    path: '/dashboard/generate',
+  }
+
+  // ============================================
+  // 📆 OUTILS ÉPHÉMÉRIDE (tons indigo/violet/cyan)
+  // ============================================
+  const outilsEphemeride = [
+    { id: 1, icon: '🎂', titre: 'Anniversaires', couleur: 'from-indigo-500 to-indigo-600', path: '/dashboard/anniversaires' },
+    { id: 2, icon: '🙏', titre: 'Fêtes des Saints', couleur: 'from-violet-500 to-purple-600', path: '/dashboard/calendrier_saints' },
+    { id: 3, icon: '📅', titre: 'Calendrier', couleur: 'from-sky-500 to-cyan-600', path: '/dashboard/calendrier' },
+  ]
+
+  // ============================================
+  // ⚙️ GESTION (tons sobres)
+  // ============================================
+  const outilsGestion = [
+    { id: 1, icon: '📒', titre: 'Contacts', sous: 'Gère ton carnet', path: '/dashboard/contacts' },
+    { id: 2, icon: '📨', titre: 'Messages programmés', sous: 'Tes envois en attente', path: '/dashboard/messages-programmes' },
+  ]
 
   return (
-    <div className="p-6 md:p-8">
+    <div className="p-4 md:p-8 max-w-5xl mx-auto">
 
-      {/* TABLEAU DE BORD */}
-      <div className="mb-8">
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Tableau de bord</h2>
-
-        {/* Bienvenue */}
+      {/* ============ EN-TÊTE ============ */}
+      <div className="mb-6">
+        <h2 className="text-xl md:text-2xl font-bold text-white">Tableau de bord</h2>
         {profile?.prenom ? (
-
-          <p className="text-indigo-200 text-sm mb-6">
+          <p className="text-indigo-200 text-sm mt-1">
             Bienvenue, <span className="font-semibold">{profile.prenom}</span> 👋
           </p>
         ) : userName && (
-          <p className="text-indigo-200 text-sm mb-6">
+          <p className="text-indigo-200 text-sm mt-1">
             Bienvenue, <span className="font-semibold">{userName}</span> 👋
           </p>
         )}
+      </div>
 
-        {/* BLOC : FÊTE DU JOUR + ANNIVERSAIRES */}
-        <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-5 mb-8 flex flex-col gap-6">
+      {/* ============ BLOC FÊTE + ANNIVERSAIRES ============ */}
+      <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-4 md:p-5 mb-8 flex flex-col gap-5">
 
         {/* Fête du jour */}
         <div>
@@ -172,7 +256,7 @@ export default function Dashboard() {
             ✨ Fête du jour
           </p>
           {feteDuJour.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               {feteDuJour.map((saint, idx) => (
                 <div key={idx} className="bg-purple-500/10 border border-purple-400/20 rounded-2xl px-4 py-3">
                   <p className="text-white font-bold text-sm">{saint.nomSaint}</p>
@@ -193,7 +277,7 @@ export default function Dashboard() {
             🎂 Anniversaire(s) aujourd'hui
           </p>
           {anniversairesAujourdhui.length > 0 ? (
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2.5">
               {anniversairesAujourdhui.map((c) => (
                 <div key={c.id} className="bg-rose-500/10 border border-rose-400/20 rounded-2xl px-4 py-3">
                   <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
@@ -216,7 +300,7 @@ export default function Dashboard() {
               <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-3">
                 ⏳ Anniversaires récents (7 derniers jours)
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2.5">
                 {anniversairesPassés.map((c) => (
                   <div key={c.id} className="bg-orange-500/10 border border-orange-400/20 rounded-2xl px-4 py-3">
                     <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
@@ -238,7 +322,7 @@ export default function Dashboard() {
               <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-3">
                 📅 Bientôt (dans les 30 prochains jours)
               </p>
-              <div className="flex flex-wrap gap-3">
+              <div className="flex flex-wrap gap-2.5">
                 {anniversairesBientot.map((c) => (
                   <div key={c.id} className="bg-cyan-500/10 border border-cyan-400/20 rounded-2xl px-4 py-3">
                     <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
@@ -251,136 +335,149 @@ export default function Dashboard() {
             </div>
           </>
         )}
-
-      </div>
       </div>
 
-      {/* Section principale */}
-      <div>
-        <h2 className="text-xl md:text-2xl font-bold text-white mb-6">Accède à tes outils</h2>
+      {/* ⭐ MES FAVORIS */}
+      <FavorisRow
+        favoris={favoris}
+        favoriMenuOuvert={favoriMenuOuvert}
+        setFavoriMenuOuvert={setFavoriMenuOuvert}
+        couleurAvatar={couleurAvatar}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {cartes.map((carte) => (
+      {/* ============ ⭐ VEDETTE : GÉNÉRATEUR IA ============ */}
+      <div className="mb-8">
+        <h2 className="text-base md:text-lg font-bold text-white mb-4">L'essentiel</h2>
+
+        <button
+          onClick={() => router.push(vedette.path)}
+          className="group relative w-full overflow-hidden rounded-3xl p-6 md:p-7 text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.99]"
+        >
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 opacity-90 group-hover:opacity-100 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+
+          <div className="relative z-10 flex items-center gap-4 md:gap-5">
+            <span className="flex-shrink-0 transform group-hover:scale-110 transition-transform">
+              <IconeLuneIA size={52} />
+            </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg md:text-xl font-bold text-white">{vedette.titre}</h3>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  Vedette
+                </span>
+              </div>
+              <p className="text-white/85 text-sm leading-relaxed">{vedette.sous}</p>
+            </div>
+            <span className="hidden sm:block text-2xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all">
+              →
+            </span>
+          </div>
+
+          <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
+        </button>
+      </div>
+
+        {/* ============ 📆 OUTILS ÉPHÉMÉRIDE (3 au même niveau) ============ */}
+      <div className="mb-8">
+        <h2 className="text-base md:text-lg font-bold text-white mb-4">Dates & éphéméride</h2>
+
+        <div className="grid grid-cols-3 gap-3">
+          {outilsEphemeride.map((carte) => (
             <button
               key={carte.id}
-              onClick={() => !carte.disabled && router.push(carte.path)}
-              disabled={carte.disabled}
-              className={`group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 ${
-                carte.disabled ? 'opacity-50 cursor-not-allowed' : 'hover:scale-105 hover:shadow-2xl cursor-pointer'
-              }`}
+              onClick={() => router.push(carte.path)}
+              className="group relative overflow-hidden rounded-2xl p-4 flex flex-col items-center justify-center text-center min-h-[110px] transition-all duration-300 hover:scale-[1.03] active:scale-95"
             >
-              <div className={`absolute inset-0 bg-gradient-to-br ${carte.couleur} ${
-                carte.disabled ? 'opacity-30' : 'opacity-80 group-hover:opacity-100'
-              } transition-opacity duration-300`}></div>
-              <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/10 to-white/0 transform translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-              <div className="relative z-10 flex flex-col h-full">
-                <span className="text-4xl md:text-5xl mb-4 transform group-hover:scale-110 transition-transform duration-300">{carte.icon}</span>
-                <h3 className="text-lg md:text-xl font-bold text-white text-left mb-2">{carte.titre}</h3>
-                <p className="text-white/80 text-sm text-left flex-1">{carte.description}</p>
-                {carte.disabled && (
-                  <div className="mt-4 inline-flex px-3 py-1 bg-white/20 rounded-full">
-                    <span className="text-xs font-semibold text-white">🔧 Bientôt</span>
-                  </div>
-                )}
-                {!carte.disabled && (
-                  <div className="mt-4 flex items-center gap-2 text-white group-hover:gap-3 transition-all">
-                    <span className="text-sm font-semibold">Ouvrir</span>
-                    <span className="transform group-hover:translate-x-1 transition-transform">→</span>
-                  </div>
-                )}
+              <div className={`absolute inset-0 bg-gradient-to-br ${carte.couleur} opacity-75 group-hover:opacity-90 transition-opacity`} />
+              <div className="relative z-10 flex flex-col items-center gap-2">
+                <span className="text-2xl md:text-3xl transform group-hover:scale-110 transition-transform">{carte.icon}</span>
+                <h3 className="text-xs md:text-sm font-bold text-white leading-tight">{carte.titre}</h3>
               </div>
-              <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-colors"></div>
+              <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-colors" />
             </button>
           ))}
         </div>
+      </div>
 
-        {/* Section infos — 3 cartes */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
+      {/* ============ ⚙️ GESTION (2 au même niveau) ============ */}
+      <div className="mb-8">
+        <h2 className="text-base md:text-lg font-bold text-white mb-4">Gérer mes envois</h2>
 
-          {/* Carte : Comment ça marche */}
-          <div className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-white/20 transition-colors">
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl">✨</span>
-              <h3 className="text-lg font-bold text-white">Comment ça marche ?</h3>
-            </div>
-            <p className="text-indigo-200 text-sm">
-              Ajoute tes contacts, définis leurs dates importantes, et reçois des rappels pour ne jamais oublier un anniversaire ou une fête.
-            </p>
-          </div>
-
-          {/* Carte : Générateur IA */}
-          <div
-            onClick={() => router.push('/dashboard/generate')}
-            className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-purple-400/50 hover:bg-white/10 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl group-hover:scale-110 transition-transform">🤖</span>
-              <h3 className="text-lg font-bold text-white">Générateur IA</h3>
-            </div>
-            <p className="text-indigo-200 text-sm">
-              Génère un message personnalisé pour SMS, email ou réseaux sociaux en quelques secondes.
-            </p>
-            <span className="inline-block mt-3 text-xs text-purple-300 font-medium">Essayer →</span>
-          </div>
-
-          {/* Carte : Messages programmés */}
-          <div
-            onClick={() => router.push('/dashboard/messages-programmes')}
-            className="bg-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/10 hover:border-blue-400/50 hover:bg-white/10 transition-all cursor-pointer group"
-          >
-            <div className="flex items-center gap-3 mb-3">
-              <span className="text-3xl group-hover:scale-110 transition-transform">📅</span>
-              <h3 className="text-lg font-bold text-white">Messages programmés</h3>
-            </div>
-            <p className="text-indigo-200 text-sm">
-              Consulte et gère tous tes messages en attente d'envoi.
-            </p>
-            <span className="inline-block mt-3 text-xs text-blue-300 font-medium">Voir →</span>
-          </div>
-
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {outilsGestion.map((carte) => (
+            <button
+              key={carte.id}
+              onClick={() => router.push(carte.path)}
+              className="flex items-center gap-4 bg-white/5 backdrop-blur-lg rounded-2xl p-4 border border-white/10 hover:border-indigo-400/40 hover:bg-white/10 transition-all text-left group"
+            >
+              <span className="text-2xl md:text-3xl flex-shrink-0 group-hover:scale-110 transition-transform">{carte.icon}</span>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-bold text-white">{carte.titre}</h3>
+                <p className="text-indigo-200/70 text-xs mt-0.5 truncate">{carte.sous}</p>
+              </div>
+              <span className="text-white/40 group-hover:text-white group-hover:translate-x-1 transition-all">→</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        {/* Footer */}
-<div className="mt-12 pt-6 border-t border-white/10 text-center space-y-3">
-  <p className="text-indigo-300 text-sm">
-    Made with 💜 • Version Alpha 0.2
-  </p>
+      {/* ============ ℹ️ AIDE REPLIABLE ============ */}
+      <div className="mb-8">
+        <button
+          onClick={() => setAideOuverte(!aideOuverte)}
+          className="flex items-center gap-2 text-indigo-300/70 hover:text-indigo-200 text-sm transition-colors"
+        >
+          <span>💡</span>
+          <span>Besoin d'aide ? Comment ça marche</span>
+          <span className={`transform transition-transform ${aideOuverte ? 'rotate-180' : ''}`}>▾</span>
+        </button>
 
-  <div className="flex justify-center gap-4 flex-wrap">
-    <a
-      href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-    >
-      <span>💬</span>
-      Contacter le support
-    </a>
+        {/* Contenu repliable */}
+        {aideOuverte && (
+          <div className="mt-3 bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-start gap-3 animate-[fadeIn_0.3s_ease]">
+            <span className="text-2xl flex-shrink-0">✨</span>
+            <p className="text-indigo-200/80 text-sm leading-relaxed">
+              Ajoute tes contacts et leurs dates importantes (anniversaires, fêtes…).
+              Ephemer détecte automatiquement les événements à venir et te permet de générer
+              puis programmer des messages personnalisés. Tu ne rateras plus jamais une date importante !
+            </p>
+          </div>
+        )}
+      </div>
 
-    <Link
-      href="/confidentialite"
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-    >
-      🔒 Politique de confidentialité
-    </Link>
+      {/* ============ FOOTER ============ */}
+      <div className="mt-10 pt-6 border-t border-white/10 text-center space-y-3">
+        <p className="text-indigo-300 text-sm">
+          Made with 💜 • Version Alpha 0.2
+        </p>
 
-    <Link 
-      href="/conditions"
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-    >
-      📄 Conditions
-    </Link>
-
-    {/* NOUVEAU : Bouton Patch Notes */}
-    <Link 
-      href="/patchnote"
-      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-    >
-      📜 Quoi de neuf ?
-    </Link>
-  </div>
-</div>
-
-
-
+        <div className="flex justify-center gap-2 flex-wrap">
+          <a
+            href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+          >
+            💬 Support
+          </a>
+          <Link
+            href="/confidentialite"
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+          >
+            🔒 Confidentialité
+          </Link>
+          <Link
+            href="/conditions"
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+          >
+            📄 Conditions
+          </Link>
+          <Link
+            href="/patchnote"
+            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+          >
+            📜 Quoi de neuf ?
+          </Link>
+        </div>
       </div>
 
     </div>
