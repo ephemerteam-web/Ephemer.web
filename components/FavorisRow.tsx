@@ -40,7 +40,6 @@ export default function FavorisRow({
 }: Props) {
   const router = useRouter()
   const { ouvrirDrawer } = useDrawer()
-  // Référence pour détecter les clics en dehors du menu
   const conteneurRef = useRef<HTMLDivElement>(null)
 
   // Ferme le menu quand on clique ailleurs sur la page
@@ -57,7 +56,6 @@ export default function FavorisRow({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [favoriMenuOuvert, setFavoriMenuOuvert])
 
-  // Si aucun favori, on n'affiche rien
   if (favoris.length === 0) return null
 
   return (
@@ -75,7 +73,7 @@ export default function FavorisRow({
         </Link>
       </div>
 
-      {/* Rangée qui défile horizontalement sur mobile, visible sur desktop avec flex-wrap */}
+      {/* Rangée qui défile horizontalement sur mobile */}
       <div className="flex gap-4 overflow-x-auto overflow-y-visible pb-2 -mx-1 px-1 scrollbar-hide md:flex-wrap md:overflow-x-visible">
         {favoris.map((fav) => {
           const initiales =
@@ -84,7 +82,6 @@ export default function FavorisRow({
           const afficheBadge = ev && ev.jours >= 0 && ev.jours <= 30
           const menuOuvert = favoriMenuOuvert === fav.id
 
-          // Prépare le contact pour le drawer (sans prochainEvent)
           const contactPourDrawer = {
             id: fav.id,
             nom: fav.nom,
@@ -137,7 +134,17 @@ export default function FavorisRow({
 
               {/* Menu contextuel */}
               {menuOuvert && (
-                <div className="absolute top-16 left-1/2 -translate-x-1/2 z-50 bg-[#221f47] border border-white/15 rounded-xl shadow-2xl p-1 min-w-[170px] animate-[fadeIn_0.15s_ease]">
+                <div
+                  className={`
+                    z-50 bg-[#221f47] border border-white/15 rounded-xl shadow-2xl p-1 min-w-[170px]
+                    animate-[fadeIn_0.15s_ease]
+                    /* Desktop : attaché à l'avatar */
+                    md:absolute md:top-16 md:left-1/2 md:-translate-x-1/2
+                    /* Mobile : flottant en bas de l'écran */
+                    max-sm:fixed max-sm:bottom-4 max-sm:left-1/2 max-sm:-translate-x-1/2
+                    max-sm:w-[calc(100%-2rem)] max-sm:max-w-xs
+                  `}
+                >
                   <button
                     onClick={() => {
                       ouvrirDrawer(contactPourDrawer)

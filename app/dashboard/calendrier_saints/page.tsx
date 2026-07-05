@@ -3,8 +3,12 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { SAINTS_PAR_DATE, trouverSaintParPrenom } from '@/lib/saints'
+import { SAINTS_PAR_DATE } from '@/lib/saints'
 import { trouverFete, calculerProchaineFete, formaterDateFR } from '@/lib/anniversaires'
+import { useContactFilters } from '@/lib/hooks/useContactFilters'
+import ContactSearchFilters from '@/components/ContactSearchFilters'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Contact = {
   id: string
@@ -23,6 +27,8 @@ type FeteAvecContact = {
   contact: Contact
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function CalendrierSaintsPage() {
   const router = useRouter()
   const [fetelist, setFetelist] = useState<FeteAvecContact[]>([])
@@ -31,6 +37,7 @@ export default function CalendrierSaintsPage() {
   useEffect(() => {
     async function init() {
       const { data: { session } } = await supabase.auth.getSession()
+
       if (!session) {
         router.push('/connexion')
         return
@@ -47,9 +54,13 @@ export default function CalendrierSaintsPage() {
 
         for (const contact of contacts) {
           const fete = trouverFete(contact.prenom)
+
           if (fete) {
-            const { prochaineFete, joursRestants } = calculerProchaineFete(fete.date)
+            const { prochaineFete, joursRestants } =
+              calculerProchaineFete(fete.date)
+
             const saint = SAINTS_PAR_DATE.get(fete.date)
+
             list.push({
               nomSaint: fete.nomSaint,
               prenoms: saint?.prenoms || [],
@@ -60,25 +71,48 @@ export default function CalendrierSaintsPage() {
           }
         }
 
-        list.sort((a, b) => a.joursRestants - b.joursRestants)
         setFetelist(list)
       }
 
       setLoading(false)
     }
+
     init()
   }, [router])
 
+  // ✅ Hook filtres réutilisé
+  const {
+    recherche,
+    setRecherche,
+    triPar,
+    setTriPar,
+    filtreRelation,
+    setFiltreRelation,
+    contactsFiltres,
+  } = useContactFilters(fetelist.map(f => f.contact))
+
+  // ✅ Reconstruction après filtre
+  const fetesFiltrees = fetelist.filter(f =>
+    contactsFiltres.some(c => c.id === f.contact.id)
+  )
+
+  // ✅ TRI métier
+  const fetesTriees = [...fetesFiltrees].sort(
+    (a, b) => a.joursRestants - b.joursRestants
+  )
+
+  // ─── UI helpers ────────────────────────────────────────────────────────────
+
   const couleurBadge = (jours: number) => {
-    if (jours === 0) return 'bg-red-100 text-red-600'
-    if (jours <= 7) return 'bg-orange-100 text-orange-600'
-    if (jours <= 30) return 'bg-yellow-100 text-yellow-700'
-    return 'bg-purple-100 text-purple-600'
+    if (jours === 0) return 'bg-red-500/20 text-red-300 border border-red-500/30'
+    if (jours <= 7) return 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+    if (jours <= 30) return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+    return 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
   }
 
   const texteBadge = (jours: number) => {
-    if (jours === 0) return "🎉 Aujourd'hui !"
-    if (jours === 1) return '⏰ Demain !'
+    if (jours === 0) return "🎉 Aujourd'hui"
+    if (jours === 1) return '⏰ Demain'
     return `Dans ${jours} j`
   }
 
@@ -86,53 +120,100 @@ export default function CalendrierSaintsPage() {
     router.push(`/dashboard/generate?contactId=${contactId}&eventType=fete`)
   }
 
+  // ─── Loading ───────────────────────────────────────────────────────────────
+
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <p className="text-gray-400">Chargement...</p>
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <p className="text-indigo-300">Chargement...</p>
       </main>
     )
   }
 
+  // ─── UI ────────────────────────────────────────────────────────────────────
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+    <main className="min-h-screen p-4 sm:p-6 text-white">
       <div className="max-w-3xl mx-auto">
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">✨ Fêtes des Saints</h1>
+        {/* Header */}
+        <h1 className="text-2xl font-bold mb-4">
+          ✨ Fêtes des Saints
+          <span className="ml-2 text-sm text-indigo-300">
+            ({fetesTriees.length})
+          </span>
+        </h1>
 
-        {fetelist.length === 0 ? (
-          <p className="text-gray-500">Aucun contact avec une fête associée.</p>
+        {/* Filtres */}
+        <ContactSearchFilters
+          recherche={recherche}
+          setRecherche={setRecherche}
+          triPar={triPar}
+          setTriPar={setTriPar}
+          filtreRelation={filtreRelation}
+          setFiltreRelation={setFiltreRelation}
+        />
+
+        {/* Liste */}
+        {fetesTriees.length === 0 ? (
+          <div className="text-center mt-16">
+            <span className="text-5xl block mb-4">✨</span>
+            <p className="text-indigo-300">
+              Aucun contact avec une fête associée.
+            </p>
+          </div>
         ) : (
           <div className="grid gap-3">
-            {fetelist.map((item, idx) => (
-              <div
-                key={`${item.contact.id}-${idx}`}
-                className="bg-white rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3"
-              >
-                <div className="flex-1 min-w-[150px]">
-                  <p className="font-semibold text-gray-800">
-                    {item.nomSaint}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formaterDateFR(item.prochaineFete)}
-                  </p>
-                  <p className="text-xs text-purple-600 mt-1">
-                    👤 {item.contact.prenom} {item.contact.nom} • {item.prenoms.join(', ')}
-                  </p>
-                </div>
+            {fetesTriees.map((item, idx) => {
+              const highlight =
+                item.joursRestants <= 3
+                  ? 'ring-2 ring-[#C8A84E]'
+                  : ''
 
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${couleurBadge(item.joursRestants)}`}>
-                  {texteBadge(item.joursRestants)}
-                </span>
+              const pulse =
+                item.joursRestants === 0
+                  ? 'animate-pulse'
+                  : ''
 
-                <button
-                  onClick={() => allerVersGenerateur(item.contact.id)}
-                  className="text-xs bg-purple-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-purple-500 transition whitespace-nowrap"
+              return (
+                <div
+                  key={`${item.contact.id}-${idx}`}
+                  className={`bg-white/5 backdrop-blur-lg border border-white/10 hover:bg-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-all duration-200 ${highlight} ${pulse}`}
                 >
-                  ✨ Préparer un message
-                </button>
-              </div>
-            ))}
+                  {/* Infos */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-white truncate">
+                      {item.nomSaint}
+                    </p>
+
+                    <p className="text-sm text-indigo-200">
+                      {formaterDateFR(item.prochaineFete)}
+                    </p>
+
+                    <p className="text-xs text-indigo-300 mt-1">
+                      👤 {item.contact.prenom} {item.contact.nom}
+                    </p>
+                  </div>
+
+                  {/* Badge */}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit ${couleurBadge(
+                      item.joursRestants
+                    )}`}
+                  >
+                    {texteBadge(item.joursRestants)}
+                  </span>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => allerVersGenerateur(item.contact.id)}
+                    className="w-full sm:w-auto text-xs bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-medium px-4 py-2 rounded-xl transition"
+                  >
+                    ✨ Message
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>

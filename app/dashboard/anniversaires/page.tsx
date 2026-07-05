@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/anniversaires'
+import { useContactFilters } from '@/lib/hooks/useContactFilters'
+import ContactSearchFilters from '@/components/ContactSearchFilters'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ type ContactAvecAnniv = Contact & {
   prochainAnniv: Date
 }
 
-// ─── Composant principal ───────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function AnniversairesPage() {
   const router = useRouter()
@@ -31,14 +33,13 @@ export default function AnniversairesPage() {
 
   useEffect(() => {
     async function init() {
-      // Vérifier la session (utilisateur connecté ?)
       const { data: { session } } = await supabase.auth.getSession()
+
       if (!session) {
         router.push('/login')
         return
       }
 
-      // Charger les contacts de l'utilisateur
       const { data, error } = await supabase
         .from('contacts')
         .select('id, nom, prenom, date_naissance, relation, email')
@@ -46,6 +47,7 @@ export default function AnniversairesPage() {
 
       if (!error && data) {
         const liste = data as Contact[]
+
         const avecAnniv: ContactAvecAnniv[] = liste
           .filter((c) => c.date_naissance !== null)
           .map((c) => {
@@ -53,88 +55,138 @@ export default function AnniversairesPage() {
               calculerProchainAnniversaire(c.date_naissance!)
             return { ...c, joursRestants, ageAVenir, prochainAnniv }
           })
-          .sort((a, b) => a.joursRestants - b.joursRestants)
 
         setContactsAvecAnniv(avecAnniv)
       }
 
       setLoading(false)
     }
+
     init()
   }, [router])
 
-  // ─── Style du badge "jours restants" ───────────────────────────────────────
+  // ✅ Hook filtres réutilisable
+  const {
+    recherche,
+    setRecherche,
+    triPar,
+    setTriPar,
+    filtreRelation,
+    setFiltreRelation,
+    contactsFiltres,
+  } = useContactFilters(contactsAvecAnniv)
+
+  // ✅ Tri métier prioritaire (important)
+  const contactsTries = [...contactsFiltres].sort(
+    (a, b) => a.joursRestants - b.joursRestants
+  )
+
+  // ─── UI helpers ────────────────────────────────────────────────────────────
 
   const couleurBadge = (jours: number) => {
-    if (jours === 0) return 'bg-red-100 text-red-600'
-    if (jours <= 7) return 'bg-orange-100 text-orange-600'
-    if (jours <= 30) return 'bg-yellow-100 text-yellow-700'
-    return 'bg-purple-100 text-purple-600'
+    if (jours === 0) return 'bg-red-500/20 text-red-300 border border-red-500/30'
+    if (jours <= 7) return 'bg-orange-500/20 text-orange-300 border border-orange-500/30'
+    if (jours <= 30) return 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30'
+    return 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
   }
 
   const texteBadge = (jours: number) => {
-    if (jours === 0) return "🎉 Aujourd'hui !"
-    if (jours === 1) return '⏰ Demain !'
+    if (jours === 0) return "🎉 Aujourd'hui"
+    if (jours === 1) return '⏰ Demain'
     return `Dans ${jours} j`
   }
 
-  // ─── Redirection vers le générateur avec contact prérempli ─────────────────
-  // On passe l'ID du contact + le type d'événement dans l'URL.
-  // La page /dashboard/generate lira ces paramètres et préremplira tout.
   const allerVersGenerateur = (contactId: string) => {
     router.push(`/dashboard/generate?contactId=${contactId}&eventType=anniversaire`)
   }
 
-  // ─── Rendu ─────────────────────────────────────────────────────────────────
+  // ─── Loading ───────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 flex items-center justify-center">
-        <p className="text-gray-400">Chargement...</p>
+      <main className="min-h-screen flex items-center justify-center text-white">
+        <p className="text-indigo-300">Chargement...</p>
       </main>
     )
   }
 
+  // ─── UI ────────────────────────────────────────────────────────────────────
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 p-6">
+    <main className="min-h-screen p-4 sm:p-6 text-white">
       <div className="max-w-3xl mx-auto">
 
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">🎂 Anniversaires</h1>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">
+            🎂 Anniversaires
+            <span className="ml-2 text-sm text-indigo-300">
+              ({contactsTries.length})
+            </span>
+          </h1>
+        </div>
 
-        {contactsAvecAnniv.length === 0 ? (
-          <p className="text-gray-500">Aucun contact avec une date de naissance.</p>
+        {/* Filtres */}
+        <ContactSearchFilters
+          recherche={recherche}
+          setRecherche={setRecherche}
+          triPar={triPar}
+          setTriPar={setTriPar}
+          filtreRelation={filtreRelation}
+          setFiltreRelation={setFiltreRelation}
+        />
+
+        {/* Liste */}
+        {contactsTries.length === 0 ? (
+          <div className="text-center mt-16">
+            <span className="text-5xl block mb-4">🎂</span>
+            <p className="text-indigo-300">
+              Aucun anniversaire trouvé.
+            </p>
+          </div>
         ) : (
           <div className="grid gap-3">
-            {contactsAvecAnniv.map((contact) => (
-              <div
-                key={contact.id}
-                className="bg-white rounded-xl p-4 shadow-sm flex flex-wrap items-center gap-3"
-              >
-                {/* Infos contact */}
-                <div className="flex-1 min-w-[150px]">
-                  <p className="font-semibold text-gray-800">
-                    {contact.prenom} {contact.nom}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {formaterDateFR(contact.prochainAnniv)} • {contact.ageAVenir} ans
-                  </p>
-                </div>
+            {contactsTries.map((contact) => {
+              const highlight =
+                contact.joursRestants <= 3
+                  ? 'ring-2 ring-[#C8A84E]'
+                  : ''
 
-                {/* Badge jours restants */}
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${couleurBadge(contact.joursRestants)}`}>
-                  {texteBadge(contact.joursRestants)}
-                </span>
-
-                {/* UN SEUL bouton : direction le générateur */}
-                <button
-                  onClick={() => allerVersGenerateur(contact.id)}
-                  className="text-xs bg-purple-600 text-white font-medium px-4 py-2 rounded-xl hover:bg-purple-500 transition whitespace-nowrap"
+              return (
+                <div
+                  key={contact.id}
+                  className={`bg-white/5 backdrop-blur-lg border border-white/10 hover:bg-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center gap-3 transition-all duration-200 ${highlight}`}
                 >
-                  ✨ Préparer un message
-                </button>
+                  {/* Infos */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-white truncate">
+                      {contact.prenom} {contact.nom}
+                    </p>
 
-              </div>
-            ))}
+                    <p className="text-sm text-indigo-200">
+                      {formaterDateFR(contact.prochainAnniv)} • {contact.ageAVenir} ans
+                    </p>
+                  </div>
+
+                  {/* Badge */}
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium w-fit ${couleurBadge(
+                      contact.joursRestants
+                    )}`}
+                  >
+                    {texteBadge(contact.joursRestants)}
+                  </span>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => allerVersGenerateur(contact.id)}
+                    className="w-full sm:w-auto text-xs bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-medium px-4 py-2 rounded-xl transition"
+                  >
+                    ✨ Message
+                  </button>
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
