@@ -2,33 +2,35 @@
 
 import { createContext, useContext, useState, ReactNode } from 'react'
 
-// Type d'un contact (on reprend la même structure que dans ContactsPage)
+// Type correspondant à une ligne de la table "contacts"
+// On rend optionnelles les colonnes non affichées pour faciliter l'usage
 export type ContactDrawer = {
   id: string
-  nom: string
-  prenom: string
+  created_at?: string          // rendu optionnel
+  user_id?: string | null      // rendu optionnel
+  prenom: string | null
+  nom: string | null
   date_naissance: string | null
-  relation: string
+  relation: string | null
   email: string | null
+  est_favori: boolean | null
   telephone_indicatif: string | null
   telephone_numero: string | null
   note: string | null
-  est_favori: boolean | null
-  estLie: boolean
-  // Ajoute ici tous les champs que tu veux afficher dans le drawer
 }
 
-// Type du contexte (ce qu'on partage)
+
+// Type du contexte partagé
 type DrawerContextType = {
   contactAffiche: ContactDrawer | null
   ouvrirDrawer: (contact: ContactDrawer) => void
   fermerDrawer: () => void
 }
 
-// On crée le contexte (vide au départ)
+// Contexte (vide au départ, rempli par le Provider)
 const DrawerContext = createContext<DrawerContextType | undefined>(undefined)
 
-// Le Provider : c'est lui qui "fournit" le state à toute l'app
+// Provider : rend l'état accessible à tous les composants enfants
 export function DrawerProvider({ children }: { children: ReactNode }) {
   const [contactAffiche, setContactAffiche] = useState<ContactDrawer | null>(null)
 
@@ -42,7 +44,7 @@ export function DrawerProvider({ children }: { children: ReactNode }) {
   )
 }
 
-// Hook custom : pour utiliser le contexte facilement dans n'importe quel composant
+// Hook custom pour utiliser le contexte facilement
 export function useDrawer() {
   const context = useContext(DrawerContext)
   if (!context) {

@@ -46,8 +46,9 @@ export default function Dashboard() {
 
       const { data } = await supabase
         .from('contacts')
-        .select('id, nom, prenom, date_naissance, est_favori')
+        .select('*')
         .eq('user_id', session.user.id)
+        .eq('est_favori', true)
 
       if (data) setContacts(data as Contact[])
 

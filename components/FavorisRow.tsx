@@ -5,19 +5,18 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useDrawer } from '@/components/DrawerContext'
 
-// Type complet pour un favori (tous les champs nécessaires au drawer)
+// Type complet correspondant à un favori (doit refléter la table contacts)
 type Favori = {
   id: string
-  nom: string
-  prenom: string
+  nom: string | null
+  prenom: string | null
   date_naissance: string | null
   est_favori?: boolean
   email: string | null
   telephone_indicatif: string | null
   telephone_numero: string | null
-  relation: string
+  relation: string | null
   note: string | null
-  est_lie: boolean
   prochainEvent: {
     type: 'anniversaire' | 'fete_prenom'
     date: Date
@@ -82,6 +81,7 @@ export default function FavorisRow({
           const afficheBadge = ev && ev.jours >= 0 && ev.jours <= 30
           const menuOuvert = favoriMenuOuvert === fav.id
 
+          // Objet contact complet pour le drawer (tous les champs de la table)
           const contactPourDrawer = {
             id: fav.id,
             nom: fav.nom,
@@ -93,8 +93,7 @@ export default function FavorisRow({
             telephone_numero: fav.telephone_numero,
             relation: fav.relation,
             note: fav.note,
-            est_lie: fav.est_lie,
-            estLie: fav.est_lie,
+            // On n’inclut PAS est_lie/estLie car cela n'existe pas dans la base
           }
 
           return (
