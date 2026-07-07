@@ -70,10 +70,8 @@ export default function DashboardLayout({
             <div className="absolute inset-0 rounded-full border border-[#C8A84E]/10" />
           </div>
         </div>
-<body>
-  <OfflineBanner />
-  {/* le reste de ton contenu */}
-</body>
+
+        <OfflineBanner />
 
         {/* HEADER */}
         <header className="sticky top-0 z-40 backdrop-blur-lg bg-[#0B1120]/70 border-b border-[#C8A84E]/10">
@@ -108,7 +106,7 @@ export default function DashboardLayout({
     <button
       onClick={() => setMenuOuvert(true)}
       aria-label="Ouvrir le menu"
-      className="relative w-10 h-10 rounded-full bg-gradient-to-br from-[#C8A84E]/30 to-[#C8A84E]/10 border-2 border-[#C8A84E]/40 hover:border-[#C8A84E] hover:scale-105 transition-all duration-200 flex items-center justify-center overflow-hidden group"
+      className="relative w-10 h-10 rounded-full bg-gradient-to-br from-[#C8A84E]/30 to-[#C8A84E]/10 border-2 border-[#C8A84E]/40 hover:border-[#C8A84E] hover:scale-105 transition-all duration-200 flex items-center justify-center"
     >
       {initiale ? (
         <span className="text-[#C8A84E] font-bold text-base group-hover:scale-110 transition-transform">
