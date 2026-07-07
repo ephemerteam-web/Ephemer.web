@@ -10,6 +10,7 @@ import NotificationBell from '@/components/NotificationBell'
 import MenuLateral from '@/components/MenuLateral'
 import { Analytics } from "@vercel/analytics/next"
 import MenuNavigation from '@/components/MenuNavigation'
+import OfflineBanner from '@/components/OfflineBanner';
 
 export default function DashboardLayout({
   children,
@@ -69,6 +70,10 @@ export default function DashboardLayout({
             <div className="absolute inset-0 rounded-full border border-[#C8A84E]/10" />
           </div>
         </div>
+<body>
+  <OfflineBanner />
+  {/* le reste de ton contenu */}
+</body>
 
         {/* HEADER */}
         <header className="sticky top-0 z-40 backdrop-blur-lg bg-[#0B1120]/70 border-b border-[#C8A84E]/10">
