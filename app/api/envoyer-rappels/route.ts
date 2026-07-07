@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
             typeEvenement: rappel.type_evenement || 'Événement',
             message: rappel.message || 'Pense à cette personne aujourd\'hui ❤️',
             dateEnvoi: aujourdhui,
-            ton: rappel.type_rappel,
+            ton: rappel.ton,
             expediteurNom,
             expediteurEmail
           }),

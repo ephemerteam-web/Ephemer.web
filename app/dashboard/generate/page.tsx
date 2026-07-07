@@ -543,17 +543,6 @@ async function handleShare() {
   </div>
 )}
 
-
-{/* 🔍 DEBUG TEMPORAIRE - à supprimer après */}
-<div className="bg-yellow-500/10 border border-yellow-500/40 rounded-lg p-3 text-xs text-yellow-200 space-y-1">
-  <p>🔍 Debug affichage ProgrammerRappel :</p>
-  <p>• message : {message ? "✅ OK" : "❌ vide"}</p>
-  <p>• selectedContact : {selectedContact ? `✅ ${selectedContact.prenom}` : "❌ null"}</p>
-  <p>• datesPossibles : {datesPossibles ? "✅ OK" : "❌ null"}</p>
-  <p>• session : {session ? "✅ OK" : "❌ null"}</p>
-  <p>• eventType : {eventType}</p>
-</div>
-
             {message && selectedContact && session && (
   <>
     <>
