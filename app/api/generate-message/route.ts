@@ -197,7 +197,8 @@ Règles importantes :
 - Le message doit être court : 1 à 2 phrases maximum.
 - Le message doit sembler écrit par un humain, pas par une IA.
 - Évite les formulations trop génériques comme "en cette journée spéciale".
-- Évite les répétitions du prénom.
+- Le message DOIT obligatoirement mentionner le prénom "${safeFirstName}" au moins une fois (par exemple au début, comme "Bonne fête ${safeFirstName} !").
+- Utilise le prénom une seule fois, sans le répéter plusieurs fois.
 - Adapte le niveau d'émotion à la relation.
 - Si la relation est professionnelle, reste sobre et respectueux.
 - Si le ton est humoristique, reste bienveillant et évite les blagues blessantes.
@@ -235,8 +236,12 @@ Message final :
 
     const data = await mammouthResponse.json();
     const message = data.choices?.[0]?.message?.content?.trim() || "";
-
-    return NextResponse.json({ message });
+    // 🛡️ Filet de sécurité : si l'IA a oublié le prénom, on l'ajoute au début
+    let messageFinal = message;
+    if (safeFirstName && message && !message.toLowerCase().includes(safeFirstName.toLowerCase())) {
+      messageFinal = `${safeFirstName}, ${message.charAt(0).toLowerCase()}${message.slice(1)}`;
+    }
+    return NextResponse.json({ message: messageFinal });
 
   } catch (error) {
     console.error("Erreur inattendue:", error);

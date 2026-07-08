@@ -3,7 +3,6 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
-import { programmerMessage } from "@/lib/rappels";
 import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
 import { formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/anniversaires";
@@ -16,8 +15,7 @@ import {
 } from "@/lib/constants";
 import { genererMessage } from "@/lib/api-messages";
 import ProgrammerRappel from "@/components/ProgrammerRappel";
-
-
+import { useDrawer } from "@/components/DrawerContext"; // ← On importe le contexte !
 
 // ============================================================
 // 📌 TYPES
@@ -29,7 +27,10 @@ type Contact = {
   relation: string;
   date_naissance: string | null;
   email?: string | null;
-  note?: string | null; // ← AJOUT
+  note?: string | null;
+  est_favori?: boolean;
+  telephone_indicatif?: string | null;
+  telephone_numero?: string | null;
 };
 
 type DatesPossibles = {
@@ -41,10 +42,8 @@ type DatesPossibles = {
 type ChoixDateEnvoi = "jourJ" | "j1" | "j7" | "custom";
 
 // ============================================================
-// 🔧 HELPER : prochaine occurrence annuelle d'une date
+// 🔧 HELPER (hors composant)
 // ============================================================
-// Prend une date (ex: 15/03/2015) et retourne la prochaine fois
-// que ce jour/mois reviendra (ex: 15/03/2026 si on est en avril 2025)
 function prochaineOccurrenceAnnuelle(dateOriginale: Date): Date {
   const aujourdhui = new Date();
   aujourdhui.setHours(0, 0, 0, 0);
@@ -55,7 +54,6 @@ function prochaineOccurrenceAnnuelle(dateOriginale: Date): Date {
     dateOriginale.getDate()
   );
 
-  // Si la date est déjà passée cette année → on prend l'an prochain
   if (prochaine < aujourdhui) {
     prochaine.setFullYear(prochaine.getFullYear() + 1);
   }
@@ -67,37 +65,12 @@ function prochaineOccurrenceAnnuelle(dateOriginale: Date): Date {
 // 🎨 COMPOSANT PRINCIPAL
 // ============================================================
 function GenerateForm() {
+  // ---------------------------
+  // 2. HOOKS
+  // ---------------------------
   const searchParams = useSearchParams();
-// ============================================================
-// 🔧 FONCTIONS UTILITAIRES
-// ============================================================
-// ===== FONCTIONS =====
-  function appliquerContact(contact: Contact) {
-    setSelectedContactId(String(contact.id));
-    setSelectedContact(contact);
-    setFirstName(contact.prenom);
-    setLastName(contact.nom);
-    setRelation(contact.relation || "ami");
+  const { ouvrirDrawer } = useDrawer(); // ← Récupère la fonction du contexte
 
-    if (contact.date_naissance) {
-      const naissance = new Date(contact.date_naissance);
-      const aujourdhui = new Date();
-      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
-      const anniversaireCetteAnnee = new Date(
-        aujourdhui.getFullYear(),
-        naissance.getMonth(),
-        naissance.getDate()
-      );
-      if (anniversaireCetteAnnee < aujourdhui) {
-        ageCalcule += 1;
-      }
-      setAge(String(ageCalcule));
-    } else {
-      setAge("");
-    }
-  }
-  
-  // ===== STATES =====
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [age, setAge] = useState("");
@@ -119,12 +92,120 @@ function GenerateForm() {
   const [eventDate, setEventDate] = useState<string>("");
   const [eventDescription, setEventDescription] = useState<string>("");
   const [searchContact, setSearchContact] = useState("");
+  const [contactListOpen, setContactListOpen] = useState(false); // ← ICI, pas dans useEffect
 
-
-  // ✅ Helper : est-ce un événement avec date manuelle ?
   const needsManualDate = necessiteDateManuelle(eventType);
 
-  // ===== EFFETS =====
+  // ---------------------------
+  // 3. FONCTIONS
+  // ---------------------------
+  function appliquerContact(contact: Contact) {
+    setSelectedContactId(String(contact.id));
+    setSelectedContact(contact);
+    setFirstName(contact.prenom);
+    setLastName(contact.nom);
+    setRelation(contact.relation || "ami");
+
+    if (contact.date_naissance) {
+      const naissance = new Date(contact.date_naissance);
+      const aujourdhui = new Date();
+      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
+      const anniversaireCetteAnnee = new Date(
+        aujourdhui.getFullYear(),
+        naissance.getMonth(),
+        naissance.getDate()
+      );
+      if (anniversaireCetteAnnee > aujourdhui) {
+        ageCalcule -= 1;
+      }
+      setAge(String(ageCalcule));
+    } else {
+      setAge("");
+    }
+  }
+
+  // Fonction pour ouvrir le drawer d'édition avec le contact actuel
+  const handleEditContact = () => {
+    if (selectedContact) {
+      ouvrirDrawer({
+        id: String(selectedContact.id),
+        prenom: selectedContact.prenom,
+        nom: selectedContact.nom,
+        date_naissance: selectedContact.date_naissance,
+        relation: selectedContact.relation,
+        email: selectedContact.email ?? null,
+        note: selectedContact.note ?? null,
+        est_favori: selectedContact.est_favori ?? null,
+        telephone_indicatif: selectedContact.telephone_indicatif ?? null,
+        telephone_numero: selectedContact.telephone_numero ?? null,
+      });
+    }
+  };
+
+  // Fonction pour rafraîchir les contacts après modification
+  const refreshContacts = async () => {
+    if (!session) return;
+
+    const { data, error } = await supabase
+      .from("contacts")
+      .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
+      .eq("user_id", session.user.id)
+      .order("prenom");
+
+    if (!error && data) {
+      setContacts(data as Contact[]);
+
+      // Met à jour le contact sélectionné si l'ID correspond toujours
+      if (selectedContactId) {
+        const updated = data.find((c) => String(c.id) === selectedContactId);
+        if (updated) {
+          appliquerContact(updated as Contact);
+        }
+      }
+    }
+  };
+
+  async function handleGenerate() {
+    setLoading(true);
+    setError("");
+    setMessage("");
+    setCopied(false);
+
+    try {
+      let dateEvenementPourIA: string | null = null;
+
+      if (needsManualDate && eventDate) {
+        dateEvenementPourIA = eventDate;
+      } else if (datesPossibles) {
+        dateEvenementPourIA = datesPossibles.jourJ.toISOString().split("T")[0];
+      }
+
+      const messageGenere = await genererMessage({
+        firstName,
+        lastName,
+        age: age ? parseInt(age) : null,
+        relation,
+        tone,
+        eventType,
+        eventDate: dateEvenementPourIA,
+        eventDescription: needsManualDate ? eventDescription : null,
+        note: selectedContact?.note || null,
+        eventDateOrigin: selectedContact?.date_naissance ?? null,
+      });
+
+      setMessage(messageGenere);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Impossible de générer le message.";
+      setError(errorMessage);
+      console.error("Erreur dans handleGenerate:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ---------------------------
+  // 4. EFFETS
+  // ---------------------------
   useEffect(() => {
     async function loadContactsAndPrefill() {
       const { data: { session } } = await supabase.auth.getSession();
@@ -133,7 +214,7 @@ function GenerateForm() {
 
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, prenom, nom, relation, date_naissance, email, note")
+        .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
         .eq("user_id", session.user.id)
         .order("prenom");
 
@@ -164,96 +245,42 @@ function GenerateForm() {
     loadContactsAndPrefill();
   }, [searchParams]);
 
-  
-
-  async function handleGenerate() {
-  setLoading(true);
-  setError("");
-  setMessage("");
-  setCopied(false);
-
-  try {
-    // ✅ On calcule la date réelle de l'événement pour l'envoyer à l'IA
-    let dateEvenementPourIA: string | null = null;
+  // ---------------------------
+  // VARIABLES DÉRIVÉES
+  // ---------------------------
+  const datesPossibles: DatesPossibles | null = (() => {
+    if (!selectedContact) return null;
 
     if (needsManualDate && eventDate) {
-      // Événement manuel (jour_special) : on prend la date saisie
-      dateEvenementPourIA = eventDate;
-    } else if (datesPossibles) {
-      // Événement automatique (anniversaire, fête...) : on prend le jour J calculé
-      dateEvenementPourIA = datesPossibles.jourJ.toISOString().split("T")[0];
+      const dateSaisie = new Date(eventDate);
+      const prochaineDate = prochaineOccurrenceAnnuelle(dateSaisie);
+      return calculerDatesJ7J1JourJ(prochaineDate);
     }
 
-    const messageGenere = await genererMessage({
-      firstName,
-      lastName,
-      age: age ? parseInt(age) : null,
-      relation,
-      tone,
-      eventType,
-      eventDate: dateEvenementPourIA,           // ✅ toujours renseigné si possible
-      eventDescription: needsManualDate ? eventDescription : null,
-      note: selectedContact?.note || null,
-      eventDateOrigin: selectedContact?.date_naissance ?? null,
+    const typeEvt = EVENT_TYPE_MAP[eventType];
+    if (!typeEvt) return null;
+
+    const dateEvenement = calculerDateEvenement(typeEvt, {
+      prenom: firstName || selectedContact.prenom,
+      date_naissance: selectedContact.date_naissance,
     });
+    if (!dateEvenement) return null;
 
-    setMessage(messageGenere);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : "Impossible de générer le message.";
-    setError(errorMessage);
-    console.error("Erreur dans handleGenerate:", err);
-  } finally {
-    setLoading(false);
-  }
-}
+    return calculerDatesJ7J1JourJ(dateEvenement);
+  })();
 
+  const contactsFiltres = contacts.filter((contact) =>
+    `${contact.prenom} ${contact.nom} ${contact.relation}`
+      .toLowerCase()
+      .includes(searchContact.toLowerCase())
+  );
 
-
-  // ✅ Calcul des dates possibles (typage strict)
-  const datesPossibles: DatesPossibles | null = (() => {
-  if (!selectedContact) return null;
-
-  // Cas 1 : Événement avec date manuelle
-// → On calcule la prochaine occurrence annuelle (même si date passée)
-if (needsManualDate && eventDate) {
-  const dateSaisie = new Date(eventDate);
-  const prochaineDate = prochaineOccurrenceAnnuelle(dateSaisie);
-  return calculerDatesJ7J1JourJ(prochaineDate);
-}
-
-
-  // Cas 2 : Événements automatiques
-  const typeEvt = EVENT_TYPE_MAP[eventType];
-  if (!typeEvt) return null;
-
-  const dateEvenement = calculerDateEvenement(typeEvt, {
-    prenom: selectedContact.prenom,
-    date_naissance: selectedContact.date_naissance,
-  });
-  if (!dateEvenement) return null;
-
-  return calculerDatesJ7J1JourJ(dateEvenement);
-})();
-
-// Liste des contacts filtrés par la barre de recherche
-const contactsFiltres = contacts.filter((contact) =>
-  `${contact.prenom} ${contact.nom} ${contact.relation}`
-    .toLowerCase()
-    .includes(searchContact.toLowerCase())
-);
-  const dateMin = new Date().toISOString().split("T")[0];
-
-  // ✅ CORRIGÉ : Typage strict (pas d'accès dynamique problématique)
   function getDateEnvoiChoisie(): Date | null {
     if (!datesPossibles) return null;
-
-    if (choixDate === "custom") {
-      return dateCustom ? new Date(dateCustom) : null;
-    }
+    if (choixDate === "custom") return dateCustom ? new Date(dateCustom) : null;
     if (choixDate === "jourJ") return datesPossibles.jourJ;
     if (choixDate === "j1") return datesPossibles.j1;
     if (choixDate === "j7") return datesPossibles.j7;
-
     return null;
   }
 
@@ -263,30 +290,29 @@ const contactsFiltres = contacts.filter((contact) =>
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
-async function handleShare() {
-  if (!message) return;
 
-  try {
-    // navigator.share = fonction native du navigateur qui ouvre le menu de partage du téléphone
-    if (navigator.share) {
-      await navigator.share({
-        title: "Message Ephemer",
-        text: message,
-      });
-      return;
+  async function handleShare() {
+    if (!message) return;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Message Ephemer",
+          text: message,
+        });
+        return;
+      }
+      await navigator.clipboard.writeText(message);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      alert("Le partage direct n'est pas disponible ici. Le message a été copié.");
+    } catch (err) {
+      console.error("Erreur lors du partage :", err);
     }
-
-    // Fallback = solution de secours si le navigateur ne supporte pas le partage natif
-    await navigator.clipboard.writeText(message);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    alert("Le partage direct n'est pas disponible ici. Le message a été copié.");
-  } catch (err) {
-    console.error("Erreur lors du partage :", err);
   }
-}
 
-  // ===== RENDU =====
+  // ---------------------------
+  // 5. RENDU
+  // ---------------------------
   return (
     <div className="min-h-screen bg-[#0B1120] text-white p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
@@ -297,95 +323,134 @@ async function handleShare() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* COLONNE GAUCHE : FORMULAIRE */}
           <div className="space-y-6">
-            
+            {/* Sélection de contact */}
             <div>
-  <label className="block text-sm font-medium text-white/60 mb-2">
-    👤 Contact <span className="text-red-400">*</span>
-  </label>
+              <label className="block text-sm font-medium text-white/60 mb-2">
+                👤 Contact <span className="text-red-400">*</span>
+              </label>
 
-  {/* Barre de recherche intégrée */}
-  <div className="relative mb-3">
-    <input
-      type="text"
-      placeholder="Tape le prénom, nom ou relation..."
-      value={searchContact}
-      onChange={(e) => setSearchContact(e.target.value)}
-      className="w-full border border-white/10 rounded-2xl px-5 py-3 text-sm bg-white/5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
-    />
-    {searchContact && (
-      <button
-        type="button"
-        onClick={() => setSearchContact("")}
-        className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
-      >
-        ✕
-      </button>
-    )}
-  </div>
-
-  {/* Liste des contacts filtrés (style contacts page) */}
-  {!selectedContact && (
-    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 divide-y divide-white/10">
-      {contactsFiltres.length > 0 ? (
-        contactsFiltres.map((contact) => (
-          <button
-            key={contact.id}
-            type="button"
-            onClick={() => {
-              appliquerContact(contact);
-              setSelectedContactId(String(contact.id));
-              setSearchContact("");
-            }}
-            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/10 active:bg-white/15 transition"
-          >
-            <div>
-              <div className="font-medium text-white">
-                {contact.prenom} {contact.nom}
+              {/* Barre de recherche */}
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  placeholder="Tape le prénom, nom ou relation..."
+                  value={searchContact}
+                  onChange={(e) => {
+                    setSearchContact(e.target.value);
+                    if (e.target.value.trim() !== "") {
+                      setContactListOpen(true);
+                    }
+                  }}
+                  className="w-full border border-white/10 rounded-2xl px-5 py-3 text-sm bg-white/5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+                />
+                {searchContact && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchContact("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
-              <div className="text-xs text-white/60 capitalize">{contact.relation}</div>
+
+              {/* Liste déroulante des contacts */}
+              {!selectedContact && (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => setContactListOpen((ouvert) => !ouvert)}
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:bg-white/15 transition"
+                  >
+                    <span className="font-medium">
+                      {contactListOpen ? "Masquer mes contacts" : "📇 Choisir un contact existant"}
+                    </span>
+                    <span
+                      className={`text-[#C8A84E] transition-transform duration-200 ${
+                        contactListOpen ? "rotate-180" : ""
+                      }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  {contactListOpen && (
+                    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 divide-y divide-white/10">
+                      {contactsFiltres.length > 0 ? (
+                        contactsFiltres.map((contact) => (
+                          <button
+                            key={contact.id}
+                            type="button"
+                            onClick={() => {
+                              appliquerContact(contact);
+                              setSearchContact("");
+                              setContactListOpen(false);
+                            }}
+                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/10 active:bg-white/15 transition"
+                          >
+                            <div>
+                              <div className="font-medium text-white">
+                                {contact.prenom} {contact.nom}
+                              </div>
+                              <div className="text-xs text-white/60 capitalize">{contact.relation}</div>
+                            </div>
+                            <div className="text-[#C8A84E] text-sm">→</div>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="px-4 py-6 text-center text-sm text-white/50">
+                          Aucun contact trouvé
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Badge du contact sélectionné */}
+              {selectedContact && (
+                <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                  <div>
+                    <div className="font-semibold text-white">
+                      {selectedContact.prenom} {selectedContact.nom}
+                    </div>
+                    <div className="text-xs text-white/60 capitalize">{selectedContact.relation}</div>
+                    {!selectedContact.email && (
+                      <div className="text-xs text-orange-400 mt-1">
+                        ⚠️ Email manquant
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {/* ✅ Bouton Modifier qui utilise le contexte DrawerContext */}
+                    <button
+                      type="button"
+                      onClick={handleEditContact}
+                      className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/30 transition"
+                    >
+                      ✏️ Détails du contact
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedContact(null);
+                        setSelectedContactId("");
+                        setFirstName("");
+                        setLastName("");
+                        setAge("");
+                        setRelation("ami");
+                        setSearchContact("");
+                      }}
+                      className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition"
+                    >
+                      ❌
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="text-[#C8A84E] text-sm">→</div>
-          </button>
-        ))
-      ) : (
-        <div className="px-4 py-6 text-center text-sm text-white/50">
-          Aucun contact trouvé
-        </div>
-      )}
-    </div>
-  )}
 
-  {/* Contact sélectionné (joli badge) */}
-  {selectedContact && (
-    <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-      <div>
-        <div className="font-semibold text-white">
-          {selectedContact.prenom} {selectedContact.nom}
-        </div>
-        <div className="text-xs text-white/60 capitalize">{selectedContact.relation}</div>
-      </div>
-
-      <button
-        type="button"
-        onClick={() => {
-          setSelectedContact(null);
-          setSelectedContactId("");
-          setFirstName("");
-          setLastName("");
-          setAge("");
-          setRelation("ami");
-          setSearchContact("");
-        }}
-        className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition flex items-center gap-1.5"
-      >
-        <span>Changer</span>
-      </button>
-    </div>
-  )}
-</div>
-
-
-
+            {/* Prénom et Nom */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-white/60 mb-1">
@@ -395,7 +460,7 @@ async function handleShare() {
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white disabled:opacity-50"
+                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
                   placeholder="Jean"
                 />
               </div>
@@ -405,12 +470,13 @@ async function handleShare() {
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white disabled:opacity-50"
+                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
                   placeholder="Dupont"
                 />
               </div>
             </div>
 
+            {/* Âge */}
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">Âge</label>
               <input
@@ -424,6 +490,7 @@ async function handleShare() {
               />
             </div>
 
+            {/* Relation */}
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Relation <span className="text-red-400">*</span>
@@ -435,6 +502,7 @@ async function handleShare() {
               />
             </div>
 
+            {/* Type d'événement */}
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Type d'événement <span className="text-red-400">*</span>
@@ -445,13 +513,14 @@ async function handleShare() {
                 onChange={(value) => {
                   setEventType(value);
                   if (!necessiteDateManuelle(value)) {
-                  setEventDate("");
-                  setEventDescription("");
+                    setEventDate("");
+                    setEventDescription("");
                   }
-              }}
+                }}
               />
             </div>
 
+            {/* Champs pour date manuelle */}
             {needsManualDate && (
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div>
@@ -482,6 +551,7 @@ async function handleShare() {
               </div>
             )}
 
+            {/* Ton du message */}
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">
                 Ton du message <span className="text-red-400">*</span>
@@ -493,6 +563,7 @@ async function handleShare() {
               />
             </div>
 
+            {/* Bouton Générer */}
             <button
               onClick={handleGenerate}
               disabled={
@@ -513,73 +584,80 @@ async function handleShare() {
           {/* COLONNE DROITE : RÉSULTAT */}
           <div className="space-y-6">
             {message && (
-  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
-    <div className="flex justify-between items-start mb-2">
-      <h3 className="font-semibold text-[#C8A84E]">💌 Message généré (modifiable)</h3>
-    </div>
+              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-[#C8A84E]">💌 Message généré (modifiable)</h3>
+                </div>
 
-    <textarea
-      value={message}
-      onChange={(e) => setMessage(e.target.value)}
-      className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-xl p-4 text-white/90 resize-y focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 text-sm leading-relaxed"
-      placeholder="Votre message personnalisé..."
-    />
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-xl p-4 text-white/90 resize-y focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 text-sm leading-relaxed"
+                  placeholder="Votre message personnalisé..."
+                />
 
-    <div className="grid grid-cols-2 gap-3 mt-4">
-      <button
-        onClick={handleCopy}
-        className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-      >
-        {copied ? "✅ Copié !" : "Copier"}
-      </button>
-      <button
-        onClick={handleShare}
-        disabled={!message}
-        className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-      >
-        📤 Partager
-      </button>
-    </div>
-  </div>
-)}
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button
+                    onClick={handleCopy}
+                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                  >
+                    {copied ? "✅ Copié !" : "Copier"}
+                  </button>
+                  <button
+                    onClick={handleShare}
+                    disabled={!message}
+                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                  >
+                    📤 Partager
+                  </button>
+                </div>
+              </div>
+            )}
 
             {message && selectedContact && session && (
-  <>
-    <>
-  <ProgrammerRappel
-    session={session}
-    selectedContact={selectedContact}
-    message={message}
-    tone={tone}
-    eventType={eventType}
-    datesPossibles={datesPossibles ?? undefined}
-  />
+              <>
+                <ProgrammerRappel
+                  session={session}
+                  selectedContact={selectedContact}
+                  message={message}
+                  tone={tone}
+                  eventType={eventType}
+                  datesPossibles={datesPossibles ?? undefined}
+                />
 
-  {!datesPossibles && (
-    <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
-      ℹ️ Pas de date automatique pour cet événement.
-      {eventType === "fete_prenomale" && (
-        <p className="mt-1">
-          Le prénom <strong>{selectedContact.prenom}</strong> n'a pas été trouvé
-          dans notre calendrier des saints.
-        </p>
-      )}
-      {eventType === "anniversaire" && !selectedContact.date_naissance && (
-        <p className="mt-1">
-          Ce contact n'a pas de <strong>date de naissance</strong> renseignée.
-        </p>
-      )}
-      <p className="mt-2">
-        👉 Utilise <strong>📆 Date personnalisée</strong> ci-dessus pour choisir manuellement.
-      </p>
-    </div>
-  )}
-</>
+                {/* Avertissements */}
+                {!datesPossibles && (
+                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
+                    ℹ️ Pas de date automatique pour cet événement.
+                    {eventType === "fete_prenomale" && (
+                      <p className="mt-1">
+                        Le prénom <strong>{selectedContact.prenom}</strong> n'a pas été trouvé
+                        dans notre calendrier des saints.
+                      </p>
+                    )}
+                    {eventType === "anniversaire" && !selectedContact.date_naissance && (
+                      <p className="mt-1">
+                        Ce contact n'a pas de <strong>date de naissance</strong> renseignée.
+                      </p>
+                    )}
+                    <p className="mt-2">
+                      👉 Utilise <strong>📆 Date personnalisée</strong> ci-dessus pour choisir manuellement.
+                    </p>
+                  </div>
+                )}
 
-  </>
-)}
-
-
+                {/* ✅ Avertissement email manquant */}
+                {!selectedContact.email && (
+                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
+                    ℹ️ Ce contact n'a pas d'<strong>adresse email</strong> renseignée.
+                    <p className="mt-2">
+                      👉 Clique sur <strong>✏️ Modifier</strong> pour ajouter un email 
+                      et pouvoir envoyer des messages par email.
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -589,11 +667,13 @@ async function handleShare() {
 
 export default function GeneratePage() {
   return (
-    <Suspense fallback={
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <p className="text-white/50">Chargement...</p>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <p className="text-white/50">Chargement...</p>
+        </div>
+      }
+    >
       <GenerateForm />
     </Suspense>
   );
