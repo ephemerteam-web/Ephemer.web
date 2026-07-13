@@ -10,8 +10,7 @@ import NotificationBell from '@/components/NotificationBell'
 import MenuLateral from '@/components/MenuLateral'
 import { Analytics } from "@vercel/analytics/next"
 import MenuNavigation from '@/components/MenuNavigation'
-
-const OfflineBanner = () => null
+import OfflineBanner from '@/components/OfflineBanner';
 
 export default function DashboardLayout({
   children,

@@ -9,13 +9,12 @@ import { useDrawer } from '@/components/DrawerContext'
 import ContactSearchFilters from '@/components/ContactSearchFilters'
 import { useContactFilters } from '@/lib/hooks/useContactFilters'
 
-
 type Contact = {
   id: string
-  nom: string
-  prenom: string
+  nom: string | null
+  prenom: string | null
   date_naissance: string | null
-  relation: string
+  relation: string | null
   email: string | null
   telephone_indicatif: string | null
   telephone_numero: string | null
@@ -45,7 +44,9 @@ export default function ContactsPage() {
 
   useEffect(() => {
     const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
 
       if (!session) {
         router.push('/connexion')
@@ -56,19 +57,40 @@ export default function ContactsPage() {
         .from('contacts')
         .select('*')
         .eq('user_id', session.user.id)
-        .order('nom', { ascending: true })
+        .order('nom', { ascending: true, nullsFirst: false })
 
-      if (!error && data) {
+      if (error) {
+        console.error('Erreur chargement contacts :', error)
+        setContacts([])
+        setLoading(false)
+        return
+      }
+
+      if (data) {
         const liste = data as Contact[]
 
         const avecLiens = await Promise.all(
           liste.map(async (contact) => {
-            if (!contact.email) return { ...contact, estLie: false }
+            if (!contact.email) {
+              return { ...contact, estLie: false }
+            }
 
-            const { data: resultat } = await supabase.rpc('est_contact_lie', {
-              mon_user_id: session.user.id,
-              email_du_contact: contact.email,
-            })
+            const { data: resultat, error: lienError } = await supabase.rpc(
+              'est_contact_lie',
+              {
+                mon_user_id: session.user.id,
+                email_du_contact: contact.email,
+              }
+            )
+
+            if (lienError) {
+              console.warn(
+                'Impossible de vérifier si le contact est lié :',
+                lienError
+              )
+
+              return { ...contact, estLie: false }
+            }
 
             return { ...contact, estLie: resultat === true }
           })
@@ -83,8 +105,9 @@ export default function ContactsPage() {
     init()
   }, [router])
 
-  const couleurRelation = (relation: string) => {
-    const config = TYPES_RELATION.find((t) => t.value === relation)
+  const couleurRelation = (relation: string | null) => {
+    const relationSecurisee = relation ?? ''
+    const config = TYPES_RELATION.find((t) => t.value === relationSecurisee)
 
     if (!config) {
       return 'bg-white/10 text-indigo-200 border border-white/20'
@@ -93,9 +116,31 @@ export default function ContactsPage() {
     return config.couleur
   }
 
+  const getNomComplet = (contact: ContactAvecLien) => {
+    const prenom = contact.prenom?.trim() ?? ''
+    const nom = contact.nom?.trim() ?? ''
+    const nomComplet = `${prenom} ${nom}`.trim()
+
+    return nomComplet || 'Contact sans nom'
+  }
+
+  const getInitiales = (contact: ContactAvecLien) => {
+    const premiereLettrePrenom = contact.prenom?.trim()?.[0] ?? ''
+    const premiereLettreNom = contact.nom?.trim()?.[0] ?? ''
+    const initiales = `${premiereLettrePrenom}${premiereLettreNom}`.trim()
+
+    return initiales || '👤'
+  }
+
+  const getRelationLabel = (relation: string | null) => {
+    const relationSecurisee = relation?.trim()
+
+    return relationSecurisee || 'non classé'
+  }
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[60vh] px-4">
         <div className="text-center">
           <div className="animate-pulse mb-4">
             <span className="text-6xl">📒</span>
@@ -109,7 +154,7 @@ export default function ContactsPage() {
   return (
     <div className="p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-white">
             📒 Mes contacts
             <span className="ml-2 text-sm font-normal text-indigo-300">
@@ -119,7 +164,7 @@ export default function ContactsPage() {
 
           <Link
             href="/dashboard/contacts/nouveau"
-            className="bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
+            className="w-full sm:w-auto text-center bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
           >
             + Nouveau
           </Link>
@@ -163,13 +208,12 @@ export default function ContactsPage() {
               >
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="w-10 h-10 rounded-full bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {contact.prenom?.[0]}
-                    {contact.nom?.[0]}
+                    {getInitiales(contact)}
                   </div>
 
                   <div className="min-w-0">
                     <p className="font-semibold text-white truncate">
-                      {contact.prenom} {contact.nom}
+                      {getNomComplet(contact)}
                     </p>
 
                     <span
@@ -177,7 +221,7 @@ export default function ContactsPage() {
                         contact.relation
                       )}`}
                     >
-                      {contact.relation}
+                      {getRelationLabel(contact.relation)}
                     </span>
                   </div>
                 </div>

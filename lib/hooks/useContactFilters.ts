@@ -4,9 +4,9 @@ export type TriContact = 'nom' | 'prenom'
 
 export type ContactFiltrable = {
   id: string
-  nom: string
-  prenom: string
-  relation: string
+  nom: string | null
+  prenom: string | null
+  relation: string | null
   est_favori?: boolean | null
 }
 
@@ -18,14 +18,18 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
   const contactsFiltres = useMemo(() => {
     return [...contacts]
       .filter((contact) => {
-        const texte = `${contact.prenom} ${contact.nom}`.toLowerCase()
+        const prenom = contact.prenom ?? ''
+        const nom = contact.nom ?? ''
+        const relation = contact.relation ?? ''
+
+        const texte = `${prenom} ${nom} ${relation}`.toLowerCase()
         const rechercheNettoyee = recherche.trim().toLowerCase()
 
         const matchRecherche =
           rechercheNettoyee === '' || texte.includes(rechercheNettoyee)
 
         const matchRelation =
-          filtreRelation === 'tous' || contact.relation === filtreRelation
+          filtreRelation === 'tous' || relation === filtreRelation
 
         return matchRecherche && matchRelation
       })
@@ -33,11 +37,36 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
         if (a.est_favori && !b.est_favori) return -1
         if (!a.est_favori && b.est_favori) return 1
 
+        const prenomA = a.prenom ?? ''
+        const prenomB = b.prenom ?? ''
+        const nomA = a.nom ?? ''
+        const nomB = b.nom ?? ''
+
         if (triPar === 'nom') {
-          return a.nom.localeCompare(b.nom, 'fr')
+          const comparaisonNom = nomA.localeCompare(nomB, 'fr', {
+            sensitivity: 'base',
+          })
+
+          if (comparaisonNom !== 0) {
+            return comparaisonNom
+          }
+
+          return prenomA.localeCompare(prenomB, 'fr', {
+            sensitivity: 'base',
+          })
         }
 
-        return a.prenom.localeCompare(b.prenom, 'fr')
+        const comparaisonPrenom = prenomA.localeCompare(prenomB, 'fr', {
+          sensitivity: 'base',
+        })
+
+        if (comparaisonPrenom !== 0) {
+          return comparaisonPrenom
+        }
+
+        return nomA.localeCompare(nomB, 'fr', {
+          sensitivity: 'base',
+        })
       })
   }, [contacts, recherche, triPar, filtreRelation])
 
