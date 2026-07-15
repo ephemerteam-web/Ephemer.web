@@ -1,11 +1,13 @@
 'use client'
+// "use client" veut dire : ce composant tourne dans le NAVIGATEUR (pas sur le serveur)
+// Il a besoin de React, des clics utilisateur, etc.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-browser'
-import { calculerDateEvenement, TypeEvenement } from '@/lib/dates-evenements'
-import { SAINTS } from '@/lib/saints'
 import { useDrawer } from '@/components/DrawerContext'
+import { evenementsAVenir } from '@/lib/evenements-a-venir'
 
+// ── Types (définitions de la forme de nos données) ────────────────
 type NotificationInsert = {
   user_id: string
   contact_id: number
@@ -23,200 +25,209 @@ type Notification = {
   contact_id: number
 }
 
-const EVENT_TYPES: TypeEvenement[] = ['anniversaire', 'fete_prenomale']
-
-// Fonction pour trouver la prochaine fête d'un saint selon le prénom
-function getProchaineFeteSaint(prenom: string): { date: Date; nomSaint: string } | null {
-  if (!prenom) return null
-
-  const normalized = prenom
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-
-  const match = SAINTS.find(sainte =>
-    sainte.prenoms.some(p => p === normalized)
-  )
-
-  if (!match) return null
-
-  const [month, day] = match.date.split('-').map(Number)
-  const today = new Date()
-  let year = today.getFullYear()
-
-  let candidate = new Date(year, month - 1, day)
-  if (candidate < today) {
-    candidate = new Date(year + 1, month - 1, day)
-  }
-
-  return { date: candidate, nomSaint: match.nomSaint }
-}
-
+// ── Composant principal ───────────────────────────────────────────
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { ouvrirDrawer } = useDrawer()
+  const panelRef = useRef<HTMLDivElement>(null)
 
-  const genererNotifications = useCallback(async () => {
+  // ── 1) Génération des notifications ─────────────────────────────
+ // ── 1) Génération des notifications (option A : 1 notif par événement) ──
+const genererNotifications = useCallback(async () => {
+  try {
     const { data: { session } } = await supabase.auth.getSession()
     if (!session?.user?.id) return
-
     const userId = session.user.id
 
-    const { data: contacts } = await supabase
+    // Récupérer les contacts
+    const { data: contacts, error: contactsError } = await supabase
       .from('contacts')
       .select('id, prenom, nom, date_naissance')
       .eq('user_id', userId)
 
+    if (contactsError) {
+      console.error('Erreur chargement contacts:', contactsError.message)
+      return
+    }
     if (!contacts || contacts.length === 0) return
 
-    const { data: existingNotifications } = await supabase
+    // 🎯 Événements des 7 prochains jours (gère les accents ✅)
+    const events = evenementsAVenir(contacts, 7)
+    if (events.length === 0) return
+
+    // Notifs déjà existantes → anti-doublon
+    const { data: existingNotifications, error: notifError } = await supabase
       .from('notifications')
       .select('contact_id, type, event_date')
       .eq('user_id', userId)
 
+    if (notifError) {
+      console.error('Erreur chargement notifications:', notifError.message)
+      return
+    }
+
+    // Clé = contactId-type-date  (SANS suffixe jX → 1 seule notif par événement)
     const existingSet = new Set(
       existingNotifications?.map(n => `${n.contact_id}-${n.type}-${n.event_date}`) || []
     )
 
-    const aujourdHui = new Date()
-    aujourdHui.setHours(0, 0, 0, 0)
-
     const notificationsToInsert: NotificationInsert[] = []
 
-    // === 1. Anniversaires + Fêtes prénomales (basé sur date de naissance) ===
-    for (const contact of contacts) {
-      for (const typeEvt of ['anniversaire', 'fete_prenomale'] as TypeEvenement[]) {
-        const dateEvenement = calculerDateEvenement(typeEvt, {
-          prenom: contact.prenom,
-          date_naissance: contact.date_naissance,
-        })
+    for (const ev of events) {
+      const eventDateStr = ev.date.toISOString().split('T')[0] // "2026-07-19"
 
-        if (!dateEvenement) continue
-
-        const dateJ = new Date(dateEvenement)
-        dateJ.setHours(0, 0, 0, 0)
-
-        const demain = new Date(aujourdHui)
-        demain.setDate(demain.getDate() + 1)
-
-        const dans7Jours = new Date(aujourdHui)
-        dans7Jours.setDate(dans7Jours.getDate() + 7)
-
-        let typeNotification = ''
-        let emoji = ''
-        if (dateJ.getTime() === aujourdHui.getTime()) {
-          typeNotification = `${typeEvt}_j0`
-          emoji = typeEvt === 'anniversaire' ? '🎂' : '🎉'
-        } else if (dateJ.getTime() === demain.getTime()) {
-          typeNotification = `${typeEvt}_j1`
-          emoji = '📅'
-        } else if (dateJ.getTime() === dans7Jours.getTime()) {
-          typeNotification = `${typeEvt}_j7`
-          emoji = '⏰'
-        } else continue
-
-        const cle = `${contact.id}-${typeNotification}-${dateJ.toISOString().split('T')[0]}`
-        if (existingSet.has(cle)) continue
-
-        const nomComplet = `${contact.prenom} ${contact.nom || ''}`.trim()
-        let messageTexte = `${emoji} ${typeNotification.includes('anniversaire') ? "C'est l'anniversaire" : "C'est la fête"} de ${nomComplet} ${typeNotification.includes('j0') ? "aujourd'hui" : typeNotification.includes('j1') ? "demain" : "dans 7 jours"} !`
-
-        notificationsToInsert.push({
-          user_id: userId,
-          contact_id: contact.id,
-          type: typeNotification,
-          message: messageTexte,
-          event_date: dateJ.toISOString().split('T')[0],
-          lue: false,
-        })
-      }
-    }
-
-    // === 2. Fêtes des Saints (nouveau !) ===
-    for (const contact of contacts) {
-      const feteSaint = getProchaineFeteSaint(contact.prenom)
-      if (!feteSaint) continue
-
-      const dateJ = feteSaint.date
-      dateJ.setHours(0, 0, 0, 0)
-
-      const demain = new Date(aujourdHui)
-      demain.setDate(demain.getDate() + 1)
-
-      const dans7Jours = new Date(aujourdHui)
-      dans7Jours.setDate(dans7Jours.getDate() + 7)
-
-      let typeNotification = ''
-      let emoji = '🎉'
-      let suffix = ''
-
-      if (dateJ.getTime() === aujourdHui.getTime()) {
-        typeNotification = 'fete_saint_j0'
-        suffix = "aujourd'hui"
-      } else if (dateJ.getTime() === demain.getTime()) {
-        typeNotification = 'fete_saint_j1'
-        suffix = 'demain'
-      } else if (dateJ.getTime() === dans7Jours.getTime()) {
-        typeNotification = 'fete_saint_j7'
-        suffix = 'dans 7 jours'
-      } else continue
-
-      const cle = `${contact.id}-${typeNotification}-${dateJ.toISOString().split('T')[0]}`
+      // type "propre" sans palier → clé stable dans le temps
+      const cle = `${ev.contactId}-${ev.type}-${eventDateStr}`
       if (existingSet.has(cle)) continue
 
-      const messageTexte = `${emoji} C'est bientôt la fête de ${contact.prenom} (${feteSaint.nomSaint}) ${suffix} !`
+      const nomComplet = `${ev.prenom} ${ev.nom || ''}`.trim()
+      const estAnniv = ev.type === 'anniversaire'
+      const emoji = estAnniv ? '🎂' : '🙏'
+      const quoi = estAnniv ? "l'anniversaire" : 'la fête'
+      const quand =
+        ev.jours === 0 ? "aujourd'hui" :
+        ev.jours === 1 ? 'demain' :
+        `dans ${ev.jours} jours`
 
       notificationsToInsert.push({
         user_id: userId,
-        contact_id: contact.id,
-        type: typeNotification,
-        message: messageTexte,
-        event_date: dateJ.toISOString().split('T')[0],
+        contact_id: Number(ev.contactId), // la table attend un bigint
+        type: ev.type,                     // "anniversaire" ou "fete_prenomale"
+        message: `${emoji} C'est ${quoi} de ${nomComplet} ${quand} !`,
+        event_date: eventDateStr,
         lue: false,
       })
     }
 
     if (notificationsToInsert.length > 0) {
-      await supabase.from('notifications').insert(notificationsToInsert)
+      const { error: insertError } = await supabase
+        .from('notifications')
+        .insert(notificationsToInsert)
+      if (insertError) {
+        console.error('Erreur insertion notifications:', insertError.message)
+      }
     }
-  }, [])
+  } catch (err) {
+    console.error('Erreur inattendue dans genererNotifications:', err)
+    setError('Impossible de générer les notifications')
+  }
+}, [])
 
+  // ── 2) Charger les notifications déjà existantes ────────────────
   const chargerNotifications = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user?.id) {
-      setLoading(false)
-      return
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) { setLoading(false); return }
+
+      const { data, error: fetchError } = await supabase
+        .from('notifications')
+        .select('id, message, lue, created_at, contact_id')
+        .eq('user_id', session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(30)
+
+      if (fetchError) {
+        console.error('Erreur chargement notifs:', fetchError.message)
+        setError('Impossible de charger les notifications')
+      } else if (data) {
+        setNotifications(data)
+        setError(null)
+      }
+    } catch (err) {
+      console.error('Erreur chargement notifications:', err)
+      setError('Erreur de connexion')
     }
-
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('id, message, lue, created_at, contact_id')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .limit(30)
-
-    if (!error && data) setNotifications(data)
     setLoading(false)
   }, [])
 
+  // ── 3) Tout marquer comme lu ────────────────────────────────────
+  const marquerToutCommeLu = useCallback(async () => {
+    try {
+      const nonLuesIds = notifications.filter(n => !n.lue).map(n => n.id)
+      if (nonLuesIds.length === 0) return
+
+      const { error } = await supabase
+        .from('notifications')
+        .update({ lue: true })
+        .in('id', nonLuesIds) // Met à JOUR toutes les lignes dont l'ID est dans la liste
+
+      if (error) throw error
+      setNotifications(prev => prev.map(n => ({ ...n, lue: true })))
+    } catch (err) {
+      console.error('Erreur marquer tout lu:', err)
+    }
+  }, [notifications])
+
+  // ── 4) Realtime : écouter les nouvelles notifs en direct ⚡ ──────
+  useEffect(() => {
+    let channel: ReturnType<typeof supabase.channel> | null = null
+
+    const setupRealtime = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) return
+
+      // Création d'un "écouteur" sur la table notifications
+      channel = supabase
+        .channel('notifications-listen')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT', // Uniquement les NOUVELLES insertions
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${session.user.id}`, // Filtrer sur l'utilisateur connecté
+          },
+          (payload) => {
+            const newNotif = payload.new as Notification
+            setNotifications(prev => [newNotif, ...prev]) // Ajouter en haut de la liste
+          }
+        )
+        .subscribe()
+    }
+
+    setupRealtime()
+
+    // Nettoyage à la fermeture du composant (évite les fuites mémoire)
+    return () => {
+      if (channel) supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // ── Initialisation au chargement ────────────────────────────────
   useEffect(() => {
     const init = async () => {
       setLoading(true)
+      setError(null)
       await genererNotifications()
       await chargerNotifications()
     }
     init()
   }, [genererNotifications, chargerNotifications])
 
+  // ── Fermeture avec Échap (accessibilité) ────────────────────────
+  useEffect(() => {
+    if (!ouvert) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOuvert(false)
+    }
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [ouvert])
+
+  // ── Marquer une notification comme lue ──────────────────────────
   async function marquerLue(id: string) {
-    await supabase.from('notifications').update({ lue: true }).eq('id', id)
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, lue: true } : n))
-    )
+    try {
+      await supabase.from('notifications').update({ lue: true }).eq('id', id)
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: true } : n))
+    } catch (err) {
+      console.error('Erreur marquer lue:', err)
+    }
   }
 
+  // ── Clic sur une notification ───────────────────────────────────
   async function handleNotificationClick(notif: Notification) {
     marquerLue(notif.id)
     setOuvert(false)
@@ -226,7 +237,6 @@ export default function NotificationBell() {
       .select('*')
       .eq('id', notif.contact_id)
       .single()
-
     if (!contact) return
 
     const { data: { session } } = await supabase.auth.getSession()
@@ -238,47 +248,94 @@ export default function NotificationBell() {
       })
       estLie = resultat === true
     }
-
     ouvrirDrawer({ ...contact, estLie })
   }
 
+  // ── Calcul du nombre de notifications non lues ──────────────────
   const nbNonLues = notifications.filter(n => !n.lue).length
 
+  // ── Rendu visuel ────────────────────────────────────────────────
   return (
     <div className="relative">
+      {/* ── Bouton cloche ── */}
       <button
         onClick={() => setOuvert(!ouvert)}
-        className="relative p-3 rounded-full hover:bg-white/10 transition"
+        className="relative p-3 rounded-full hover:bg-white/10 transition focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
         title="Notifications"
+        aria-label={`${nbNonLues} notification${nbNonLues > 1 ? 's' : ''} non lue${nbNonLues > 1 ? 's' : ''}`}
       >
         <span className="text-2xl">🔔</span>
         {nbNonLues > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-            {nbNonLues}
+          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+            {/* animate-pulse fait "pulser" l'élément (effet visuel subtil) */}
+            {nbNonLues > 99 ? '99+' : nbNonLues}
           </span>
         )}
       </button>
 
+      {/* ── Panneau déroulant ── */}
       {ouvert && (
         <>
+          {/* Fond noir semi-transparent sur mobile */}
           <div className="fixed inset-0 z-30 bg-black/50 sm:hidden" onClick={() => setOuvert(false)} />
-          <div className="fixed sm:absolute right-4 sm:right-0 top-16 sm:top-12 w-[calc(100%-2rem)] sm:w-80 max-h-[75vh] bg-gray-900 text-white rounded-2xl shadow-2xl z-40 overflow-hidden border border-gray-700 flex flex-col">
+
+          <div
+            ref={panelRef}
+            className="fixed sm:absolute right-4 sm:right-0 top-16 sm:top-12 w-[calc(100%-2rem)] sm:w-80 max-h-[75vh] bg-gray-900 text-white rounded-2xl shadow-2xl z-40 overflow-hidden border border-gray-700 flex flex-col"
+            role="dialog"
+            aria-labelledby="notifications-title"
+          >
+            {/* En-tête */}
             <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
-              <h3 className="font-semibold">📬 Notifications</h3>
-              <button onClick={() => setOuvert(false)} className="text-gray-400 hover:text-white">✕</button>
+              <h3 id="notifications-title" className="font-semibold">📬 Notifications</h3>
+              <div className="flex gap-2 items-center">
+                {nbNonLues > 0 && (
+                  <button
+                    onClick={marquerToutCommeLu}
+                    className="text-xs text-[#C8A84E] hover:text-[#e0c46a] px-2 py-1 rounded transition active:scale-95 touch-manipulation"
+                    aria-label="Tout marquer comme lu"
+                  >
+                    ✓ Tout lu
+                  </button>
+                )}
+                <button
+                  onClick={() => setOuvert(false)}
+                  className="text-gray-400 hover:text-white"
+                  aria-label="Fermer"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
 
+            {/* Bannière d'erreur */}
+            {error && (
+              <div className="p-3 bg-red-500/20 border-b border-red-500/40 text-red-200 text-sm">
+                ⚠️ {error}
+              </div>
+            )}
+
+            {/* Contenu */}
             {loading ? (
-              <p className="p-6 text-center text-gray-400">Chargement...</p>
+              <div className="p-8 flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-[#C8A84E]/30 border-t-[#C8A84E] rounded-full animate-spin" />
+                <p className="text-gray-400 text-sm">Chargement...</p>
+              </div>
             ) : notifications.length === 0 ? (
-              <p className="p-8 text-center text-gray-400">Aucune notification pour le moment</p>
+              <div className="p-8 flex flex-col items-center gap-2">
+                <span className="text-4xl">📭</span>
+                <p className="text-gray-400">Aucune notification</p>
+              </div>
             ) : (
               <div className="overflow-y-auto flex-1 divide-y divide-gray-800">
                 {notifications.map((notif) => (
                   <div
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
-                    className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${notif.lue ? 'opacity-70' : 'bg-purple-900/10'}`}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif) }}
+                    className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${notif.lue ? 'opacity-70' : 'bg-purple-900/10 border-l-2 border-l-[#C8A84E]'}`}
+                    role="button"
+                    tabIndex={0}
                   >
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
                     <p className="text-xs text-gray-500 mt-2">

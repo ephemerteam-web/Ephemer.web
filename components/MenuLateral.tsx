@@ -54,11 +54,11 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
       ],
     },
     {
-      titre: 'Notifications',
-      items: [
-        // Note : ce bouton est spécial (composant externe), on le gère séparément plus bas
-      ],
-    },
+  titre: 'Notifications',
+  items: [
+    { label: 'Centre de notifications', chemin: '/dashboard/notifications', icone: '🔔' },
+  ],
+},
     {
       titre: 'Compte',
       items: [

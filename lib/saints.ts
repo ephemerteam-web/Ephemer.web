@@ -128,7 +128,7 @@ export const SAINTS: Sainte[] = [
   { date: "04-19", nomSaint: "Sainte Emma", prenoms: ["emma"] },
   { date: "04-20", nomSaint: "Sainte Odette", prenoms: ["odette"] },
   { date: "04-21", nomSaint: "Saint Anselme", prenoms: ["anselme"] },
-  { date: "04-22", nomSaint: "Saint Alexandre", prenoms: ["alexandre", "alex"] },
+  { date: "04-22", nomSaint: "Saint Alexandre", prenoms: ["alexandre", "alex", "alexandra"] },
   { date: "04-23", nomSaint: "Saint Georges", prenoms: ["georges"] },
   { date: "04-24", nomSaint: "Saint Fidèle", prenoms: ["fidele"] },
   { date: "04-25", nomSaint: "Saint Marc", prenoms: ["marc", "marco"] },
@@ -227,7 +227,7 @@ export const SAINTS: Sainte[] = [
   { date: "07-21", nomSaint: "Saint Victor", prenoms: ["victor"] },
   { date: "07-22", nomSaint: "Sainte Marie-Madeleine", prenoms: ["madeleine"] },
   { date: "07-23", nomSaint: "Sainte Brigitte", prenoms: ["brigitte"] },
-  { date: "07-24", nomSaint: "Sainte Christine", prenoms: ["christine"] },
+  { date: "07-24", nomSaint: "Sainte Christine", prenoms: ["christine","christelle"] },
   { date: "07-25", nomSaint: "Saint Jacques", prenoms: ["jacques", "james"] },
   { date: "07-26", nomSaint: "Sainte Anne", prenoms: ["anne", "anna"] },
   { date: "07-27", nomSaint: "Sainte Nathalie", prenoms: ["nathalie"] },
@@ -471,16 +471,15 @@ export function trouverSaintParPrenom(prenom: string): Sainte | undefined {
   const saints = trouverTousLesSaintsParPrenom(prenom)
   return saints.length > 0 ? saints[0] : undefined
 }
-export function trouverProchaineFete(prenom: string): Sainte | null {
+export function trouverProchaineFete(prenom: string): (Sainte & { dateObj: Date }) | null {
   const saints = trouverTousLesSaintsParPrenom(prenom)
-
   if (saints.length === 0) return null
 
   const aujourdHui = new Date()
+  aujourdHui.setHours(0, 0, 0, 0)  // ✅ FIX : toujours comparer des dates sans heure
 
   const saintsAvecDate = saints.map((saint) => {
     const [mois, jour] = saint.date.split('-').map(Number)
-
     let date = new Date(aujourdHui.getFullYear(), mois - 1, jour)
 
     if (date < aujourdHui) {
@@ -491,7 +490,6 @@ export function trouverProchaineFete(prenom: string): Sainte | null {
   })
 
   saintsAvecDate.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime())
-
   return saintsAvecDate[0]
 }
 /**
