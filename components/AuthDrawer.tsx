@@ -3,20 +3,20 @@
 import { supabase } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import IconeLuneIA from "@/components/IconeLuneIA"
 
 // ============================================================
-// TYPES — On définit ce que ce composant attend comme infos
+// TYPES
 // ============================================================
 type AuthDrawerProps = {
-  isOpen: boolean           // Le drawer est-il ouvert ?
-  onClose: () => void       // Fonction pour le fermer
-  mode: "inscription" | "connexion"  // Quel mode afficher
-  onSwitchMode: () => void  // Basculer entre les deux modes
+  isOpen: boolean
+  onClose: () => void
+  mode: "inscription" | "connexion"
+  onSwitchMode: () => void
 }
 
 // ============================================================
 // ICÔNES SVG OFFICIELLES
-// On les intègre directement pour éviter des dépendances
 // ============================================================
 
 const GoogleIcon = () => (
@@ -28,27 +28,9 @@ const GoogleIcon = () => (
   </svg>
 )
 
-const AppleIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-  </svg>
-)
-
 const FacebookIcon = () => (
   <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white" xmlns="http://www.w3.org/2000/svg">
     <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-  </svg>
-)
-
-const LinkedInIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white" xmlns="http://www.w3.org/2000/svg">
-    <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-  </svg>
-)
-
-const XIcon = () => (
-  <svg viewBox="0 0 24 24" className="w-5 h-5" fill="white" xmlns="http://www.w3.org/2000/svg">
-    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.259 5.63 5.905-5.63zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
   </svg>
 )
 
@@ -69,19 +51,44 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
   }, [isOpen])
 
   // ---- Connexion via provider OAuth ----
-  // provider = "google" | "apple" | "facebook" | "linkedin_oidc" | "twitter"
-  const signInWithProvider = async (provider: "google" | "apple" | "facebook" | "linkedin_oidc" | "twitter") => {
+  const signInWithProvider = async (provider: "google" | "facebook") => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
         redirectTo: `${window.location.origin}/auth/callback`
-        // ↑ Après connexion, l'utilisateur sera renvoyé ici
       }
     })
     if (error) console.error("Erreur OAuth:", error.message)
   }
 
-  // ---- Providers à afficher ----
+  // ---- Configuration des thèmes par mode ----
+  const themeConfig = mode === "inscription" ? {
+    // 🌟 INSCRIPTION : Thème Doré/Chaleureux
+    bgGradient: "linear-gradient(135deg, #1a1410 0%, #0B1120 100%)",
+    accentColor: "#C8A84E",
+    accentGlow: "rgba(200, 168, 78, 0.2)",
+    borderColor: "border-[#C8A84E]/30",
+    hoverBg: "hover:bg-[#C8A84E]/10",
+    tabBg: "bg-[#C8A84E]/20",
+    tabActiveBg: "bg-[#C8A84E]",
+    tabText: "text-[#0B1120]",
+    decorEmoji: "✨",
+    decorGlow: "0 0 40px rgba(200, 168, 78, 0.3)",
+    subtitle: "Rejoins Ephemer.name gratuitement",
+  } : {
+    // 🌙 CONNEXION : Thème Lune/IA
+    bgGradient: "linear-gradient(135deg, #0a0a2e 0%, #0B1120 100%)",
+    accentColor: "#A5B4FC",
+    accentGlow: "rgba(165, 180, 252, 0.2)",
+    borderColor: "border-indigo-400/30",
+    hoverBg: "hover:bg-indigo-400/10",
+    tabBg: "bg-indigo-400/20",
+    tabActiveBg: "bg-indigo-400",
+    tabText: "text-white",
+    decorGlow: "0 0 50px rgba(165, 180, 252, 0.4)",
+    subtitle: "Bon retour parmi nous ✨",
+  }
+
   const providers = [
     {
       id: "google" as const,
@@ -89,71 +96,100 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
       icon: <GoogleIcon />,
       className: "bg-white text-[#1a1a1a] hover:bg-gray-100 border border-gray-200"
     },
-      {
+    {
       id: "facebook" as const,
       label: "Continuer avec Facebook",
       icon: <FacebookIcon />,
       className: "bg-[#1877F2] text-white hover:bg-[#1565D8]"
     },
-  
   ]
 
   if (!isOpen) return null
 
   return (
-    // ---- Fond semi-transparent (ferme le drawer si on clique dessus) ----
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
       onClick={onClose}
     >
-      {/* ---- Panneau du drawer ---- */}
-      {/* stopPropagation = empêche le clic sur le panneau de fermer le drawer */}
+      {/* ---- Panneau du drawer avec gradient thématique ---- */}
       <div
-        className="w-full max-w-md bg-[#0F1A2E] border border-white/10 rounded-t-3xl p-6 pb-10 animate-slideUp"
+        className="w-full max-w-md rounded-t-3xl p-6 pb-10 animate-slideUp border-t border-white/10 relative overflow-hidden"
+        style={{
+          background: themeConfig.bgGradient,
+          boxShadow: themeConfig.decorGlow
+        }}
         onClick={(e) => e.stopPropagation()}
       >
+        {/* ── Décoration de fond (effet de lueur thématique) ── */}
+        <div
+          className="absolute -top-32 -right-32 w-64 h-64 rounded-full blur-3xl opacity-20 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle, ${themeConfig.accentColor} 0%, transparent 70%)`
+          }}
+        />
 
-        {/* Barre de fermeture (trait gris) */}
-        <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mb-6" />
+        {/* ── Étoiles/particules décoratives (inscription seulement) ── */}
+        {mode === "inscription" && (
+          <>
+            <div className="absolute top-12 right-16 w-1 h-1 bg-[#C8A84E]/60 rounded-full animate-pulse" />
+            <div className="absolute top-32 right-8 w-1.5 h-1.5 bg-[#C8A84E]/40 rounded-full animate-pulse" style={{animationDelay: "0.5s"}} />
+            <div className="absolute bottom-32 right-24 w-0.5 h-0.5 bg-[#C8A84E]/50 rounded-full animate-pulse" style={{animationDelay: "1s"}} />
+          </>
+        )}
 
-        {/* Titre */}
-<div className="text-center mb-6">
+        {/* ── Icône Lune + IA (connexion seulement) ── */}
+        {mode === "connexion" && (
+          <div className="absolute -top-8 -right-8 opacity-20 pointer-events-none animate-pulse">
+            <IconeLuneIA size={200} className="text-indigo-300" />
+          </div>
+        )}
 
-  {/* Onglets cliquables */}
-  <div className="flex bg-white/5 rounded-xl p-1 mb-5">
-    <button
-      onClick={() => mode !== "inscription" && onSwitchMode()}
-      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-        mode === "inscription"
-          ? "bg-[#C8A84E] text-[#0B1120]"
-          : "text-white/40 hover:text-white/70"
-      }`}
-    >
-      S'inscrire
-    </button>
-    <button
-      onClick={() => mode !== "connexion" && onSwitchMode()}
-      className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-200 ${
-        mode === "connexion"
-          ? "bg-[#C8A84E] text-[#0B1120]"
-          : "text-white/40 hover:text-white/70"
-      }`}
-    >
-      Se connecter
-    </button>
-  </div>
+        {/* ── Barre de fermeture ── */}
+        <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{background: `${themeConfig.accentColor}/30`}} />
 
-  <p className="text-white/40 text-sm">
-    {mode === "inscription"
-      ? "Rejoins Ephemer.name gratuitement"
-      : "Bon retour parmi nous ✨"}
-  </p>
+        {/* ── Section titre ── */}
+        <div className="text-center mb-6 relative z-10">
+          {/* Indicateur : Icône personnalisée pour connexion, emoji pour inscription */}
+          <div className="mb-4 h-16 flex items-center justify-center">
+            {mode === "inscription" ? (
+              <span className="text-4xl">✨</span>
+            ) : (
+              <IconeLuneIA size={64} className="text-indigo-300 drop-shadow-lg" />
+            )}
+          </div>
 
-</div>
+          {/* Onglets cliquables avec couleur thématique */}
+          <div className={`flex rounded-xl p-1 mb-5 ${themeConfig.tabBg}`}>
+            <button
+              onClick={() => mode !== "inscription" && onSwitchMode()}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                mode === "inscription"
+                  ? `${themeConfig.tabActiveBg} ${themeConfig.tabText} shadow-lg`
+                  : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              S'inscrire
+            </button>
+            <button
+              onClick={() => mode !== "connexion" && onSwitchMode()}
+              className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
+                mode === "connexion"
+                  ? `${themeConfig.tabActiveBg} ${themeConfig.tabText} shadow-lg`
+                  : "text-white/40 hover:text-white/70"
+              }`}
+            >
+              Se connecter
+            </button>
+          </div>
 
+          {/* Sous-titre thématique */}
+          <p className="text-white/50 text-sm">
+            {themeConfig.subtitle}
+          </p>
+        </div>
 
-        {/* Boutons providers */}
-        <div className="flex flex-col gap-3">
+        {/* ── Boutons providers ── */}
+        <div className="flex flex-col gap-3 relative z-10">
           {providers.map((p) => (
             <button
               key={p.id}
@@ -166,25 +202,24 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
           ))}
         </div>
 
-        {/* Séparateur */}
-        <div className="flex items-center gap-3 my-5">
+        {/* ── Séparateur ── */}
+        <div className="flex items-center gap-3 my-5 relative z-10">
           <div className="flex-1 h-px bg-white/10" />
           <span className="text-white/30 text-xs">ou</span>
           <div className="flex-1 h-px bg-white/10" />
         </div>
 
-        {/* Lien vers page email classique */}
+        {/* ── Bouton Email avec couleur thématique ── */}
         <button
           onClick={() => {
             onClose()
             router.push(mode === "inscription" ? "/inscription" : "/connexion")
           }}
-          className="w-full py-3 rounded-xl border border-[#C8A84E]/30 text-[#C8A84E] text-sm font-medium hover:bg-[#C8A84E]/10 transition-all duration-200"
+          className={`w-full py-3 rounded-xl border text-sm font-medium transition-all duration-200 relative z-10 ${themeConfig.borderColor} ${themeConfig.hoverBg}`}
+          style={{color: themeConfig.accentColor}}
         >
           ✉️ Continuer avec Email
         </button>
-
-        
 
       </div>
     </div>
