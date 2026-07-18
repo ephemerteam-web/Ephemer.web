@@ -11,7 +11,6 @@ type MenuNavigationProps = {
 // ============================================
 // 📂 STRUCTURE : pages regroupées par catégorie
 // ============================================
-// On garde EXACTEMENT tes mêmes liens, juste mieux rangés
 type Page = { label: string; chemin: string; icone: string }
 type Groupe = { titre: string; pages: Page[] }
 
@@ -31,9 +30,10 @@ const GROUPES: Groupe[] = [
     ],
   },
   {
-    titre: 'Créer',
+    titre: 'Créer & Planifier',
     pages: [
       { label: 'Générer un message', chemin: '/dashboard/generate', icone: '✨' },
+      { label: 'Idées cadeaux', chemin: '/dashboard/gift-ideas', icone: '🎁' },
       { label: 'Messages programmés', chemin: '/dashboard/messages-programmes', icone: '📨' },
     ],
   },
@@ -63,7 +63,6 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
   }
 
   // On aplatit tous les liens pour calculer le délai d'animation en cascade
-  // (chaque lien apparaît légèrement après le précédent)
   let compteurLien = 0
 
   return (

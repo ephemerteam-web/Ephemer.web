@@ -10,14 +10,6 @@ export default function DrawerGlobal() {
   const router = useRouter()
   const { contactAffiche, fermerDrawer } = useDrawer()
 
-  const [giftIdeas, setGiftIdeas] = useState<Array<{
-    idee: string
-    raison: string
-    lien_amazon: string
-    emoji?: string
-  }>>([])
-  const [isLoadingGifts, setIsLoadingGifts] = useState(false)
-
   const formaterDate = (dateISO: string) => {
     return new Date(dateISO).toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -167,111 +159,9 @@ export default function DrawerGlobal() {
                 </p>
               </div>
 
-                          {/* ── SECTION IDÉES CADEAUX IA ── */}
-              <div className="mt-2">
-                <button
-                  onClick={async () => {
-                    if (!contactAffiche) return
-                    setIsLoadingGifts(true)
-                    setGiftIdeas([])
-
-                    const age = contactAffiche.date_naissance
-  ? Math.floor(
-      (new Date().getTime() - new Date(contactAffiche.date_naissance).getTime()) /
-        31557600000
-    )
-  : null
-
-try {
-  const res = await fetch('/api/generate-gift-ideas', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      firstName: contactAffiche.prenom,
-      lastName: contactAffiche.nom,
-      dateNaissance: contactAffiche.date_naissance,
-      age,
-      relation: contactAffiche.relation || 'ami',
-      email: contactAffiche.email,
-      estFavori: contactAffiche.est_favori,
-      telephoneIndicatif: contactAffiche.telephone_indicatif,
-      telephoneNumero: contactAffiche.telephone_numero,
-      note: contactAffiche.note,
-      eventType: 'anniversaire',
-    }),
-  })
-
-                      const data = await res.json()
-                      if (data.ideas && Array.isArray(data.ideas)) {
-                        setGiftIdeas(data.ideas)
-                      }
-                    } catch (e) {
-                      console.error('Erreur lors de la génération des cadeaux', e)
-                    } finally {
-                      setIsLoadingGifts(false)
-                    }
-                  }}
-                  disabled={isLoadingGifts}
-                  className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white py-3 rounded-2xl font-medium flex items-center justify-center gap-2 active:scale-[0.985] transition disabled:opacity-60"
-                >
-                  {isLoadingGifts ? '🤖 Génération en cours...' : '🎁 Générer des idées cadeaux avec l’IA'}
-                </button>
-
-                {/* ── CARTES CADEAUX ── */}
-                {giftIdeas.length > 0 && (
-                  <div className="mt-4 space-y-3">
-                    <div className="flex items-center justify-between px-1">
-                      <p className="text-xs text-emerald-400 uppercase tracking-wider">
-                        Suggestions personnalisées par l’IA
-                      </p>
-                      {/* Petit bouton discret pour fermer les cartes */}
-                      <button
-                        onClick={() => setGiftIdeas([])}
-                        className="text-emerald-400/60 hover:text-emerald-300 text-lg leading-none p-1 transition"
-                        title="Fermer les suggestions"
-                        aria-label="Fermer les suggestions de cadeaux"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {giftIdeas.map((idea, index) => (
-                      <div
-                        key={index}
-                        className="bg-white/5 border border-white/10 rounded-2xl p-4 flex flex-col gap-3"
-                      >
-                        <div className="flex items-start gap-3">
-                          {/* Emoji lié au type de cadeau (fourni par l’IA) */}
-                          <span className="text-3xl flex-shrink-0 mt-0.5">
-                            {idea.emoji || '🎁'}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-white font-semibold text-[15px] leading-tight">
-                              {idea.idee}
-                            </p>
-                            <p className="text-emerald-200/80 text-sm mt-1 leading-snug">
-                              {idea.raison}
-                            </p>
-                          </div>
-                        </div>
-
-                        <a
-                          href={idea.lien_amazon}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="mt-1 inline-flex items-center justify-center gap-2 w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-sm font-medium py-2.5 rounded-xl transition"
-                        >
-                          Voir sur Amazon →
-                        </a>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
             </div>
 
-            {/* ── Boutons d’action (sticky en bas) ── */}
+            {/* ── Boutons d'action (sticky en bas) ── */}
             <div className="p-6 border-t border-white/10 sticky bottom-0 bg-indigo-950/95 flex flex-col gap-3">
               <button
                 onClick={() => {
@@ -283,7 +173,7 @@ try {
               >
                 ✏️ Modifier ce contact
               </button>
-              
+
               <button
                 onClick={() => {
                   const id = contactAffiche.id
@@ -294,7 +184,18 @@ try {
               >
                 ✨ Générer un message
               </button>
-              
+
+              <button
+                onClick={() => {
+                  const id = contactAffiche.id
+                  fermerDrawer()
+                  router.push(`/dashboard/gift-ideas?contactId=${id}`)
+                }}
+                className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] transition"
+              >
+                🎁 Idées cadeaux
+              </button>
+
             </div>
 
           </div>

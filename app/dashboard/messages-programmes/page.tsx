@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
-import AccordionGroup from "@/components/AccordionGroup"; // ✅ adapte le chemin si besoin
+import AccordionGroup from "@/components/AccordionGroup";
 
 type MessageProgramme = {
   id: number;
@@ -92,10 +92,11 @@ export default function MessagesProgrammesPage() {
 
   const [annulationId, setAnnulationId] = useState<number | null>(null);
   const [reactivationId, setReactivationId] = useState<number | null>(null);
+  const [suppressionId, setSuppressionId] = useState<number | null>(null);
+  const [sauvegardeId, setSauvegardeId] = useState<number | null>(null);
 
   const [erreur, setErreur] = useState<string | null>(null);
 
-  // ✅ clés distinctes pour éviter le "mélange" avenir/historique
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -132,7 +133,6 @@ export default function MessagesProgrammesPage() {
     const list = (data as MessageProgramme[]) || [];
     setMessages(list);
 
-    // ✅ ouverture auto UNIQUEMENT pour "À venir"
     const now = new Date();
     const aVenir = list.filter(
       (m) => m.statut === "programme" && new Date(m.date_envoi) >= now
@@ -197,6 +197,48 @@ export default function MessagesProgrammesPage() {
     }
 
     setReactivationId(null);
+  }
+
+  async function handleSupprimer(id: number) {
+    const confirme = window.confirm(
+      "⚠️ Supprimer définitivement ce message ? Cette action est irréversible."
+    );
+    if (!confirme) return;
+
+    setSuppressionId(id);
+
+    const { error } = await supabase.from("rappels").delete().eq("id", id);
+
+    if (error) {
+      console.error("Erreur suppression:", error);
+      setErreur("Échec de la suppression. Réessaie.");
+    } else {
+      setMessages((prev) => prev.filter((m) => m.id !== id));
+    }
+
+    setSuppressionId(null);
+  }
+
+  async function handleModifier(id: number, nouveauTexte: string) {
+    setSauvegardeId(id);
+
+    const { error } = await supabase
+      .from("rappels")
+      .update({ message: nouveauTexte })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Erreur modification:", error);
+      setErreur("Échec de l'enregistrement. Réessaie.");
+      setSauvegardeId(null);
+      return false;
+    }
+
+    setMessages((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, message: nouveauTexte } : m))
+    );
+    setSauvegardeId(null);
+    return true;
   }
 
   const now = new Date();
@@ -291,8 +333,12 @@ export default function MessagesProgrammesPage() {
                           message={m}
                           onAnnuler={handleAnnuler}
                           onReactiver={handleReactiver}
+                          onSupprimer={handleSupprimer}
+                          onModifier={handleModifier}
                           estEnCours={annulationId === m.id}
                           estReactivationEnCours={reactivationId === m.id}
+                          estSuppressionEnCours={suppressionId === m.id}
+                          estSauvegardeEnCours={sauvegardeId === m.id}
                         />
                       ))}
                   </AccordionGroup>
@@ -335,8 +381,12 @@ export default function MessagesProgrammesPage() {
                           message={m}
                           onAnnuler={handleAnnuler}
                           onReactiver={handleReactiver}
+                          onSupprimer={handleSupprimer}
+                          onModifier={handleModifier}
                           estEnCours={false}
                           estReactivationEnCours={false}
+                          estSuppressionEnCours={suppressionId === m.id}
+                          estSauvegardeEnCours={sauvegardeId === m.id}
                         />
                       ))}
                   </AccordionGroup>
@@ -354,26 +404,93 @@ function MessageCard({
   message: m,
   onAnnuler,
   onReactiver,
+  onSupprimer,
+  onModifier,
   estEnCours,
   estReactivationEnCours,
+  estSuppressionEnCours,
+  estSauvegardeEnCours,
 }: {
   message: MessageProgramme;
   onAnnuler: (id: number) => void;
   onReactiver: (id: number) => void;
+  onSupprimer: (id: number) => void;
+  onModifier: (id: number, nouveauTexte: string) => Promise<boolean>;
   estEnCours: boolean;
   estReactivationEnCours: boolean;
+  estSuppressionEnCours: boolean;
+  estSauvegardeEnCours: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const [enEdition, setEnEdition] = useState(false);
+  const [texteEdite, setTexteEdite] = useState(m.message);
+  const [menuOuvert, setMenuOuvert] = useState(false);
+  const [partageMsg, setPartageMsg] = useState<string | null>(null);
 
   const contactNom = extractContactName(m.contacts);
   const joursRestants = getRelativeDate(m.date_envoi);
 
   const estAnnulable = m.statut === "programme" && new Date(m.date_envoi) > new Date();
   const estAnnule = m.statut === "annule";
+  const estModifiable = m.statut === "programme";
   const dateFR = formatDateFR(m.date_envoi);
 
+  // 🆕 Replier la carte quand on clique ailleurs dessus (Option B)
+  function handleCarteClick() {
+    if (expanded && !enEdition) {
+      setExpanded(false);
+    }
+  }
+
+  // 🆕 Partage natif mobile + repli sur PC (copier)
+  async function handlePartager() {
+    const texte = m.message;
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: `Message pour ${contactNom}`,
+          text: texte,
+        });
+      } else {
+        await navigator.clipboard.writeText(texte);
+        setPartageMsg("📋 Message copié !");
+        setTimeout(() => setPartageMsg(null), 2000);
+      }
+    } catch (err) {
+      // L'utilisateur a annulé le partage → on ne fait rien
+      console.log("Partage annulé ou échoué", err);
+    }
+  }
+
+  // 🆕 Copier le message au clic sur le texte
+  async function handleCopierTexte(e: React.MouseEvent) {
+    e.stopPropagation(); // empêche la carte de se replier
+    try {
+      await navigator.clipboard.writeText(m.message);
+      setPartageMsg("📋 Copié !");
+      setTimeout(() => setPartageMsg(null), 2000);
+    } catch (err) {
+      console.log("Copie échouée", err);
+      setPartageMsg("❌ Impossible de copier");
+      setTimeout(() => setPartageMsg(null), 2000);
+    }
+  }
+
+  function annulerEdition() {
+    setTexteEdite(m.message);
+    setEnEdition(false);
+  }
+
+  async function sauvegarder() {
+    const ok = await onModifier(m.id, texteEdite.trim());
+    if (ok) setEnEdition(false);
+  }
+
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-5 transition hover:bg-white/10 active:scale-[0.995]">
+    <div
+      onClick={handleCarteClick}
+      className="bg-white/5 border border-white/10 rounded-2xl p-5 transition hover:bg-white/10"
+    >
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -402,39 +519,161 @@ function MessageCard({
           )}
         </div>
 
-        <div className="flex gap-2 shrink-0 flex-wrap">
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="text-xs border border-white/10 px-3 py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition"
-          >
-            {expanded ? "Masquer" : "Voir"}
-          </button>
-
-          {estAnnulable && (
+        {/* 🆕 Boutons principaux */}
+        <div className="flex gap-2 shrink-0 flex-wrap items-center">
+          {/* Bouton Voir → devient Partager une fois déplié */}
+          {!expanded ? (
             <button
-              onClick={() => onAnnuler(m.id)}
-              disabled={estEnCours}
-              className="text-xs border border-red-500/30 px-3 py-1.5 rounded-lg text-red-300 hover:bg-red-500/10 transition disabled:opacity-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(true);
+              }}
+              className="text-xs border border-white/10 px-3 py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition"
             >
-              {estEnCours ? "..." : "Annuler"}
+              👁️ Voir
+            </button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePartager();
+              }}
+              className="text-xs border border-[#C8A84E]/30 px-3 py-1.5 rounded-lg text-[#C8A84E] hover:bg-[#C8A84E]/10 transition"
+            >
+              📤 Partager
             </button>
           )}
 
-          {estAnnule && (
+          {/* Bouton Modifier (seulement si programmé) */}
+          {estModifiable && !enEdition && (
             <button
-              onClick={() => onReactiver(m.id)}
-              disabled={estReactivationEnCours}
-              className="text-xs border border-green-500/30 px-3 py-1.5 rounded-lg text-green-300 hover:bg-green-500/10 transition disabled:opacity-50"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(true);
+                setEnEdition(true);
+              }}
+              className="text-xs border border-white/10 px-3 py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition"
             >
-              {estReactivationEnCours ? "..." : "♻️ Réactiver"}
+              ✏️ Modifier
             </button>
           )}
+
+          {/* 🆕 Menu "⋯" pour actions dangereuses */}
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOuvert((v) => !v);
+              }}
+              className="text-lg leading-none border border-white/10 px-3 py-1 rounded-lg text-white/50 hover:border-white/30 hover:text-white transition"
+            >
+              ⋯
+            </button>
+
+            {menuOuvert && (
+              <>
+                {/* Fond invisible pour fermer au clic extérieur */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMenuOuvert(false);
+                  }}
+                />
+
+                {/* Menu déroulant */}
+                <div className="absolute right-0 mt-2 w-44 bg-[#0B1120] border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
+                  {estAnnulable && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuOuvert(false);
+                        onAnnuler(m.id);
+                      }}
+                      disabled={estEnCours}
+                      className="w-full text-left text-sm px-4 py-2.5 text-orange-300 hover:bg-white/5 transition disabled:opacity-50"
+                    >
+                      {estEnCours ? "..." : "🚫 Annuler l'envoi"}
+                    </button>
+                  )}
+
+                  {estAnnule && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMenuOuvert(false);
+                        onReactiver(m.id);
+                      }}
+                      disabled={estReactivationEnCours}
+                      className="w-full text-left text-sm px-4 py-2.5 text-green-300 hover:bg-white/5 transition disabled:opacity-50"
+                    >
+                      {estReactivationEnCours ? "..." : "♻️ Réactiver"}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setMenuOuvert(false);
+                      onSupprimer(m.id);
+                    }}
+                    disabled={estSuppressionEnCours}
+                    className="w-full text-left text-sm px-4 py-2.5 text-red-300 hover:bg-red-500/10 transition disabled:opacity-50 border-t border-white/10"
+                  >
+                    {estSuppressionEnCours ? "..." : "🗑️ Supprimer"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Message de confirmation de copie (PC) */}
+      {partageMsg && (
+        <p className="text-xs text-green-300 mt-2 text-right">{partageMsg}</p>
+      )}
+
       {expanded && (
-        <div className="mt-4 bg-white/5 rounded-xl p-4 text-sm text-white/70 whitespace-pre-wrap border border-white/10">
-          {m.message}
+        <div className="mt-4">
+          {enEdition ? (
+            <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+              <textarea
+                value={texteEdite}
+                onChange={(e) => setTexteEdite(e.target.value)}
+                rows={6}
+                className="w-full bg-white/5 rounded-xl p-4 text-sm text-white/90 border border-[#C8A84E]/30 focus:outline-none focus:border-[#C8A84E] resize-y"
+                placeholder="Écris ton message ici..."
+              />
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={sauvegarder}
+                  disabled={estSauvegardeEnCours || !texteEdite.trim()}
+                  className="text-sm bg-[#C8A84E] text-[#0B1120] font-bold px-4 py-2 rounded-lg hover:bg-[#D4B85C] transition disabled:opacity-50"
+                >
+                  {estSauvegardeEnCours ? "Enregistrement..." : "💾 Enregistrer"}
+                </button>
+                <button
+                  onClick={annulerEdition}
+                  disabled={estSauvegardeEnCours}
+                  className="text-sm border border-white/20 px-4 py-2 rounded-lg text-white/60 hover:bg-white/5 transition disabled:opacity-50"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+                    ) : (
+            <div
+              onClick={handleCopierTexte}
+              title="Cliquer pour copier le message"
+              className="group cursor-pointer bg-white/5 rounded-xl p-4 text-sm text-white/70 whitespace-pre-wrap border border-white/10 hover:border-[#C8A84E]/30 hover:bg-white/10 transition relative"
+            >
+              {m.message}
+              <span className="block mt-3 text-[11px] text-white/30 group-hover:text-[#C8A84E]/60 transition">
+                📋 Cliquer pour copier
+              </span>
+            </div>
+          )}
         </div>
       )}
     </div>
