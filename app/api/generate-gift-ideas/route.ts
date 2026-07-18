@@ -6,7 +6,6 @@ function limiterTexte(value: unknown, maxLength = 300): string {
   return value.trim().slice(0, maxLength);
 }
 
-// Liste des catégories valides
 const CATEGORIES_VALIDES = [
   "loisir",
   "bien_etre",
@@ -14,6 +13,18 @@ const CATEGORIES_VALIDES = [
   "decoration",
   "gourmand",
 ] as const;
+
+// 👈 Table de correspondance : code technique → description lisible pour l'IA
+const LABELS_EVENEMENT: Record<string, string> = {
+  anniversaire: "un anniversaire",
+  fete_prenom: "sa fête (prénom)",
+  noel: "Noël",
+  saint_valentin: "la Saint-Valentin",
+  fete_meres: "la fête des mères",
+  fete_peres: "la fête des pères",
+  nouvel_an: "le Nouvel An",
+  autre: "une occasion spéciale",
+};
 
 export async function POST(request: Request) {
   try {
@@ -31,21 +42,33 @@ export async function POST(request: Request) {
       telephoneNumero = null,
       note = null,
       eventType = "anniversaire",
+      eventDescription = "", // 👈 NOUVEAU
     } = body;
 
     const safeFirstName = limiterTexte(firstName, 80);
     const safeLastName = limiterTexte(lastName, 80);
     const safeNote = limiterTexte(note, 500);
     const safeEmail = limiterTexte(email, 120);
+    const safeDescription = limiterTexte(eventDescription, 200); // 👈 NOUVEAU
 
     const fullName = [safeFirstName, safeLastName].filter(Boolean).join(" ");
 
-    // Construction du prompt enrichi
+    // 👈 On transforme le code technique en description lisible
+    const labelEvenement = LABELS_EVENEMENT[eventType] || "une occasion spéciale";
+
+    // 👈 Si "autre" + description fournie, on la privilégie
+    const occasionTexte =
+      eventType === "autre" && safeDescription
+        ? `une occasion spéciale décrite ainsi : "${safeDescription}"`
+        : labelEvenement;
+
     const prompt = `
 Tu es un expert cadeau français très créatif et réaliste.
 
 Objectif :
-Proposer exactement 6 idées cadeaux personnalisées pour ${fullName || "cette personne"}, avec des catégories variées pour couvrir les 5 domaines principaux.
+Proposer exactement 6 idées cadeaux personnalisées pour ${fullName || "cette personne"}, à l'occasion de ${occasionTexte}, avec des catégories variées pour couvrir les 5 domaines principaux.
+
+⚠️ IMPORTANT : Les idées doivent être COHÉRENTES avec l'occasion (${occasionTexte}). Adapte le ton et le type de cadeau à cet événement précis.
 
 Informations disponibles sur le contact :
 - Prénom : ${safeFirstName || "non précisé"}
@@ -53,10 +76,9 @@ Informations disponibles sur le contact :
 ${dateNaissance ? `- Date de naissance exacte : ${dateNaissance}` : ""}
 ${age ? `- Âge approximatif : ${age} ans` : ""}
 - Relation : ${relation}
-- Type d'événement : ${eventType}
-${safeEmail ? `- Email : ${safeEmail}` : ""}
+- Occasion du cadeau : ${occasionTexte}
+${safeDescription ? `- Détails de l'occasion : ${safeDescription}` : ""}
 ${estFavori ? `- Ce contact est marqué comme favori` : ""}
-${telephoneIndicatif && telephoneNumero ? `- Téléphone : ${telephoneIndicatif} ${telephoneNumero}` : ""}
 ${safeNote ? `- Informations personnelles / notes : ${safeNote}` : ""}
 
 Les 5 catégories à utiliser (une ou deux idées par catégorie maximum) :
@@ -70,20 +92,18 @@ Contraintes strictes :
 - Réponds UNIQUEMENT avec un tableau JSON valide (pas de texte avant ou après).
 - Chaque objet doit contenir exactement ces 5 clés : "idee", "raison", "categorie", "recherche", "emoji".
 - "idee" = nom du cadeau (maximum 8 mots, concret et attrayant).
-- "raison" = explication courte et personnalisée (maximum 15 mots) qui utilise les infos fournies. Tu DOIS mentionner quelque chose de personnel (une passion, un trait de caractère, un souvenir partagé, une préférence...).
+- "raison" = explication courte et personnalisée (maximum 15 mots) qui relie le cadeau À LA FOIS à la personne ET à l'occasion (${occasionTexte}).
 - "categorie" = une des 5 catégories listées ci-dessus (en minuscules avec underscore). Répartis tes 6 idées sur au moins 4 catégories différentes.
-- "recherche" = mots-clés de recherche optimisés (3-6 mots maximum, sans accent, séparés par des "+"). Ex: "coffret+the+ BIO" → "coffret+the+bio"
-- "emoji" = un seul emoji pertinent en rapport avec le type de cadeau (ex: 📚 pour un livre, ☕ pour du thé, 🎧 pour des écouteurs, 🧘 pour du bien-être...). Jamais de 🎁.
-- Idées réalistes, positives, adaptées à la relation, à l'âge et aux notes personnelles.
+- "recherche" = mots-clés de recherche optimisés (3-6 mots maximum, sans accent, séparés par des "+").
+- "emoji" = un seul emoji pertinent. Jamais de 🎁.
+- Idées réalistes, positives, adaptées à la relation, à l'âge, aux notes ET à l'occasion.
 - Évite les objets trop chers (max ~80€) ou inappropriés.
 - Ne répète jamais le prénom du destinataire dans les idées.
-- Varie les gammes de prix pour proposer des options pour tous les budgets.
+- Varie les gammes de prix.
 
 Format attendu (exemple) :
 [
-  {"idee": "Coffret thés du monde", "raison": "Parfait pour Marie qui adore voyager et découvrir de nouvelles saveurs", "categorie": "gourmand", "recherche": "coffret+the+monde", "emoji": "☕"},
-  {"idee": "Roman polar hardcover", "raison": "Un thriller captivant pour les amateurs du genre comme Sophie", "categorie": "loisir", "recherche": "roman+ polar+thriller", "emoji": "📖"},
-  {"idee": "Masque visage bio", "raison": "Soin naturel pour Paul qui prend soin de sa peau au quotidien", "categorie": "bien_etre", "recherche": "masque+visage+naturel+bio", "emoji": "🧴"}
+  {"idee": "Coffret thés du monde", "raison": "Idéal pour cet anniversaire, elle adore voyager et découvrir des saveurs", "categorie": "gourmand", "recherche": "coffret+the+monde", "emoji": "☕"}
 ]
 `.trim();
 
@@ -115,7 +135,6 @@ Format attendu (exemple) :
     const data = await mammouthResponse.json();
     let raw = data.choices?.[0]?.message?.content?.trim() || "";
 
-    // Nettoyage du JSON reçu
     raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
 
     let ideas: Array<{
@@ -136,7 +155,6 @@ Format attendu (exemple) :
       );
     }
 
-    // Validation et nettoyage des idées
     ideas = ideas
       .filter(
         (i) =>
@@ -146,7 +164,9 @@ Format attendu (exemple) :
           typeof i.categorie === "string" &&
           typeof i.recherche === "string"
       )
-      .filter((i) => CATEGORIES_VALIDES.includes(i.categorie as typeof CATEGORIES_VALIDES[number]))
+      .filter((i) =>
+        CATEGORIES_VALIDES.includes(i.categorie as typeof CATEGORIES_VALIDES[number])
+      )
       .slice(0, 6);
 
     return NextResponse.json({ ideas });

@@ -86,7 +86,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
     tabActiveBg: "bg-indigo-400",
     tabText: "text-white",
     decorGlow: "0 0 50px rgba(165, 180, 252, 0.4)",
-    subtitle: "Bon retour parmi nous ✨",
+    subtitle: "Bon retour parmi nous 🌙",
   }
 
   const providers = [

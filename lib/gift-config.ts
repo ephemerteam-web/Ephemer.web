@@ -1,8 +1,12 @@
 /**
  * 🎁 CONFIGURATION CADEAUX - Ephemer.name
- * 
+ *
  * Ce fichier centralise les marchands e-commerce et les catégories
  * de cadeaux. Modifier ici suffit pour changer toute l'application.
+ *
+ * 🛡️ FIABILITÉ DES LIENS (dernière vérif : 18/07/2026) :
+ *   ✅ = URL confirmée valide
+ *   ⚠️ = format plausible, à cliquer soi-même pour confirmer (le site bloque les robots)
  */
 
 // ============================================
@@ -21,36 +25,11 @@ export const CATEGORIES_CADEAU: Array<{
   emoji: string;
   description: string;
 }> = [
-  {
-    id: "loisir",
-    nom: "Loisirs & Passions",
-    emoji: "🎮",
-    description: "Pour les passionné·e·s",
-  },
-  {
-    id: "bien_etre",
-    nom: "Bien-être",
-    emoji: "🧘",
-    description: "Détente et santé",
-  },
-  {
-    id: "tech",
-    nom: "Tech & Gadgets",
-    emoji: "📱",
-    description: "High-tech et innovation",
-  },
-  {
-    id: "decoration",
-    nom: "Décoration",
-    emoji: "🏠",
-    description: "Pour embellir le quotidien",
-  },
-  {
-    id: "gourmand",
-    nom: "Gourmandise",
-    emoji: "🍫",
-    description: "Friandises et saveurs",
-  },
+  { id: "loisir", nom: "Loisirs & Passions", emoji: "🎮", description: "Pour les passionné·e·s" },
+  { id: "bien_etre", nom: "Bien-être", emoji: "🧘", description: "Détente et santé" },
+  { id: "tech", nom: "Tech & Gadgets", emoji: "📱", description: "High-tech et innovation" },
+  { id: "decoration", nom: "Décoration", emoji: "🏠", description: "Pour embellir le quotidien" },
+  { id: "gourmand", nom: "Gourmandise", emoji: "🍫", description: "Friandises et saveurs" },
 ];
 
 // ============================================
@@ -62,13 +41,13 @@ type Marchand = {
   nom: string;
   emoji: string;
   url: (recherche: string) => string;
-  couleur: string; // classe Tailwind
+  couleur: string;
   categories: CategorieCadeau[];
 };
 
 const tagAmazon = process.env.NEXT_PUBLIC_AMAZON_TAG ?? "";
 
-// ▶️ Amazon France
+// ✅ Amazon France — CONFIRMÉ
 const amazonFrance: Marchand = {
   id: "amazon",
   nom: "Amazon",
@@ -83,46 +62,46 @@ const amazonFrance: Marchand = {
   categories: ["loisir", "bien_etre", "tech", "decoration", "gourmand"],
 };
 
-// ▶️ Cdiscount
+// ✅ Cdiscount — CORRIGÉ (/search/10/ au lieu de /search/1/)
 const cdiscount: Marchand = {
   id: "cdiscount",
   nom: "Cdiscount",
   emoji: "🛒",
   url: (recherche: string) => {
     const query = encodeURIComponent(recherche);
-    return `https://www.cdiscount.com/search/1/${query}.html`;
+    return `https://www.cdiscount.com/search/10/${query}.html`;
   },
   couleur: "bg-[#004A9F] hover:bg-[#003580] text-white",
   categories: ["loisir", "tech", "decoration"],
 };
 
-// ▶️Fnac
+// ✅ Fnac — CORRIGÉ (ancien format /SearchResults/taball/ invalide)
 const fnac: Marchand = {
   id: "fnac",
   nom: "Fnac",
   emoji: "🎧",
   url: (recherche: string) => {
     const query = encodeURIComponent(recherche);
-    return `https://www.fnac.com/SearchResults/taball/${query}`;
+    return `https://www.fnac.com/SearchResult/ResultList.aspx?Search=${query}`;
   },
   couleur: "bg-[#E30613] hover:bg-[#c80510] text-white",
   categories: ["loisir", "tech"],
 };
 
-// ▶️ Cultura
+// ⚠️ Cultura — format plausible, à cliquer pour confirmer
 const cultura: Marchand = {
   id: "cultura",
   nom: "Cultura",
   emoji: "📚",
   url: (recherche: string) => {
     const query = encodeURIComponent(recherche);
-    return `https://www.cultura.com/recherche/${query}`;
+    return `https://www.cultura.com/search?q=${query}`;
   },
   couleur: "bg-[#E5007D] hover:bg-[#c5006a] text-white",
   categories: ["loisir", "decoration"],
 };
 
-// ▶️ Marionnaud
+// ⚠️ Marionnaud
 const marionnaud: Marchand = {
   id: "marionnaud",
   nom: "Marionnaud",
@@ -135,7 +114,7 @@ const marionnaud: Marchand = {
   categories: ["bien_etre"],
 };
 
-// ▶️ Sephora
+// ⚠️ Sephora
 const sephora: Marchand = {
   id: "sephora",
   nom: "Sephora",
@@ -148,20 +127,20 @@ const sephora: Marchand = {
   categories: ["bien_etre"],
 };
 
-// ▶️ Boulanger
+// ✅ Boulanger — CORRIGÉ (ancien /{query} menait à une 404)
 const boulanger: Marchand = {
   id: "boulanger",
   nom: "Boulanger",
   emoji: "🔌",
   url: (recherche: string) => {
     const query = encodeURIComponent(recherche);
-    return `https://www.boulanger.fr/${query}`;
+    return `https://www.boulanger.fr/resultats?tr=${query}`;
   },
   couleur: "bg-[#E2001A] hover:bg-[#c50017] text-white",
   categories: ["tech"],
 };
 
-// ▶️ La Redoute
+// ⚠️ La Redoute
 const laRedoute: Marchand = {
   id: "laredoute",
   nom: "La Redoute",
@@ -174,7 +153,7 @@ const laRedoute: Marchand = {
   categories: ["decoration", "bien_etre"],
 };
 
-// ▶️ Maisons du Monde
+// ⚠️ Maisons du Monde
 const maisonsDuMonde: Marchand = {
   id: "maisonsdumonde",
   nom: "Maisons du Monde",
@@ -187,18 +166,7 @@ const maisonsDuMonde: Marchand = {
   categories: ["decoration"],
 };
 
-// ▶️ Comptoir de l'Imaginaire
-const comptoirImaginaire: Marchand = {
-  id: "comptoirdelimaginaire",
-  nom: "Comptoir de l'Imaginaire",
-  emoji: "🌙",
-  url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
-    return `https://www.comptoirdelimaginaire.fr/recherche?q=${query}`;
-  },
-  couleur: "bg-[#2D1B69] hover:bg-[#251759] text-white",
-  categories: ["loisir"],
-};
+// ❌ Comptoir de l'Imaginaire — SUPPRIMÉ (domaine mort, ne répond plus)
 
 // ============================================
 // 📋 TABLEAU GLOBAL DES MARCHANDS
@@ -213,17 +181,12 @@ export const MARCHANDS = [
   boulanger,
   laRedoute,
   maisonsDuMonde,
-  comptoirImaginaire,
 ];
 
 // ============================================
 // 🔍 FONCTIONS UTILITAIRES
 // ============================================
 
-/**
- * Retourne la liste des marchands disponibles pour une catégorie donnée.
- * Si aucune catégorie, retourne tous les marchands.
- */
 export function marchandsPourCategorie(
   categorie?: CategorieCadeau
 ): Marchand[] {
@@ -231,9 +194,6 @@ export function marchandsPourCategorie(
   return MARCHANDS.filter((m) => m.categories.includes(categorie));
 }
 
-/**
- * Retourne la configuration d'une catégorie par son ID.
- */
 export function getCategorieById(
   id: CategorieCadeau
 ): (typeof CATEGORIES_CADEAU)[number] | undefined {

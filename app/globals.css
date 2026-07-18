@@ -37,3 +37,42 @@ body {
   from { opacity: 0; transform: translateY(-4px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* ============================================================ */
+/* 🎴 ANIMATIONS POUR LES FLIP-CARDS ET LA PAGE CADEAUX         */
+/* ============================================================ */
+
+/* Petit balancement de l'icône "↻" qui indique qu'on peut retourner la carte */
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+/* Effet de flottement du cadeau dans l'état vide */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-12px); }
+}
+
+/* Scrollbar discrète pour la liste de contacts */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Sur mobile : pas d'effet de hover sur les flip-cards (on utilise le tap) */
+@media (hover: hover) {
+  .gift-flip-card:hover .gift-flip-inner {
+    /* Optionnel : décommenter la ligne ci-dessous si tu veux que la carte se retourne AU SURVOL sur desktop */
+    /* transform: rotateY(180deg); */
+  }
+}
