@@ -197,7 +197,7 @@ export function peutMentionnerAnneesEcoulees(eventType: string): boolean {
 // 🗺️ MAPPING TYPE D'ÉVÉNEMENT (UI → BDD)
 // ============================================
 // Convertit la valeur du <select> vers le type utilisé par calculerDateEvenement
-import type { TypeEvenement } from './dates-evenements'
+import type { TypeEvenement } from './date-utils'
 
 export const EVENT_TYPE_MAP: Record<string, TypeEvenement> = {
   anniversaire: 'anniversaire',
