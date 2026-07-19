@@ -1,5 +1,5 @@
 import { supabase } from './supabase-browser'
-import { calculerDateEvenement, TypeEvenement } from './dates-evenements'
+import { calculerDateEvenement, TypeEvenement } from './date-utils'
 
 // ============================================================
 // 🔔 RAPPELS AUTOMATIQUES

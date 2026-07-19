@@ -4,8 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
-import { TypeEvenement, calculerDateEvenement } from "@/lib/dates-evenements";
-import { formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/anniversaires";
+import { TypeEvenement, calculerDateEvenement, formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/date-utils";
 import {
   TYPES_RELATION,
   TONS_MESSAGE,

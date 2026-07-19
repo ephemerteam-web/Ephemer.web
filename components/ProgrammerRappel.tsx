@@ -4,7 +4,7 @@ import { useState } from "react";
 import { programmerMessage } from "@/lib/rappels";
 import { DESTINATAIRES_RAPPEL } from "@/lib/constants";
 import type { Destinataire } from "@/lib/rappels";
-import { formaterDateFR } from "@/lib/anniversaires";
+import { formaterDateFR } from "@/lib/date-utils";
 
 // ============================================================
 // 📌 TYPES

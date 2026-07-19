@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/anniversaires'
+import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/date-utils'
 import { useContactFilters } from '@/lib/hooks/useContactFilters'
 import ContactSearchFilters from '@/components/ContactSearchFilters'
 
@@ -51,7 +51,7 @@ export default function AnniversairesPage() {
         const avecAnniv: ContactAvecAnniv[] = liste
           .filter((c) => c.date_naissance !== null)
           .map((c) => {
-            const { joursRestants, ageAVenir, prochainAnniv } =
+            const { joursRestants, ageAVenir, date: prochainAnniv } =
               calculerProchainAnniversaire(c.date_naissance!)
             return { ...c, joursRestants, ageAVenir, prochainAnniv }
           })

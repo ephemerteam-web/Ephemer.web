@@ -204,14 +204,23 @@ export default function Dashboard() {
     return palettes[somme % palettes.length]
   }
 
+   // ============================================
+  // ⭐ FONCTIONS VEDETTES
   // ============================================
-  // ⭐ FONCTION VEDETTE
-  // ============================================
-  const vedette = {
-    icon: '🤖',
+  const vedetteIA = {
     titre: 'Générateur IA',
     sous: 'Crée un message personnalisé pour SMS, email ou réseaux sociaux en quelques secondes.',
     path: '/dashboard/generate',
+    gradient: 'from-violet-600 via-indigo-600 to-purple-700',
+    badge: 'Vedette',
+  }
+
+  const vedetteCadeaux = {
+    titre: 'Idées Cadeaux',
+    sous: 'Trouve l\'inspiration parfaite et offre le cadeau idéal adapté à chaque événement.',
+    path: '/dashboard/gift-ideas',
+    gradient: 'from-fuchsia-600 via-rose-600 to-pink-700', // Un dégradé rose/fuchsia super chaleureux
+    badge: 'Nouveau',
   }
 
   // ============================================
@@ -346,37 +355,78 @@ export default function Dashboard() {
         couleurAvatar={couleurAvatar}
       />
 
-      {/* ============ ⭐ VEDETTE : GÉNÉRATEUR IA ============ */}
+            {/* ============ ⭐ VEDETTES : L'ESSENTIEL ============ */}
       <div className="mb-8">
         <h2 className="text-base md:text-lg font-bold text-white mb-4">L'essentiel</h2>
 
-        <button
-          onClick={() => router.push(vedette.path)}
-          className="group relative w-full overflow-hidden rounded-3xl p-6 md:p-7 text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.99]"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-indigo-600 to-purple-700 opacity-90 group-hover:opacity-100 transition-opacity" />
-          <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+        {/* grid-cols-1 = 1 colonne sur mobile | md:grid-cols-2 = 2 colonnes sur tablette/ordinateur */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          
+          {/* Bouton 1 : Générateur IA */}
+          <button
+            onClick={() => router.push(vedetteIA.path)}
+            className="group relative w-full overflow-hidden rounded-3xl p-5 md:p-6 text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] flex flex-col justify-between min-h-[150px] md:min-h-[160px]"
+          >
+            {/* Dégradé de fond interactif */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${vedetteIA.gradient} opacity-90 group-hover:opacity-100 transition-opacity`} />
+            {/* Effet de reflet de lumière au survol */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
 
-          <div className="relative z-10 flex items-center gap-4 md:gap-5">
-            <span className="flex-shrink-0 transform group-hover:scale-110 transition-transform">
-              <IconeLuneIA size={52} />
-            </span>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg md:text-xl font-bold text-white">{vedette.titre}</h3>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
-                  Vedette
-                </span>
+            <div className="relative z-10 flex items-start gap-3 md:gap-4 h-full">
+              {/* Conteneur d'icône avec fond translucide */}
+              <span className="flex-shrink-0 transform group-hover:scale-110 transition-transform bg-white/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
+                <IconeLuneIA size={28} />
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <h3 className="text-base md:text-lg font-bold text-white leading-tight">{vedetteIA.titre}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                    {vedetteIA.badge}
+                  </span>
+                </div>
+                <p className="text-white/85 text-xs md:text-sm leading-relaxed">{vedetteIA.sous}</p>
               </div>
-              <p className="text-white/85 text-sm leading-relaxed">{vedette.sous}</p>
+              <span className="hidden sm:block text-xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all self-center">
+                →
+              </span>
             </div>
-            <span className="hidden sm:block text-2xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all">
-              →
-            </span>
-          </div>
 
-          <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
-        </button>
+            <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
+          </button>
+
+          {/* Bouton 2 : Idées Cadeaux */}
+          <button
+            onClick={() => router.push(vedetteCadeaux.path)}
+            className="group relative w-full overflow-hidden rounded-3xl p-5 md:p-6 text-left transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] flex flex-col justify-between min-h-[150px] md:min-h-[160px]"
+          >
+            {/* Dégradé de fond interactif */}
+            <div className={`absolute inset-0 bg-gradient-to-br ${vedetteCadeaux.gradient} opacity-90 group-hover:opacity-100 transition-opacity`} />
+            {/* Effet de reflet de lumière au survol */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+
+            <div className="relative z-10 flex items-start gap-3 md:gap-4 h-full">
+              {/* Conteneur d'icône cadeau */}
+              <span className="flex-shrink-0 text-2xl transform group-hover:scale-110 transition-transform bg-white/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
+                🎁
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <h3 className="text-base md:text-lg font-bold text-white leading-tight">{vedetteCadeaux.titre}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                    {vedetteCadeaux.badge}
+                  </span>
+                </div>
+                <p className="text-white/85 text-xs md:text-sm leading-relaxed">{vedetteCadeaux.sous}</p>
+              </div>
+              <span className="hidden sm:block text-xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all self-center">
+                →
+              </span>
+            </div>
+
+            <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
+          </button>
+
+        </div>
       </div>
 
         {/* ============ 📆 OUTILS ÉPHÉMÉRIDE (3 au même niveau) ============ */}

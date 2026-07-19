@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
-import { evenementsAVenir } from '@/lib/evenements-a-venir'
+import { evenementsAVenir, formatDateLocale } from '@/lib/date-utils'
 
 // ── Types (définitions de la forme de nos données) ────────────────
 type NotificationInsert = {
@@ -77,7 +77,7 @@ const genererNotifications = useCallback(async () => {
     const notificationsToInsert: NotificationInsert[] = []
 
     for (const ev of events) {
-      const eventDateStr = ev.date.toISOString().split('T')[0] // "2026-07-19"
+      const eventDateStr = formatDateLocale(ev.date) // "2026-07-19" (sans décalage UTC)
 
       // type "propre" sans palier → clé stable dans le temps
       const cle = `${ev.contactId}-${ev.type}-${eventDateStr}`
@@ -181,9 +181,14 @@ const genererNotifications = useCallback(async () => {
             filter: `user_id=eq.${session.user.id}`, // Filtrer sur l'utilisateur connecté
           },
           (payload) => {
-            const newNotif = payload.new as Notification
-            setNotifications(prev => [newNotif, ...prev]) // Ajouter en haut de la liste
-          }
+  const newNotif = payload.new as Notification
+  setNotifications(prev => {
+    // ✅ On vérifie si cette notif existe déjà (évite les doublons de "key")
+    const existeDeja = prev.some(n => n.id === newNotif.id)
+    if (existeDeja) return prev
+    return [newNotif, ...prev]
+  })
+}
         )
         .subscribe()
     }
