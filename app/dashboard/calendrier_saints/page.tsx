@@ -1,10 +1,12 @@
 'use client'
 
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
-import { trouverFete, calculerProchaineFete, formaterDateFR } from '@/lib/anniversaires'
 import { TYPES_RELATION } from '@/lib/constants'
+import { useDrawer } from '@/components/DrawerContext'
+import ProgressRing from '@/components/ProgressRing' // 👈 AJOUT : import de l'anneau
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,12 +19,6 @@ type Contact = {
   email: string | null
 }
 
-type Sainte = {
-  date: string
-  nomSaint: string
-  prenoms: string[]
-}
-
 type FeteAvecContact = {
   nomSaint: string
   prenoms: string[]
@@ -33,419 +29,299 @@ type FeteAvecContact = {
 }
 
 type FilterMode = 'all' | 'week' | 'month' | 'today'
+type SortMode = 'date' | 'alpha' | 'relation'
+type ViewMode = 'cards' | 'compact'
 
 // ─── Constantes visuelles ──────────────────────────────────────────────────────
 
 const BADGE_CONFIG = {
-  today:    { label: '🎉 Aujourd\'hui',        bg: 'bg-red-500/20', text: 'text-red-600', border: 'border-red-400' },
-  urgent:   { label: 'J-7',                     bg: 'bg-amber-500/20', text: 'text-amber-600', border: 'border-amber-400' },
-  soon:     { label: 'J-30',                    bg: 'bg-blue-500/20', text: 'text-blue-600', border: 'border-blue-400' },
-  relaxed:  { label: null,                      bg: 'bg-slate-500/10', text: 'text-slate-500', border: 'border-slate-300' },
+  today: { label: "Aujourd'hui", classe: 'bg-[#C8A84E] text-[#0B1120]' },
+  soon: { label: 'Bientôt', classe: 'bg-orange-400/20 text-orange-300 border border-orange-400/40' },
+  later: { label: '', classe: 'bg-white/10 text-white/60 border border-white/10' },
 }
 
-const RELATION_EMOJI: Record<string, string> = {
-  famille:    '👨‍👩‍👧‍👦',
-  ami:        '🤝',
-  collegue:   '💼',
-  amour:      '❤️',
-  autre:      '⭐',
+function normaliserPrenom(prenom: string): string {
+  return prenom
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
 }
 
-// ─── Fonction utilitaire ───────────────────────────────────────────────────────
-
-function getBadge(joursRestants: number) {
-  if (joursRestants === 0) return BADGE_CONFIG.today
-  if (joursRestants <= 7)  return BADGE_CONFIG.urgent
-  if (joursRestants <= 30) return BADGE_CONFIG.soon
-  return BADGE_CONFIG.relaxed
+function prochaineOccurrence(mois: number, jour: number): Date {
+  const aujourdhui = new Date()
+  aujourdhui.setHours(0, 0, 0, 0)
+  const annee = aujourdhui.getFullYear()
+  let date = new Date(annee, mois - 1, jour)
+  if (date < aujourdhui) {
+    date = new Date(annee + 1, mois - 1, jour)
+  }
+  return date
 }
 
-function calculerProchaine(dateMMJJ: string): { date: Date; jours: number } {
-  const [mois, jour] = dateMMJJ.split('-').map(Number)
-  const maintenant = new Date()
-  const cetteAnnee = new Date(maintenant.getFullYear(), mois - 1, jour)
-  const anSuivant  = new Date(maintenant.getFullYear() + 1, mois - 1, jour)
-  const candidate  = cetteAnnee >= maintenant ? cetteAnnee : anSuivant
-  const diffMs     = candidate.getTime() - maintenant.getTime()
-  const diffJours  = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
-  return { date: candidate, jours: diffJours }
+function joursRestants(date: Date): number {
+  const aujourdhui = new Date()
+  aujourdhui.setHours(0, 0, 0, 0)
+  const cible = new Date(date)
+  cible.setHours(0, 0, 0, 0)
+  const diffMs = cible.getTime() - aujourdhui.getTime()
+  return Math.round(diffMs / (1000 * 60 * 60 * 24))
 }
 
-// ─── Composant principal ───────────────────────────────────────────────────────
+// ─── Skeleton loader (carte grise qui pulse) ──────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 animate-pulse space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="h-4 w-24 bg-white/10 rounded" />
+        <div className="h-5 w-16 bg-white/10 rounded-full" />
+      </div>
+      <div className="h-3 w-32 bg-white/10 rounded" />
+      <div className="h-2 w-full bg-white/10 rounded-full" />
+      <div className="h-9 w-full bg-white/10 rounded-xl" />
+    </div>
+  )
+}
+
+// ─── Page principale ────────────────────────────────────────────────────────
 
 export default function CalendrierSaintsPage() {
-  const [fetelist, setFetelist] = useState<FeteAvecContact[]>([])
+  const router = useRouter()
+  const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
-  const [recherche, setRecherche] = useState('')
-  const [filtreRelation, setFiltreRelation] = useState<string>('tous')
-  const [filtreMode, setFiltreMode] = useState<FilterMode>('all')
-  const [showTodayOnly, setShowTodayOnly] = useState(false)
-  const [contactQuantities, setContactQuantities] = useState<Record<string, number>>({})
-  const topRef = useRef<HTMLDivElement>(null)
+  const [filterMode, setFilterMode] = useState<FilterMode>('all')
+  const [sortMode, setSortMode] = useState<SortMode>('date')
+  const [viewMode, setViewMode] = useState<ViewMode>('cards')
+  const [copiedSaint, setCopiedSaint] = useState<string | null>(null)
+  const { ouvrirDrawer } = useDrawer()
 
-  // ── Chargement des données ──────────────────────────────────────────────────
-
+  // ── Chargement des contacts ──
   useEffect(() => {
-    async function init() {
-      const { data: contacts } = await supabase
+    async function loadContacts() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/login')
+        return
+      }
+
+      const { data, error } = await supabase
         .from('contacts')
         .select('id, nom, prenom, date_naissance, relation, email')
+        .eq('user_id', session.user.id)
+        .order('prenom')
 
-      if (!contacts) return
-
-      // Grouper les contacts par prénom normalisé
-      const parPrenom: Record<string, Contact[]> = {}
-      for (const c of contacts) {
-        const key = c.prenom?.toLowerCase().trim() || ''
-        if (!key) continue
-        if (!parPrenom[key]) parPrenom[key] = []
-        parPrenom[key].push(c as Contact)
+      if (!error && data) {
+        setContacts(data as Contact[])
       }
-
-      // Construire la liste des fêtes avec contacts
-      const liste: FeteAvecContact[] = []
-      for (const contact of contacts as Contact[]) {
-        const p = contact.prenom?.toLowerCase().trim()
-        if (!p) continue
-
-        // Trouver le saint correspondant
-        const saint = SAINTS.find((s) =>
-          s.prenoms.some((np) => np.toLowerCase() === p)
-        )
-        if (!saint) continue
-
-        const { date, jours } = calculerProchaine(saint.date)
-        liste.push({
-          nomSaint:      saint.nomSaint,
-          prenoms:       saint.prenoms,
-          prochaineFete: date,
-          joursRestants: jours,
-          contact,
-          multipleDates: (parPrenom[p]?.length ?? 1) > 1,
-        })
-      }
-
-      // Tri : aujourd'hui d'abord, puis par joursRestants
-      liste.sort((a, b) => a.joursRestants - b.joursRestants)
-      setFetelist(liste)
-
-      // Compter les contacts par prénom
-      const qty: Record<string, number> = {}
-      for (const p of Object.keys(parPrenom)) {
-        qty[p] = parPrenom[p].length
-      }
-      setContactQuantities(qty)
       setLoading(false)
     }
+    loadContacts()
+  }, [router])
 
-    init()
-  }, [])
+  // ── Calcul des fêtes (avec gestion prénom vide) ──
+  const { fetelist, contactsSansFete } = useMemo(() => {
+    const resultats: FeteAvecContact[] = []
+    const sansFete: Contact[] = []
 
-  // ── Filtrage ────────────────────────────────────────────────────────────────
-
-  const filtered = useCallback(() => {
-    return fetelist.filter((f) => {
-      // Recherche par nom / prénom
-      if (recherche) {
-        const r = recherche.toLowerCase()
-        const matchNom    = f.contact.nom?.toLowerCase().includes(r)
-        const matchPrenom = f.contact.prenom?.toLowerCase().includes(r)
-        const matchSaint  = f.nomSaint.toLowerCase().includes(r)
-        if (!matchNom && !matchPrenom && !matchSaint) return false
+    for (const contact of contacts) {
+      if (!contact.prenom || contact.prenom.trim() === '') {
+        sansFete.push(contact)
+        continue
       }
 
-      // Filtre par relation
-      if (filtreRelation !== 'tous' && f.contact.relation !== filtreRelation) {
-        return false
+      const prenomNormalise = normaliserPrenom(contact.prenom)
+      const saint = SAINTS.find(s => s.prenoms.includes(prenomNormalise))
+
+      if (!saint) {
+        sansFete.push(contact)
+        continue
       }
 
-      // Filtre par mode temporal
-      if (filtreMode === 'today') {
-        return f.joursRestants === 0
-      }
-      if (filtreMode === 'week') {
-        return f.joursRestants <= 7
-      }
-      if (filtreMode === 'month') {
-        return f.joursRestants <= 30
-      }
+      const [mois, jour] = saint.date.split('-').map(Number)
+      const prochaineFete = prochaineOccurrence(mois, jour)
 
+      resultats.push({
+        nomSaint: saint.nomSaint,
+        prenoms: saint.prenoms,
+        prochaineFete,
+        joursRestants: joursRestants(prochaineFete),
+        contact,
+        multipleDates: saint.prenoms.length > 1,
+      })
+    }
+
+    return { fetelist: resultats, contactsSansFete: sansFete }
+  }, [contacts])
+
+  // ── Filtrage ──
+  const fetelistFiltree = useMemo(() => {
+    return fetelist.filter(f => {
+      if (filterMode === 'today') return f.joursRestants === 0
+      if (filterMode === 'week') return f.joursRestants >= 0 && f.joursRestants <= 7
+      if (filterMode === 'month') return f.joursRestants >= 0 && f.joursRestants <= 30
       return true
     })
-  }, [fetelist, recherche, filtreRelation, filtreMode])
+  }, [fetelist, filterMode])
 
-  const visible = filtered()
-  const todayList   = fetelist.filter((f) => f.joursRestants === 0)
-  const weekList    = fetelist.filter((f) => f.joursRestants > 0 && f.joursRestants <= 7)
-  const monthList   = fetelist.filter((f) => f.joursRestants > 7 && f.joursRestants <= 30)
-  const laterList   = fetelist.filter((f) => f.joursRestants > 30)
-
-  // ── Scroll smooth vers le haut ──────────────────────────────────────────────
-
-  const scrollToTop = () => {
-    topRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  // ── Notification "envoyer un message" ──────────────────────────────────────
-
-  const envoyerMessage = (email: string | null, nom: string, prenom: string) => {
-    if (!email) {
-      alert(`${prenom} ${nom} n'a pas d'adresse e-mail enregistrée.`)
-      return
+  // ── Tri ──
+  const fetelistTriee = useMemo(() => {
+    const copie = [...fetelistFiltree]
+    if (sortMode === 'date') {
+      copie.sort((a, b) => a.joursRestants - b.joursRestants)
+    } else if (sortMode === 'alpha') {
+      copie.sort((a, b) => a.contact.prenom.localeCompare(b.contact.prenom))
+    } else if (sortMode === 'relation') {
+      copie.sort((a, b) => a.contact.relation.localeCompare(b.contact.relation))
     }
-    window.location.href = `mailto:${email}?subject=Fête de ${prenom}&body=Bonjour ${prenom},%0A%0AJoyeuse fête ! 🎉`
-  }
+    return copie
+  }, [fetelistFiltree, sortMode])
 
-  // ─────────────────────────────────────────────────────────────────────────────
+  // ── Compteurs pour l'en-tête ──
+  const counts = useMemo(() => ({
+    all: fetelist.length,
+    today: fetelist.filter(f => f.joursRestants === 0).length,
+  }), [fetelist])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-slate-500 font-medium">Chargement des fêtes…</p>
-        </div>
-      </div>
-    )
-  }
+  // ── Actions ──
+  const handleMessage = useCallback((contactId: string) => {
+    router.push(`/dashboard/generate?contactId=${contactId}&eventType=fete_prenomale`)
+  }, [router])
 
-  const counts = {
-    all:   fetelist.length,
-    today: todayList.length,
-    week:  weekList.length,
-    month: monthList.length,
-  }
+  const handleCopySaint = useCallback((nomSaint: string) => {
+    navigator.clipboard.writeText(nomSaint)
+    setCopiedSaint(nomSaint)
+    setTimeout(() => setCopiedSaint(null), 2000)
+  }, [])
 
+  // ── Rendu ──
   return (
-    <div
-      ref={topRef}
-      className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50"
-    >
-      {/* ── En-tête ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-20 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4 space-y-4">
-          {/* Titre */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">🎂</span>
-              <div>
-                <h1 className="text-2xl font-bold text-slate-800">Fêtes des Saints</h1>
-                <p className="text-sm text-slate-500">
-                  {counts.today > 0
-                    ? `${counts.today} fête${counts.today > 1 ? 's' : ''} aujourd'hui !`
-                    : `${counts.all} contacts référencés`}
-                </p>
-              </div>
-            </div>
-            {/* Bouton retour */}
-            <button
-              onClick={scrollToTop}
-              className="text-sm text-indigo-500 hover:text-indigo-700 transition-colors"
-            >
-              ↑ Haut de page
-            </button>
-          </div>
+    <div className="min-h-screen bg-[#0B1120] px-4 py-6 sm:px-6 sm:py-10">
+      <main className="max-w-5xl mx-auto space-y-6">
 
-          {/* Barre de recherche */}
-          <div className="relative">
-            <svg
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Rechercher par nom, prénom ou saint…"
-              value={recherche}
-              onChange={(e) => setRecherche(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-white
-                         text-slate-700 placeholder-slate-400 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent
-                         transition-shadow"
-            />
-            {recherche && (
-              <button
-                onClick={() => setRecherche('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-
-          {/* Filtres : relation + mode temporal */}
-          <div className="flex flex-wrap gap-2">
-            {/* Filtre relation */}
-            <select
-              value={filtreRelation}
-              onChange={(e) => setFiltreRelation(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm
-                         focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-            >
-              <option value="tous">Toutes relations</option>
-              {TYPES_RELATION.map((t) => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
-
-            {/* Séparateur vertical */}
-            <div className="w-px h-8 bg-slate-200 self-center hidden sm:block" />
-
-            {/* Filtres temporels avec badges de compteur */}
-            {[
-              { key: 'all',   label: 'Tous' },
-              { key: 'today', label: '🎉 Aujourd\'hui',   badge: counts.today },
-              { key: 'week',  label: '📅 Cette semaine',  badge: counts.week },
-              { key: 'month', label: '🗓️ Ce mois',        badge: counts.month },
-            ].map(({ key, label, badge }) => {
-              const active = filtreMode === key
-              return (
-                <button
-                  key={key}
-                  onClick={() => setFiltreMode(key as FilterMode)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium
-                              border transition-all duration-200 ${
-                    active
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                      : 'bg-white text-slate-600 border-slate-200 hover:border-indigo-300 hover:text-indigo-600'
-                  }`}
-                >
-                  {label}
-                  {badge !== undefined && badge > 0 && (
-                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                      active ? 'bg-indigo-400 text-white' : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {badge}
-                    </span>
-                  )}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      </header>
-
-      {/* ── Contenu principal ────────────────────────────────────────────────── */}
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-8">
-
-        {/* ── Section « Aujourd'hui » (highlightée) ─────────────────────────── */}
-        {todayList.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">🎉</span>
-              <h2 className="text-lg font-bold text-slate-800">Fêtes du jour</h2>
-              <span className="text-xs font-semibold bg-red-100 text-red-600 px-2 py-1 rounded-full">
-                {todayList.length}
-              </span>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {todayList.map((f) => (
-                <CardSaint
-                  key={f.contact.id}
-                  fete={f}
-                  isToday
-                  onMessage={envoyerMessage}
-                  hasMultipleDates={contactQuantities[f.contact.prenom?.toLowerCase()] > 1}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Section « Cette semaine » ──────────────────────────────────────── */}
-        {weekList.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">📅</span>
-              <h2 className="text-lg font-bold text-slate-800">Cette semaine</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {weekList.map((f) => (
-                <CardSaint
-                  key={f.contact.id}
-                  fete={f}
-                  onMessage={envoyerMessage}
-                  hasMultipleDates={contactQuantities[f.contact.prenom?.toLowerCase()] > 1}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Section « Ce mois » ─────────────────────────────────────────────── */}
-        {monthList.length > 0 && (
-          <section>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">🗓️</span>
-              <h2 className="text-lg font-bold text-slate-800">Dans le mois</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {monthList.map((f) => (
-                <CardSaint
-                  key={f.contact.id}
-                  fete={f}
-                  onMessage={envoyerMessage}
-                  hasMultipleDates={contactQuantities[f.contact.prenom?.toLowerCase()] > 1}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* ── Section « Plus tard » (résultats filtrés ou tous) ──────────────── */}
-        {(filtreMode === 'all' ? laterList : visible).length > 0 && (
-          <section>
-            {filtreMode === 'all' && (
-              <div className="flex items-center gap-2 mb-3">
-                <span className="text-xl">🌿</span>
-                <h2 className="text-lg font-bold text-slate-800">Bientôt</h2>
-              </div>
-            )}
-            {filtreMode !== 'all' && (
-              <p className="text-sm text-slate-500 mb-3">
-                {visible.length} résultat{visible.length > 1 ? 's' : ''}
-                {recherche ? ` pour "${recherche}"` : ''}
+        {/* En-tête */}
+        <header className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">🎂</span>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold text-white">Fêtes des Saints</h1>
+              <p className="text-xs sm:text-sm text-white/50">
+                {counts.today > 0
+                  ? `${counts.today} fête${counts.today > 1 ? 's' : ''} aujourd'hui !`
+                  : `${counts.all} contacts référencés`}
               </p>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {(filtreMode === 'all' ? laterList : visible).map((f) => (
-                <CardSaint
-                  key={f.contact.id}
-                  fete={f}
-                  onMessage={envoyerMessage}
-                  hasMultipleDates={contactQuantities[f.contact.prenom?.toLowerCase()] > 1}
-                />
-              ))}
             </div>
-          </section>
-        )}
+          </div>
+        </header>
 
-        {/* ── État vide ─────────────────────────────────────────────────────── */}
-        {visible.length === 0 && (
-          <div className="text-center py-16">
-            <div className="text-5xl mb-4">🔍</div>
-            <h3 className="text-lg font-semibold text-slate-700">Aucun résultat</h3>
-            <p className="text-slate-500 mt-1">
-              Aucun contact ne correspond à ta recherche ou à tes filtres.
-            </p>
-            <button
-              onClick={() => { setRecherche(''); setFiltreRelation('tous'); setFiltreMode('all') }}
-              className="mt-4 text-indigo-600 hover:text-indigo-800 text-sm font-medium underline"
-            >
-              Réinitialiser les filtres
-            </button>
+       {/* ⚠️ Section contacts sans fête référencée */}
+{contactsSansFete.length > 0 && (
+  <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 text-sm text-orange-200">
+    <div className="flex items-start gap-4">
+      {/* Texte à gauche */}
+      <div className="flex-1 min-w-0">
+        <p className="font-medium">
+          ⚠️ <strong>{contactsSansFete.length}</strong> contact{contactsSansFete.length > 1 ? 's' : ''} sans fête référencée
+        </p>
+        <p className="text-xs text-orange-200/70 mt-1 break-words">
+          {contactsSansFete
+            .slice(0, 5)
+            .map(c => (c.prenom && c.prenom.trim() !== '' ? c.prenom : '(sans prénom)'))
+            .join(', ')}
+          {contactsSansFete.length > 5 ? `, +${contactsSansFete.length - 5} autre(s)` : ''}
+        </p>
+      </div>
+
+      {/* Bouton à droite */}
+      <button
+        onClick={() => router.push('/dashboard/contacts')}
+        className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl
+                   bg-white/5 hover:bg-white/10
+                   border border-orange-500/40 hover:border-orange-400
+                   text-orange-100 text-xs sm:text-sm font-medium
+                   transition"
+      >
+        ✏️ Compléter les prénoms
+      </button>
+    </div>
+  </div>
+)}
+
+        {/* Barre de filtres + tri + vue */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <div className="flex gap-1.5 flex-wrap">
+            {(['all', 'today', 'week', 'month'] as FilterMode[]).map(mode => (
+              <button
+                key={mode}
+                onClick={() => setFilterMode(mode)}
+                className={`px-3 py-1.5 rounded-full text-xs sm:text-sm transition ${
+                  filterMode === mode
+                    ? 'bg-[#C8A84E] text-[#0B1120] font-semibold'
+                    : 'bg-white/5 text-white/60 hover:bg-white/10'
+                }`}
+              >
+                {mode === 'all' ? 'Tous' : mode === 'today' ? "Aujourd'hui" : mode === 'week' ? '7 jours' : '30 jours'}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex-1" />
+
+          <select
+            value={sortMode}
+            onChange={(e) => setSortMode(e.target.value as SortMode)}
+            className="bg-white/5 border border-white/10 text-white/80 text-xs sm:text-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+          >
+            <option value="date" className="bg-[#0B1120]">Trier : Date</option>
+            <option value="alpha" className="bg-[#0B1120]">Trier : Alphabétique</option>
+            <option value="relation" className="bg-[#0B1120]">Trier : Relation</option>
+          </select>
+
+          <button
+            onClick={() => setViewMode(v => (v === 'cards' ? 'compact' : 'cards'))}
+            className="px-3 py-1.5 rounded-full text-xs sm:text-sm bg-white/5 text-white/60 hover:bg-white/10 transition"
+          >
+            {viewMode === 'cards' ? '☰ Vue compacte' : '▦ Vue cartes'}
+          </button>
+        </div>
+
+        {/* Contenu */}
+        {loading ? (
+          <div className={viewMode === 'cards' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4' : 'space-y-2'}>
+            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          </div>
+        ) : fetelistTriee.length === 0 ? (
+          <div className="text-center py-16 text-white/40">
+            Aucune fête à afficher pour ce filtre.
+          </div>
+        ) : viewMode === 'cards' ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {fetelistTriee.map(fete => (
+              <CardSaint
+                key={fete.contact.id}
+                fete={fete}
+                onMessage={handleMessage}
+                onCopySaint={handleCopySaint}
+                copied={copiedSaint === fete.nomSaint}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {fetelistTriee.map(fete => (
+              <RowSaint
+                key={fete.contact.id}
+                fete={fete}
+                onMessage={handleMessage}
+              />
+            ))}
           </div>
         )}
 
-        {/* ── Pied de page : compteur ───────────────────────────────────────── */}
+        {/* Pied de page */}
         {fetelist.length > 0 && (
-          <footer className="text-center py-6 text-sm text-slate-400">
+          <footer className="text-center py-6 text-sm text-white/30">
             {fetelist.length} contact{fetelist.length > 1 ? 's' : ''} avec une fête référencée
-            {' · '}
-            {todayList.length > 0 ? `${todayList.length} fête${todayList.length > 1 ? 's' : ''} aujourd'hui` : 'Aucune fête aujourd\'hui'}
           </footer>
         )}
       </main>
@@ -453,93 +329,108 @@ export default function CalendrierSaintsPage() {
   )
 }
 
-// ─── Composant CardSaint ────────────────────────────────────────────────────────
+// ─── Composant Carte (vue par défaut) ────────────────────────────────────────
 
-type CardProps = {
+function CardSaint({
+  fete,
+  onMessage,
+  onCopySaint,
+  copied,
+}: {
   fete: FeteAvecContact
-  isToday?: boolean
-  onMessage: (email: string | null, nom: string, prenom: string) => void
-  hasMultipleDates?: boolean
-}
+  onMessage: (id: string) => void
+  onCopySaint: (nom: string) => void
+  copied: boolean
+}) {
+  const { ouvrirDrawer } = useDrawer()
 
-function CardSaint({ fete, isToday, onMessage, hasMultipleDates }: CardProps) {
-  const badge = getBadge(fete.joursRestants)
+  const badge = fete.joursRestants === 0 ? BADGE_CONFIG.today
+    : fete.joursRestants <= 7 ? BADGE_CONFIG.soon
+    : BADGE_CONFIG.later
 
-  const dateLabel =
-    fete.joursRestants === 0
-      ? 'Aujourd\'hui !'
-      : fete.joursRestants === 1
-      ? 'Demain'
-      : `Dans ${fete.joursRestants} jours`
+  const dateLabel = fete.prochaineFete.toLocaleDateString('fr-FR', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'long',
+  })
 
-  const relConfig = TYPES_RELATION.find((t) => t.value === fete.contact.relation)
-  const emoji    = RELATION_EMOJI[fete.contact.relation] ?? '⭐'
+  const estAujourdhui = fete.joursRestants === 0
 
   return (
-    <div
-      className={`relative rounded-2xl border p-4 flex flex-col gap-3
-                  transition-all duration-200 hover:shadow-md hover:-translate-y-0.5
-                  ${isToday
-                    ? 'bg-gradient-to-br from-red-50 to-orange-50 border-red-200 shadow-sm'
-                    : 'bg-white border-slate-200 shadow-sm'
-                  }`}
-    >
-      {/* Badge en haut à droite */}
-      <div className="absolute top-3 right-3">
-        <span
-          className={`inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-full border
-                       ${badge.bg} ${badge.text} ${badge.border}`}
-          title={dateLabel}
-        >
-          {badge.label ?? `J-${fete.joursRestants}`}
-        </span>
-      </div>
+    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3 hover:bg-white/[0.07] transition">
+      {/* Ligne du haut : anneau + nom + badge */}
+      <div className="flex items-center gap-3">
+        {/* 👇 Anneau avec logique de progression sur 365 jours */}
+        <ProgressRing joursRestants={fete.joursRestants} estAujourdhui={estAujourdhui} />
 
-      {/* Prénom + saint */}
-      <div>
-        <p className="text-xs text-slate-400 mb-0.5">{emoji} {relConfig?.label ?? fete.contact.relation}</p>
-        <h3 className="text-lg font-bold text-slate-800 leading-tight">
-          {fete.contact.prenom} {fete.contact.nom}
-        </h3>
-        <p className="text-sm text-indigo-600 font-medium">{fete.nomSaint}</p>
-        {hasMultipleDates && (
-          <p className="text-xs text-slate-400 mt-0.5">📌 {fete.prenoms.length} saints possibles</p>
-        )}
-      </div>
+        <div className="flex-1 min-w-0">
+          <button
+            onClick={() => ouvrirDrawer(fete.contact as any)}
+            className="font-semibold text-white truncate hover:text-[#C8A84E] transition text-left block w-full"
+          >
+            {fete.contact.prenom} {fete.contact.nom}
+          </button>
+          <span className="text-white/40 text-xs">{dateLabel}</span>
+        </div>
 
-      {/* Date de la fête */}
-      <div className="flex items-center gap-2 text-sm text-slate-600">
-        <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-        <span className="font-medium">
-          {fete.prochaineFete.toLocaleDateString('fr-FR', {
-            weekday: 'short',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </span>
-        {fete.joursRestants > 0 && (
-          <span className="text-slate-400">· {dateLabel}</span>
-        )}
-      </div>
+        </div>
 
-      {/* Bouton Envoyer un message */}
+      {/* Ligne du saint (copier) */}
       <button
-        onClick={() => onMessage(fete.contact.email, fete.contact.nom, fete.contact.prenom)}
-        className={`mt-auto w-full py-2.5 px-4 rounded-xl text-sm font-semibold
-                    transition-all duration-200 flex items-center justify-center gap-2
-                    ${isToday
-                      ? 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow'
-                      : 'bg-indigo-50 hover:bg-indigo-100 text-indigo-600'
-                    }`}
+        onClick={() => onCopySaint(fete.nomSaint)}
+        className="flex items-center gap-1 text-indigo-300/80 hover:text-indigo-200 transition truncate text-xs sm:text-sm w-full"
+        title="Copier le nom du saint"
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        Envoyer un message
+        🕊️ {fete.nomSaint}
+        {copied ? ' ✓' : ' 📋'}
+      </button>
+
+      <button
+        onClick={() => onMessage(fete.contact.id)}
+        className="w-full text-xs sm:text-sm bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-medium px-4 py-2.5 rounded-xl transition"
+      >
+        ✨ Envoyer un message
+      </button>
+    </div>
+  )
+}
+
+// ─── Composant Ligne (vue compacte) — INCHANGÉ ─────────────────────────────────
+
+function RowSaint({
+  fete,
+  onMessage,
+}: {
+  fete: FeteAvecContact
+  onMessage: (id: string) => void
+}) {
+  const { ouvrirDrawer } = useDrawer()
+
+  const badge = fete.joursRestants === 0 ? BADGE_CONFIG.today
+    : fete.joursRestants <= 7 ? BADGE_CONFIG.soon
+    : BADGE_CONFIG.later
+
+  return (
+    <div className="flex items-center justify-between gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 hover:bg-white/[0.07] transition">
+      <div className="flex items-center gap-3 min-w-0">
+        <span className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${badge.classe}`}>
+          {fete.joursRestants === 0 ? "J" : `J-${fete.joursRestants}`}
+        </span>
+
+        <button
+          onClick={() => ouvrirDrawer(fete.contact as any)}
+          className="text-white text-sm truncate hover:text-[#C8A84E] transition text-left"
+        >
+          {fete.contact.prenom} {fete.contact.nom}
+        </button>
+
+        <span className="text-white/30 text-xs truncate hidden sm:inline">🕊️ {fete.nomSaint}</span>
+      </div>
+      <button
+        onClick={() => onMessage(fete.contact.id)}
+        className="text-xs bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-medium px-3 py-1.5 rounded-lg transition whitespace-nowrap"
+      >
+        ✨ Message
       </button>
     </div>
   )
