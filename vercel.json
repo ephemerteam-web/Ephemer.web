@@ -3,6 +3,10 @@
     {
       "path": "/api/envoyer-rappels",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/envoyer-newsletter?secret=TON_SECRET",
+      "schedule": "0 9 1 * *"
     }
   ]
 }

@@ -7,6 +7,14 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 const EMAIL_TEST = 'ephemer.team@gmail.com';
 const CRON_SECRET = process.env.CRON_SECRET;
 
+// 🆕 Préférences par défaut (si l'utilisateur n'a jamais réglé ses préférences)
+const PREFS_DEFAUT = {
+  canal_email: true,
+  rappel_j7: true,
+  rappel_j1: false,
+  rappel_jourj: true,
+};
+
 export async function GET(request: NextRequest) {
   // 🔐 Vérification de sécurité (Vercel Cron OU tests manuels)
   const isVercelCron = request.headers.get('x-vercel-cron') === 'true';
@@ -70,10 +78,66 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // 🆕 2️⃣bis) Récupération des PRÉFÉRENCES de notification (en une seule fois)
+    const prefsMap: Record<string, typeof PREFS_DEFAUT> = {};
+
+    if (userIds.length > 0) {
+      const { data: prefs, error: errorPrefs } = await supabaseAdmin
+        .from('notification_preferences')
+        .select('user_id, canal_email, rappel_j7, rappel_j1, rappel_jourj')
+        .in('user_id', userIds);
+
+      if (errorPrefs) {
+        console.error('⚠️ Erreur récupération préférences:', errorPrefs.message);
+      } else {
+        prefs?.forEach(p => {
+          if (p.user_id) {
+            prefsMap[p.user_id] = {
+              canal_email: p.canal_email,
+              rappel_j7: p.rappel_j7,
+              rappel_j1: p.rappel_j1,
+              rappel_jourj: p.rappel_jourj,
+            };
+          }
+        });
+      }
+    }
+
+        // 🆕 Petite fonction : ce type de rappel est-il activé par l'utilisateur ?
+    function typeRappelActive(prefs: typeof PREFS_DEFAUT, typeRappel: string): boolean {
+      if (typeRappel === 'j7') return prefs.rappel_j7;
+      if (typeRappel === 'j1') return prefs.rappel_j1;
+      if (typeRappel === 'jourj') return prefs.rappel_jourj;
+
+      // 🆕 Les rappels 'j30' sont RÉSERVÉS à la newsletter mensuelle
+      //    → on ne les envoie JAMAIS en email individuel
+      if (typeRappel === 'j30') return false;
+
+      // Type inconnu → par sécurité, on ne l'envoie pas
+      return false;
+    }
+
     const resultats = [];
 
     // 3️⃣ Boucle de traitement
     for (const rappel of rappels) {
+      // 🆕 Préférences de CET utilisateur (ou valeurs par défaut)
+      const prefs = prefsMap[rappel.user_id] || PREFS_DEFAUT;
+
+      // 🆕 FILTRE 1 : l'utilisateur veut-il recevoir des emails ?
+      if (!prefs.canal_email) {
+        console.log(`⏭️ Rappel ${rappel.id} ignoré : emails désactivés par l'utilisateur`);
+        resultats.push({ id: rappel.id, statut: 'ignore', raison: 'email_desactive' });
+        continue; // on passe au rappel suivant
+      }
+
+      // 🆕 FILTRE 2 : ce type de rappel (j7/j1/jourj) est-il activé ?
+      if (!typeRappelActive(prefs, rappel.type_rappel)) {
+        console.log(`⏭️ Rappel ${rappel.id} ignoré : type "${rappel.type_rappel}" désactivé`);
+        resultats.push({ id: rappel.id, statut: 'ignore', raison: `type_${rappel.type_rappel}_desactive` });
+        continue; // on passe au rappel suivant
+      }
+
       // 👤 Expéditeur
       const expediteur = profilsMap[rappel.user_id] || {};
       const expediteurNom = `${expediteur.prenom || ''} ${expediteur.nom || ''}`.trim() || 'Un ami Ephemer';
@@ -81,7 +145,7 @@ export async function GET(request: NextRequest) {
 
       // 🤝 Contact (sécurisé contre null/undefined)
       const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '' };
-      
+
       // 📍 Logique de destination
       let destEmail: string | string[];
       const emailContactFallback = rappel.email_destinataire || EMAIL_TEST;
