@@ -8,12 +8,17 @@ import {
   EMAIL_CONFIG,
 } from '@/lib/email-templates';
 
+// 🆕 AJOUT : on importe la fonction qui retrouve une fête prénomale
+import { trouverSaintParPrenom } from '@/lib/saints';
+
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
   try {
     // ─────────────────────────────────────────────
     // 1️⃣ SÉCURITÉ : on vérifie le mot de passe
+    // (un "secret" = un mot de passe caché dans Vercel,
+    //  personne d'autre ne peut déclencher la newsletter)
     // ─────────────────────────────────────────────
     const secret = request.nextUrl.searchParams.get('secret');
     if (secret !== CRON_SECRET) {
@@ -21,11 +26,11 @@ export async function GET(request: NextRequest) {
     }
 
     // ─────────────────────────────────────────────
-    // 2️⃣ On calcule le mois en cours (dates de début/fin)
+    // 2️⃣ On calcule le mois en cours
     // ─────────────────────────────────────────────
     const maintenant = new Date();
     const annee = maintenant.getFullYear();
-    const mois = maintenant.getMonth(); // 0 = janvier, 8 = septembre
+    const mois = maintenant.getMonth(); // 0 = janvier, 11 = décembre
 
     const moisLibelle = maintenant.toLocaleDateString('fr-FR', {
       month: 'long',
@@ -65,45 +70,65 @@ export async function GET(request: NextRequest) {
 
     // ─────────────────────────────────────────────
     // 5️⃣ On récupère TOUS les contacts de ces users
+    // 🆕 CORRECTION : on ne filtre PLUS sur date_naissance
+    // car on veut aussi les fêtes prénôminales (pas besoin de date de naissance !)
     // ─────────────────────────────────────────────
     const { data: contacts, error: errContacts } = await supabaseAdmin
       .from('contacts')
       .select('user_id, prenom, nom, date_naissance')
-      .in('user_id', userIds)
-      .not('date_naissance', 'is', null);
+      .in('user_id', userIds);
 
     if (errContacts) throw errContacts;
 
     // ─────────────────────────────────────────────
-    // 6️⃣ Pour chaque user, on filtre les anniversaires du mois
+    // 6️⃣ Pour chaque user, on construit la liste des événements du mois
     // ─────────────────────────────────────────────
     const resultats = [];
 
     for (const profil of profils || []) {
-      // Sécurité : pas d'email = on saute
       if (!profil.email) continue;
 
-      // On garde les contacts de CE user dont l'anniversaire tombe ce mois-ci
-      const evenements: EvenementNewsletter[] = (contacts || [])
-        .filter((c) => {
-          if (c.user_id !== profil.id) return false;
-          if (!c.date_naissance) return false;
-          // getMonth() sur la date de naissance → est-ce le mois courant ?
-          const dateNaiss = new Date(c.date_naissance);
-          return dateNaiss.getMonth() === mois;
-        })
-        .map((c) => {
-          const dateNaiss = new Date(c.date_naissance);
-          return {
-            prenomContact: c.prenom || 'Contact',
-            nomContact: c.nom || '',
-            typeEvenement: 'anniversaire',
-            jour: dateNaiss.getDate(), // le jour du mois (1-31)
-            emoji: '🎂',
-          };
-        })
-        // On trie par jour croissant
-        .sort((a, b) => a.jour - b.jour);
+      const mesContacts = (contacts || []).filter((c) => c.user_id === profil.id);
+      const evenements: EvenementNewsletter[] = [];
+
+      for (const contact of mesContacts) {
+        // 🅰️ ANNIVERSAIRE : si le contact a une date de naissance CE mois-ci
+        if (contact.date_naissance) {
+          const dateNaiss = new Date(contact.date_naissance);
+          if (dateNaiss.getMonth() === mois) {
+            evenements.push({
+              prenomContact: contact.prenom || 'Contact',
+              nomContact: contact.nom || '',
+              typeEvenement: 'anniversaire',
+              jour: dateNaiss.getDate(),
+              emoji: '🎂',
+            });
+          }
+        }
+
+        // 🆕 🅱️ Fête prénomale : si le prénom matche UNE fête CE mois-ci
+        if (contact.prenom) {
+          const saint = trouverSaintParPrenom(contact.prenom);
+          if (saint) {
+            // saint.date est au format "MM-JJ" (ex: "07-23" pour le 23 juillet)
+            const moisFete = parseInt(saint.date.split('-')[0], 10) - 1; // -1 car janvier=0
+            const jourFete = parseInt(saint.date.split('-')[1], 10);
+
+            if (moisFete === mois) {
+              evenements.push({
+                prenomContact: contact.prenom || 'Contact',
+                nomContact: contact.nom || '',
+                typeEvenement: 'fete_prenomale',
+                jour: jourFete,
+                emoji: '🎉',
+              });
+            }
+          }
+        }
+      }
+
+      // On trie par jour croissant
+      evenements.sort((a, b) => a.jour - b.jour);
 
       // ─────────────────────────────────────────────
       // 7️⃣ On génère et envoie l'email
@@ -144,6 +169,8 @@ export async function GET(request: NextRequest) {
 
     // ─────────────────────────────────────────────
     // 8️⃣ On renvoie le bilan
+    // (le "bilan" = un résumé JSON de tout ce qui s'est passé,
+    //  pour qu'on sache si ça a marché)
     // ─────────────────────────────────────────────
     return NextResponse.json({
       success: true,

@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
 import { evenementsAVenir, formatDateLocale } from '@/lib/date-utils'
+import { useRouter } from 'next/navigation'
 
 // ── Types (définitions de la forme de nos données) ────────────────
 type NotificationInsert = {
@@ -27,6 +28,7 @@ type Notification = {
 
 // ── Composant principal ───────────────────────────────────────────
 export default function NotificationBell() {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -292,7 +294,15 @@ const genererNotifications = useCallback(async () => {
           >
             {/* En-tête */}
             <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
-              <h3 id="notifications-title" className="font-semibold">📬 Notifications</h3>
+              <button
+  onClick={() => {
+    setOuvert(false)
+    router.push('/dashboard/notifications')
+  }}
+  className="font-semibold hover:text-[#C8A84E] transition active:scale-95 flex items-center gap-2"
+>
+   Notifications → 📬
+</button>
               <div className="flex gap-2 items-center">
                 {nbNonLues > 0 && (
                   <button

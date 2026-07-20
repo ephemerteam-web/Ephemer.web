@@ -283,11 +283,18 @@ export function genererNewsletterMensuelle(params: NewsletterParams): string {
   const preheaderText = `📅 ${evenements.length} événement${evenements.length > 1 ? 's' : ''} à ne pas manquer en ${moisLibelle}`;
 
   // 🎨 Pastilles couleurs selon type d'événement
-  const couleurParType: Record<string, string> = {
-    anniversaire: "#EF4444",
-    mariage: "#EC4899",
-    naissance: "#10B981",
-    saint_valentin: "#F43F5E",
+    const couleurParType: Record<string, string> = {
+    anniversaire: "#EF4444",       // Rouge joyeux 🎂
+    fete_prenomale: "#F59E0B",     // Jaune soleil 🎉 (pour le saint prénom !)
+    nouvel_an: "#6366F1",          // Indigo festif 🎆
+    noel: "#10B981",               // Vert sapin 🎄
+    saint_valentin: "#F43F5E",     // Rose ❤️
+    mariage: "#EC4899",            // Rose fuchsia 💍
+    naissance: "#10B981",          // Vert tendre 👶
+    fete_des_meres: "#EC4899",     // Rose 🌸
+    fete_des_peres: "#3B82F6",     // Bleu 👔
+    paques: "#F59E0B",             // Jaune doré 🐣
+    jour_special: "#8B5CF6",       // Violet mystique ✨
   };
 
   // 📋 Construit la liste HTML des événements
@@ -322,11 +329,11 @@ export function genererNewsletterMensuelle(params: NewsletterParams): string {
                     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                       <tr>
                         <!-- Pastille avec le jour -->
-                        <td width="56" valign="middle" style="padding-right: 16px;">
-                          <div style="width: 56px; height: 56px; background: linear-gradient(135deg, ${couleur}, ${couleur}cc); border-radius: 12px; text-align: center; line-height: 56px; color: #ffffff; font-size: 20px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                            ${evt.jour}
-                          </div>
-                        </td>
+                        <td valign="middle" style="padding-right: 16px;" width="56">
+  <div style="width: 56px; height: 56px; background: linear-gradient(135deg, ${couleur}, ${couleur}cc); border-radius: 12px; text-align: center; line-height: 56px; color: #ffffff; font-size: 20px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+    ${evt.jour}
+  </div>
+</td>
                         <!-- Infos du contact -->
                         <td valign="middle">
                           <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.3;">
