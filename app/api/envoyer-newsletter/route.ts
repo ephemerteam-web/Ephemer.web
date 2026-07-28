@@ -14,7 +14,21 @@ import { trouverSaintParPrenom } from '@/lib/saints';
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: NextRequest) {
+  // ─────────────────────────────────────────────
+  // 1️⃣ SÉCURITÉ : on vérifie le mot de passe
+  // Vercel Cron envoie automatiquement le header
+  // "Authorization: Bearer <CRON_SECRET>"
+  // Placé AVANT le try : une requête non autorisée
+  // ne doit pas entrer dans la logique métier.
+  // ─────────────────────────────────────────────
+  const authHeader = request.headers.get('authorization');
+
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  }
+
   try {
+    // ⬇️⬇️⬇️ TOUT LE RESTE DE TON FICHIER RESTE IDENTIQUE ⬇️⬇️⬇️
     // ─────────────────────────────────────────────
     // 1️⃣ SÉCURITÉ : on vérifie le mot de passe
     // (un "secret" = un mot de passe caché dans Vercel,

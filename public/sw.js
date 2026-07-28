@@ -1,92 +1,139 @@
 // public/sw.js
-// Service Worker amélioré pour Ephemer.name
-// Gère les notifications push + le mode hors ligne
+// Service Worker Ephemer.name — v2
+// Rôle : notifications push + page de secours hors ligne.
+// PRINCIPE DE SÉCURITÉ : on ne met JAMAIS en cache une page
+// ou une réponse contenant des données utilisateur.
 
-const CACHE_NAME = 'ephemer-cache-v1';
+const CACHE_NAME = 'ephemer-static-v2';
 
-// Liste des pages et fichiers à mettre en cache pour le mode hors ligne
+// Uniquement des fichiers PUBLICS et identiques pour tout le monde.
+// Aucune page /dashboard ici : elles contiennent des données privées.
 const URLS_TO_CACHE = [
-  '/',
-  '/dashboard',
-  '/dashboard/calendrier',
-  '/dashboard/contacts',
-  '/dashboard/messages-programmes',
+  '/offline.html',
   '/site.webmanifest',
-  '/globals.css',
-  // Ajoute ici d’autres pages importantes si besoin
+  '/icon-192.png',
 ];
 
-// 1. Installation du Service Worker → mise en cache initiale
+// ─────────────────────────────────────────────
+// 1. INSTALLATION
+// ─────────────────────────────────────────────
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Mise en cache des pages principales');
-      return cache.addAll(URLS_TO_CACHE);
-    })
-  );
-  self.skipWaiting(); // Active immédiatement la nouvelle version
-});
-
-// 2. Activation → nettoyage des anciens caches
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
+      // On ajoute les fichiers UN PAR UN : si l'un manque,
+      // les autres sont quand même installés (contrairement à addAll).
       return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
+        URLS_TO_CACHE.map((url) =>
+          cache.add(url).catch((err) => {
+            console.warn('[SW] Fichier introuvable, ignoré :', url);
+          })
+        )
       );
     })
   );
-  self.clients.claim(); // Prend le contrôle immédiatement
+  self.skipWaiting();
 });
 
-// 3. Interception des requêtes → mode hors ligne
+// ─────────────────────────────────────────────
+// 2. ACTIVATION → nettoyage des anciens caches
+// ─────────────────────────────────────────────
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys()
+      .then((names) =>
+        Promise.all(
+          names.filter((n) => n !== CACHE_NAME).map((n) => caches.delete(n))
+        )
+      )
+      .then(() => self.clients.claim())
+  );
+});
+
+// ─────────────────────────────────────────────
+// 3. FETCH → stratégie "réseau d'abord"
+// ─────────────────────────────────────────────
 self.addEventListener('fetch', (event) => {
-  // On ne met en cache que les requêtes GET
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
 
+  // a) On ignore tout ce qui n'est pas une lecture simple
+  if (request.method !== 'GET') return;
+
+  // b) On ignore les autres domaines (Supabase, Resend, Google...)
+  //    Ce n'est pas notre rôle de mettre leurs réponses en cache.
+  if (new URL(request.url).origin !== self.location.origin) return;
+
+  // c) On ignore TOTALEMENT les appels API : ce sont des données
+  //    privées et changeantes. Elles doivent toujours venir du serveur.
+  if (new URL(request.url).pathname.startsWith('/api/')) return;
+
+  // d) Pour les pages HTML : réseau d'abord, page offline en secours.
+  //    On ne met JAMAIS la page en cache (elle contient tes contacts).
+  if (request.mode === 'navigate') {
+    event.respondWith(
+      fetch(request).catch(() => caches.match('/offline.html'))
+    );
+    return;
+  }
+
+  // e) Pour les fichiers statiques (images, CSS, JS compilé) :
+  //    cache d'abord car ils portent un identifiant de version unique.
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      // Si on a une version en cache → on la renvoie (rapide + hors ligne)
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      // Sinon on va chercher sur le réseau
-      return fetch(event.request)
-        .then((networkResponse) => {
-          // On met en cache les nouvelles réponses pour la prochaine fois
-          return caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, networkResponse.clone());
-            return networkResponse;
-          });
-        })
-        .catch(() => {
-          // Si tout échoue (pas de réseau + pas en cache) → page de secours basique
-          if (event.request.destination === 'document') {
-            return caches.match('/dashboard'); // ou une page offline.html si tu en crées une
-          }
-        });
+    caches.match(request).then((cached) => {
+      if (cached) return cached;
+      return fetch(request).then((response) => {
+        // On ne met en cache que les réponses valides
+        if (response.ok && response.type === 'basic') {
+          const copie = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, copie));
+        }
+        return response;
+      });
     })
   );
 });
 
-// 4. Notifications push (ton code actuel conservé)
+// ─────────────────────────────────────────────
+// 4. NOTIFICATIONS PUSH
+// ─────────────────────────────────────────────
 self.addEventListener('push', (event) => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    // Si le message reçu n'est pas du JSON valide, on ne plante pas
+    data = { body: event.data ? event.data.text() : '' };
+  }
+
   const title = data.title || 'Ephemer';
   const options = {
     body: data.body || 'Tu as un nouveau rappel !',
     icon: '/icon-192.png',
     badge: '/badge.png',
-    data: data.url || '/',
+    // On stocke l'URL dans un objet : plus fiable pour le clic
+    data: { url: data.url || '/dashboard' },
   };
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// 5. Clic sur la notification
+// ─────────────────────────────────────────────
+// 5. CLIC SUR LA NOTIFICATION
+// ─────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data));
+  const cible = (event.notification.data && event.notification.data.url) || '/dashboard';
+
+  // Si Ephemer est déjà ouvert dans un onglet, on le réutilise
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((liste) => {
+        for (const client of liste) {
+          if (client.url.includes(self.location.origin) && 'focus' in client) {
+            client.navigate(cible);
+            return client.focus();
+          }
+        }
+        return self.clients.openWindow(cible);
+      })
+  );
 });

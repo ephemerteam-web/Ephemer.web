@@ -4,8 +4,9 @@ import { resend } from '@/lib/resend';
 import { genererEmailRappel } from '@/lib/email-templates';
 import { supabaseAdmin } from '@/lib/supabase-admin'
 
-const EMAIL_TEST = 'ephemer.team@gmail.com';
+// 🔐 Secrets lus depuis les variables d'environnement (jamais en clair dans le code)
 const CRON_SECRET = process.env.CRON_SECRET;
+const EMAIL_TEST = process.env.EMAIL_TEST || '';
 
 // 🆕 Préférences par défaut (si l'utilisateur n'a jamais réglé ses préférences)
 const PREFS_DEFAUT = {
@@ -16,17 +17,11 @@ const PREFS_DEFAUT = {
 };
 
 export async function GET(request: NextRequest) {
-  // 🔐 Vérification de sécurité (Vercel Cron OU tests manuels)
-  const isVercelCron = request.headers.get('x-vercel-cron') === 'true';
-  const urlSecret = request.nextUrl.searchParams.get('secret');
+  // 🔐 Vérification de sécurité : UNIQUEMENT le header Authorization
+  // Vercel Cron envoie automatiquement "Bearer <CRON_SECRET>"
   const authHeader = request.headers.get('authorization');
 
-  const isAuthorized =
-    isVercelCron ||
-    (urlSecret && urlSecret === CRON_SECRET) ||
-    (authHeader && authHeader === `Bearer ${CRON_SECRET}`);
-
-  if (!isAuthorized) {
+  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
   }
 
