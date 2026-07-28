@@ -1,5 +1,5 @@
 // app/api/generate-gift-ideas/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
 function limiterTexte(value: unknown, maxLength = 300): string {
   if (typeof value !== "string") return "";
@@ -26,8 +26,17 @@ const LABELS_EVENEMENT: Record<string, string> = {
   autre: "une occasion spéciale",
 };
 
-export async function POST(request: Request) {
+import { verifierGardeIA } from '@/lib/garde-ia';
+
+export async function POST(request: NextRequest) {
+  // 🔐 Garde-fou IA : vérifie la connexion + le quota quotidien
+  const garde = await verifierGardeIA(request);
+  if (!garde.ok) {
+    return NextResponse.json({ error: garde.message }, { status: garde.status });
+  }
+
   try {
+    // ... ton code existant
     const body = await request.json();
 
     const {

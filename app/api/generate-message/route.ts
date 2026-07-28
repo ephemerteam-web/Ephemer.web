@@ -1,5 +1,5 @@
 // app/api/generate-message/route.ts
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 import {
   TYPES_RELATION,
   TYPES_EVENEMENT,
@@ -8,7 +8,7 @@ import {
   peutMentionnerAnneesEcoulees,
   necessiteDateManuelle
 } from "@/lib/constants";
-
+import { verifierGardeIA } from '@/lib/garde-ia';
 
 
 type LabelValueItem = { value: string; label: string };
@@ -99,8 +99,16 @@ function getRelationInstruction(relation: string): string {
 
 
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // 🔐 Garde-fou IA : vérifie la connexion + le quota quotidien
+  // Placé AVANT tout appel payant à l'IA.
+  const garde = await verifierGardeIA(request);
+  if (!garde.ok) {
+    return NextResponse.json({ error: garde.message }, { status: garde.status });
+  }
+
   try {
+    // ... tout ton code existant reste identique
     const body = await request.json();
     const {
       firstName = "",

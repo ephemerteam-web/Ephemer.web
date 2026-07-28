@@ -2,6 +2,8 @@
 // 📡 APPELS API - Génération de messages
 // ============================================================
 
+import { supabase } from '@/lib/supabase-browser';
+
 // Type des paramètres pour générer un message
 export type GenerateMessageParams = {
   firstName: string;
@@ -22,9 +24,20 @@ export type GenerateMessageParams = {
  * @throws Error si l'API renvoie une erreur
  */
 export async function genererMessage(params: GenerateMessageParams): Promise<string> {
+  // 🔑 On récupère la session en cours (elle contient le token d'identité)
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    throw new Error('Tu dois être connecté.');
+  }
+
   const response = await fetch("/api/generate-message", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      // 🔑 On joint le token de session pour prouver notre identité au serveur
+      Authorization: `Bearer ${session.access_token}`,
+    },
     body: JSON.stringify(params),
   });
 
