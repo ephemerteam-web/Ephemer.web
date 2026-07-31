@@ -80,6 +80,7 @@ export default function ModifierContact() {
         telephone_numero: telephoneNumero || null,
         note: note || null,
         est_favori: estFavori,
+        jours_restants: null, // Reset days remaining to null
       })
       .eq('id', contactId)
 

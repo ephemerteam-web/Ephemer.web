@@ -15,6 +15,7 @@ type NotificationInsert = {
   type: string
   message: string
   event_date: string
+  jours_restants: number  // ✅ NOUVEAU : palier (7, 3, 1, 0)
   lue?: boolean
 }
 
@@ -24,6 +25,7 @@ type Notification = {
   lue: boolean
   created_at: string
   contact_id: number
+  jours_restants?: number | null  // ✅ NOUVEAU : pour le code couleur
 }
 
 // ── Composant principal ───────────────────────────────────────────
@@ -36,87 +38,115 @@ export default function NotificationBell() {
   const { ouvrirDrawer } = useDrawer()
   const panelRef = useRef<HTMLDivElement>(null)
 
-  // ── 1) Génération des notifications ─────────────────────────────
- // ── 1) Génération des notifications (option A : 1 notif par événement) ──
-const genererNotifications = useCallback(async () => {
-  try {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.user?.id) return
-    const userId = session.user.id
-
-    // Récupérer les contacts
-    const { data: contacts, error: contactsError } = await supabase
-      .from('contacts')
-      .select('id, prenom, nom, date_naissance')
-      .eq('user_id', userId)
-
-    if (contactsError) {
-      console.error('Erreur chargement contacts:', contactsError.message)
-      return
-    }
-    if (!contacts || contacts.length === 0) return
-
-    // 🎯 Événements des 7 prochains jours (gère les accents ✅)
-    const events = evenementsAVenir(contacts, 7)
-    if (events.length === 0) return
-
-    // Notifs déjà existantes → anti-doublon
-    const { data: existingNotifications, error: notifError } = await supabase
-      .from('notifications')
-      .select('contact_id, type, event_date')
-      .eq('user_id', userId)
-
-    if (notifError) {
-      console.error('Erreur chargement notifications:', notifError.message)
-      return
-    }
-
-    // Clé = contactId-type-date  (SANS suffixe jX → 1 seule notif par événement)
-    const existingSet = new Set(
-      existingNotifications?.map(n => `${n.contact_id}-${n.type}-${n.event_date}`) || []
-    )
-
-    const notificationsToInsert: NotificationInsert[] = []
-
-    for (const ev of events) {
-      const eventDateStr = formatDateLocale(ev.date) // "2026-07-19" (sans décalage UTC)
-
-      // type "propre" sans palier → clé stable dans le temps
-      const cle = `${ev.contactId}-${ev.type}-${eventDateStr}`
-      if (existingSet.has(cle)) continue
-
-      const nomComplet = `${ev.prenom} ${ev.nom || ''}`.trim()
-      const estAnniv = ev.type === 'anniversaire'
-      const emoji = estAnniv ? '🎂' : '🙏'
-      const quoi = estAnniv ? "l'anniversaire" : 'la fête'
-      const quand =
-        ev.jours === 0 ? "aujourd'hui" :
-        ev.jours === 1 ? 'demain' :
-        `dans ${ev.jours} jours`
-
-      notificationsToInsert.push({
-        user_id: userId,
-        contact_id: Number(ev.contactId), // la table attend un bigint
-        type: ev.type,                     // "anniversaire" ou "fete_prenomale"
-        message: `${emoji} C'est ${quoi} de ${nomComplet} ${quand} !`,
-        event_date: eventDateStr,
-        lue: false,
-      })
-    }
-
-    if (notificationsToInsert.length > 0) {
-      const { error: insertError } = await supabase
-        .from('notifications')
-        .insert(notificationsToInsert)
-      if (insertError) {
-        console.error('Erreur insertion notifications:', insertError.message)
-      }
-    }
-  } catch (err) {
-    console.error('Erreur inattendue dans genererNotifications:', err)
-    setError('Impossible de générer les notifications')
+  // ── Fonction utilitaire : couleur selon l'urgence ───────────────
+  const getCouleurUrgence = (jours: number | null | undefined) => {
+    if (jours === null || jours === undefined) return 'border-l-gray-500'
+    if (jours === 0) return 'border-l-red-500'      // Jour J = rouge 🔴
+    if (jours === 1) return 'border-l-orange-500'   // J-1 = orange 🟠
+    if (jours <= 3) return 'border-l-yellow-500'    // J-2/J-3 = jaune 🟡
+    return 'border-l-blue-500'                      // J-4 à J-7 = bleu 🔵
   }
-}, [])
+
+  // ── 1) Génération des notifications (avec paliers J-7, J-3, J-1, J) ──
+  const genererNotifications = useCallback(async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.user?.id) return
+      const userId = session.user.id
+
+      // Récupérer les contacts
+      const { data: contacts, error: contactsError } = await supabase
+        .from('contacts')
+        .select('id, prenom, nom, date_naissance')
+        .eq('user_id', userId)
+
+      if (contactsError) {
+        console.error('Erreur chargement contacts:', contactsError.message)
+        return
+      }
+      if (!contacts || contacts.length === 0) return
+
+      // 🎯 Événements des 7 prochains jours
+      const events = evenementsAVenir(contacts, 7)
+      if (events.length === 0) return
+
+      // Notifs déjà existantes → anti-doublon
+      const { data: existingNotifications, error: notifError } = await supabase
+        .from('notifications')
+        .select('contact_id, type, event_date, jours_restants')
+        .eq('user_id', userId)
+
+      if (notifError) {
+        console.error('Erreur chargement notifications:', notifError.message)
+        return
+      }
+
+      // ✅ Clé = contactId-type-date-jours_restants (évite les doublons par palier)
+      const existingSet = new Set(
+        existingNotifications?.map(n => 
+          `${n.contact_id}-${n.type}-${n.event_date}-${n.jours_restants}`
+        ) || []
+      )
+
+      // ✅ Paliers de notification : on ne crée une notif qu'à ces moments précis
+      const PALIERS = [7, 3, 1, 0] // J-7, J-3, J-1, Jour J
+
+      const notificationsToInsert: NotificationInsert[] = []
+
+      for (const ev of events) {
+        const eventDateStr = formatDateLocale(ev.date)
+
+        // ✅ Ne créer une notif que si on est exactement à un palier
+        if (!PALIERS.includes(ev.jours)) continue
+
+        // ✅ Clé avec palier pour éviter les doublons
+        const cle = `${ev.contactId}-${ev.type}-${eventDateStr}-${ev.jours}`
+        if (existingSet.has(cle)) continue
+
+        const nomComplet = `${ev.prenom} ${ev.nom || ''}`.trim()
+        const estAnniv = ev.type === 'anniversaire'
+        const emoji = estAnniv ? '🎂' : '🙏'
+        const quoi = estAnniv ? "l'anniversaire" : 'la fête'
+
+        // ✅ Message adapté au palier + emoji d'urgence
+        let quand: string
+        let urgence: string = ''
+
+        if (ev.jours === 0) {
+          quand = "aujourd'hui"
+          urgence = ' 🎉'
+        } else if (ev.jours === 1) {
+          quand = 'demain'
+          urgence = ' ⏰'
+        } else {
+          quand = `dans ${ev.jours} jours`
+          urgence = ev.jours <= 3 ? ' ⏳' : ''
+        }
+
+        notificationsToInsert.push({
+          user_id: userId,
+          contact_id: Number(ev.contactId),
+          type: ev.type,
+          message: `${emoji} C'est ${quoi} de ${nomComplet} ${quand} !${urgence}`,
+          event_date: eventDateStr,
+          jours_restants: ev.jours, // ✅ Stocker le palier
+          lue: false,
+        })
+      }
+
+      if (notificationsToInsert.length > 0) {
+        const { error: insertError } = await supabase
+          .from('notifications')
+          .insert(notificationsToInsert)
+        if (insertError) {
+          console.error('Erreur insertion notifications:', insertError.message)
+        }
+      }
+    } catch (err) {
+      console.error('Erreur inattendue dans genererNotifications:', err)
+      setError('Impossible de générer les notifications')
+    }
+  }, [])
 
   // ── 2) Charger les notifications déjà existantes ────────────────
   const chargerNotifications = useCallback(async () => {
@@ -126,7 +156,7 @@ const genererNotifications = useCallback(async () => {
 
       const { data, error: fetchError } = await supabase
         .from('notifications')
-        .select('id, message, lue, created_at, contact_id')
+        .select('id, message, lue, created_at, contact_id, jours_restants') // ✅ Ajout de jours_restants
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .limit(30)
@@ -154,7 +184,7 @@ const genererNotifications = useCallback(async () => {
       const { error } = await supabase
         .from('notifications')
         .update({ lue: true })
-        .in('id', nonLuesIds) // Met à JOUR toutes les lignes dont l'ID est dans la liste
+        .in('id', nonLuesIds)
 
       if (error) throw error
       setNotifications(prev => prev.map(n => ({ ...n, lue: true })))
@@ -171,33 +201,30 @@ const genererNotifications = useCallback(async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user?.id) return
 
-      // Création d'un "écouteur" sur la table notifications
       channel = supabase
         .channel('notifications-listen')
         .on(
           'postgres_changes',
           {
-            event: 'INSERT', // Uniquement les NOUVELLES insertions
+            event: 'INSERT',
             schema: 'public',
             table: 'notifications',
-            filter: `user_id=eq.${session.user.id}`, // Filtrer sur l'utilisateur connecté
+            filter: `user_id=eq.${session.user.id}`,
           },
           (payload) => {
-  const newNotif = payload.new as Notification
-  setNotifications(prev => {
-    // ✅ On vérifie si cette notif existe déjà (évite les doublons de "key")
-    const existeDeja = prev.some(n => n.id === newNotif.id)
-    if (existeDeja) return prev
-    return [newNotif, ...prev]
-  })
-}
+            const newNotif = payload.new as Notification
+            setNotifications(prev => {
+              const existeDeja = prev.some(n => n.id === newNotif.id)
+              if (existeDeja) return prev
+              return [newNotif, ...prev]
+            })
+          }
         )
         .subscribe()
     }
 
     setupRealtime()
 
-    // Nettoyage à la fermeture du composant (évite les fuites mémoire)
     return () => {
       if (channel) supabase.removeChannel(channel)
     }
@@ -274,7 +301,6 @@ const genererNotifications = useCallback(async () => {
         <span className="text-2xl">🔔</span>
         {nbNonLues > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-            {/* animate-pulse fait "pulser" l'élément (effet visuel subtil) */}
             {nbNonLues > 99 ? '99+' : nbNonLues}
           </span>
         )}
@@ -295,14 +321,14 @@ const genererNotifications = useCallback(async () => {
             {/* En-tête */}
             <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
               <button
-  onClick={() => {
-    setOuvert(false)
-    router.push('/dashboard/notifications')
-  }}
-  className="font-semibold hover:text-[#C8A84E] transition active:scale-95 flex items-center gap-2"
->
-   Notifications → 📬
-</button>
+                onClick={() => {
+                  setOuvert(false)
+                  router.push('/dashboard/notifications')
+                }}
+                className="font-semibold hover:text-[#C8A84E] transition active:scale-95 flex items-center gap-2"
+              >
+                Notifications → 📬
+              </button>
               <div className="flex gap-2 items-center">
                 {nbNonLues > 0 && (
                   <button
@@ -348,7 +374,11 @@ const genererNotifications = useCallback(async () => {
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif) }}
-                    className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${notif.lue ? 'opacity-70' : 'bg-purple-900/10 border-l-2 border-l-[#C8A84E]'}`}
+                    className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${
+                      notif.lue 
+                        ? 'opacity-70' 
+                        : `bg-purple-900/10 border-l-4 ${getCouleurUrgence(notif.jours_restants)}`
+                    }`}
                     role="button"
                     tabIndex={0}
                   >
