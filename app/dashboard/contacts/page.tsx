@@ -204,15 +204,41 @@ export default function ContactsPage() {
               <div
                 key={contact.id}
                 onClick={() => ouvrirDrawer(contact)}
-                className="bg-white/5 backdrop-blur-lg border border-white/10 hover:bg-white/10 hover:border-white/20 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all duration-200"
+                className={`group relative bg-white/5 backdrop-blur-lg border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all duration-300 ${
+                  contact.est_favori
+                    ? 'border-[#C8A84E]/40 hover:border-[#C8A84E]/70 shadow-[0_0_15px_-3px_rgba(200,168,78,0.15)]'
+                    : 'border-white/10 hover:bg-white/10 hover:border-white/20'
+                }`}
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {getInitiales(contact)}
+                {/* Lueur dorée subtile en arrière-plan si favori */}
+                {contact.est_favori && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#C8A84E]/5 to-transparent opacity-50 pointer-events-none rounded-xl" />
+                )}
+
+                <div className="flex items-center gap-4 min-w-0 relative z-10">
+                  {/* AVATAR AVEC CADRE DORÉ */}
+                  <div className="relative flex-shrink-0">
+                    {/* Le cercle doré (visible seulement si favori) */}
+                    {contact.est_favori && (
+                      <div className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-[#C8A84E] via-[#F4E5BC] to-[#C8A84E] animate-pulse-slow" />
+                    )}
+                    
+                    {/* L'avatar lui-même */}
+                    <div 
+                      className={`relative w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${
+                        contact.est_favori
+                          ? 'bg-[#0B1120] text-[#C8A84E] border-[#0B1120]' // Fond sombre pour faire ressortir l'or
+                          : 'bg-indigo-500/30 text-white border-indigo-400/40'
+                      }`}
+                    >
+                      {getInitiales(contact)}
+                    </div>
                   </div>
 
                   <div className="min-w-0">
-                    <p className="font-semibold text-white truncate">
+                    <p className={`font-semibold truncate transition-colors ${
+                      contact.est_favori ? 'text-[#C8A84E]' : 'text-white'
+                    }`}>
                       {getNomComplet(contact)}
                     </p>
 
@@ -226,8 +252,8 @@ export default function ContactsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 flex-wrap sm:justify-end">
-                  {contact.est_favori && <span className="text-lg">⭐</span>}
+                <div className="flex items-center gap-2 flex-wrap sm:justify-end relative z-10">
+                  {/* On a retiré l'étoile ici car elle est maintenant sur l'avatar */}
 
                   {contact.estLie && (
                     <span className="text-xs bg-green-500/20 text-green-300 border border-green-500/30 font-medium px-2 py-1 rounded-full">

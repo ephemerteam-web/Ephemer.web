@@ -500,37 +500,42 @@ export default function Dashboard() {
       {/* ============ FOOTER ============ */}
       <div className="mt-10 pt-6 border-t border-white/10 text-center space-y-3">
         <p className="text-indigo-300 text-sm">
-          Made with 💜 • Version Alpha 0.2
+          Made with 💜 • Version Alpha 0.7 ou 0.8 ? who knows ?
         </p>
 
         <div className="flex justify-center gap-2 flex-wrap">
-          <a
-            href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-          >
-            💬 Support
-          </a>
-          <Link
-            href="/confidentialite"
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-          >
-            🔒 Confidentialité
-          </Link>
-          <Link
-            href="/conditions"
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-          >
-            📄 Conditions
-          </Link>
-          <Link
-            href="/patchnote"
-            className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
-          >
-            📜 Quoi de neuf ?
-          </Link>
-        </div>
-      </div>
-
+    <a
+      href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      💬 Support
+    </a>
+    <Link
+      href="/guide-notifications"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      🔔 Tuto Notifications
+    </Link>
+    <Link
+      href="/confidentialite"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      🔒 Confidentialité
+    </Link>
+    <Link
+      href="/conditions"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      📄 Conditions
+    </Link>
+    <Link
+      href="/patchnote"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+    >
+      📜 Quoi de neuf ?
+    </Link>
+  </div>
+</div>
     </div>
   )
 }

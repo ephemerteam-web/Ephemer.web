@@ -257,25 +257,27 @@ export default function MessagesProgrammesPage() {
   const allMessagesCount = messages.length;
 
   return (
-    <div className="p-4 md:p-8">
+    // 🔧 MOBILE FIX : padding réduit sur mobile
+    <div className="p-3 sm:p-4 md:p-8">
       <div className="max-w-3xl mx-auto">
-        <div className="mb-6 flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-bold text-white">📅 Messages programmés</h1>
-            <p className="text-white/40 mt-1">Regroupés par événement. À venir + historique.</p>
+        {/* 🔧 MOBILE FIX : espacement et taille de titre adaptés mobile */}
+        <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">📅 Messages programmés</h1>
+            <p className="text-white/40 mt-1 text-xs sm:text-sm">Regroupés par événement. À venir + historique.</p>
           </div>
 
           <button
             onClick={() => router.push("/dashboard/generate")}
-            className="bg-[#C8A84E] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl hover:bg-[#D4B85C] transition shrink-0"
+            className="bg-[#C8A84E] text-[#0B1120] font-bold text-xs sm:text-sm px-3 sm:px-4 py-2 rounded-xl hover:bg-[#D4B85C] transition shrink-0"
           >
             + Nouveau
           </button>
         </div>
 
         {erreur && (
-          <div className="bg-red-500/10 border border-red-500/20 text-red-300 p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
-            <p className="font-medium">⚠️ {erreur}</p>
+          <div className="bg-red-500/10 border border-red-500/20 text-red-300 p-3 sm:p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
+            <p className="font-medium text-sm">⚠️ {erreur}</p>
             <button
               onClick={() => loadMessages()}
               className="text-sm font-semibold underline hover:text-red-100 shrink-0"
@@ -288,7 +290,7 @@ export default function MessagesProgrammesPage() {
         {loading && <div className="text-center py-20 text-white/40">Chargement...</div>}
 
         {!loading && !erreur && allMessagesCount === 0 && (
-          <div className="bg-white/5 border border-dashed border-[#C8A84E]/20 rounded-2xl p-12 text-center">
+          <div className="bg-white/5 border border-dashed border-[#C8A84E]/20 rounded-2xl p-8 sm:p-12 text-center">
             <div className="text-5xl mb-4">💌</div>
             <p className="text-white/60 font-medium">Aucun message programmé.</p>
             <button
@@ -302,12 +304,13 @@ export default function MessagesProgrammesPage() {
 
         {/* ✅ À VENIR */}
         {aVenir.length > 0 && (
-          <section className="mb-8">
-            <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
+          <section className="mb-6 sm:mb-8">
+            <h2 className="text-xs sm:text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
               🔜 À envoyer ({aVenir.length})
             </h2>
 
-            <div className="flex flex-col gap-4">
+            {/* 🔧 MOBILE FIX : gap réduit sur mobile */}
+            <div className="flex flex-col gap-3 sm:gap-4">
               {Object.entries(groupedAVenir).map(([type, msgs]) => {
                 const groupKey = keyAvenir(type);
                 const open = !!openGroups[groupKey];
@@ -351,11 +354,12 @@ export default function MessagesProgrammesPage() {
         {/* ✅ HISTORIQUE */}
         {historique.length > 0 && (
           <section>
-            <h2 className="text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
+            <h2 className="text-xs sm:text-sm font-bold text-white/50 uppercase tracking-wider mb-3">
               📁 Historique ({historique.length})
             </h2>
 
-            <div className="flex flex-col gap-4">
+            {/* 🔧 MOBILE FIX : gap réduit sur mobile */}
+            <div className="flex flex-col gap-3 sm:gap-4">
               {Object.entries(groupedHistorique).map(([type, msgs]) => {
                 const groupKey = keyHistorique(type);
                 const open = !!openGroups[groupKey];
@@ -435,14 +439,12 @@ function MessageCard({
   const estModifiable = m.statut === "programme";
   const dateFR = formatDateFR(m.date_envoi);
 
-  // 🆕 Replier la carte quand on clique ailleurs dessus (Option B)
   function handleCarteClick() {
     if (expanded && !enEdition) {
       setExpanded(false);
     }
   }
 
-  // 🆕 Partage natif mobile + repli sur PC (copier)
   async function handlePartager() {
     const texte = m.message;
     try {
@@ -457,14 +459,12 @@ function MessageCard({
         setTimeout(() => setPartageMsg(null), 2000);
       }
     } catch (err) {
-      // L'utilisateur a annulé le partage → on ne fait rien
       console.log("Partage annulé ou échoué", err);
     }
   }
 
-  // 🆕 Copier le message au clic sur le texte
   async function handleCopierTexte(e: React.MouseEvent) {
-    e.stopPropagation(); // empêche la carte de se replier
+    e.stopPropagation();
     try {
       await navigator.clipboard.writeText(m.message);
       setPartageMsg("📋 Copié !");
@@ -487,21 +487,27 @@ function MessageCard({
   }
 
   return (
+    // 🔧 MOBILE FIX : overflow-hidden empêche la carte de déborder + padding adapté mobile
     <div
       onClick={handleCarteClick}
-      className="bg-white/5 border border-white/10 rounded-2xl p-5 transition hover:bg-white/10"
+      className="bg-white/5 border border-white/10 rounded-2xl p-3 sm:p-4 md:p-5 transition hover:bg-white/10 overflow-hidden"
     >
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      {/* 🔧 MOBILE FIX : layout en colonne sur très petit écran si nécessaire */}
+      <div className="flex items-start justify-between gap-2 sm:gap-3">
+        {/* 🔧 MOBILE FIX : min-w-0 essentiel pour que le texte puisse se tronquer/casser */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap mb-1">
-            <span className="font-semibold text-white">{contactNom}</span>
+          {/* 🔧 MOBILE FIX : gap réduit, badges avec truncate sur le nom */}
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap mb-1">
+            <span className="font-semibold text-white text-sm sm:text-base truncate max-w-[120px] sm:max-w-none">
+              {contactNom}
+            </span>
 
-            <span className="text-xs px-2 py-0.5 rounded-full bg-[#C8A84E]/20 text-[#C8A84E]">
+            <span className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full bg-[#C8A84E]/20 text-[#C8A84E] shrink-0">
               {LABELS[m.type_evenement] ?? m.type_evenement}
             </span>
 
             <span
-              className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium shrink-0 ${
                 STATUT_STYLE[m.statut] ?? "bg-white/10 text-white/40"
               }`}
             >
@@ -509,28 +515,28 @@ function MessageCard({
             </span>
           </div>
 
-          <p className="text-sm text-white/50">
+          {/* 🔧 MOBILE FIX : break-words pour casser les dates longues + texte plus petit sur mobile */}
+          <p className="text-xs sm:text-sm text-white/50 break-words">
             {dateFR} • <span className="text-[#C8A84E] font-medium">{joursRestants}</span>
           </p>
 
-          {m.ton && <p className="text-xs text-white/40 mt-0.5">🎨 Ton : {m.ton}</p>}
+          {m.ton && <p className="text-[10px] sm:text-xs text-white/40 mt-0.5 break-words">🎨 Ton : {m.ton}</p>}
           {m.email_destinataire && (
-            <p className="text-xs text-white/40 mt-0.5">✉️ {m.email_destinataire}</p>
+            <p className="text-[10px] sm:text-xs text-white/40 mt-0.5 break-words truncate">✉️ {m.email_destinataire}</p>
           )}
         </div>
 
-        {/* 🆕 Boutons principaux */}
-        <div className="flex gap-2 shrink-0 flex-wrap items-center">
-          {/* Bouton Voir → devient Partager une fois déplié */}
+        {/* 🔧 MOBILE FIX : boutons plus compacts sur mobile, pas de flex-wrap qui pousse */}
+        <div className="flex gap-1.5 sm:gap-2 shrink-0 items-center">
           {!expanded ? (
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setExpanded(true);
               }}
-              className="text-xs border border-white/10 px-3 py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition"
+              className="text-[10px] sm:text-xs border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition whitespace-nowrap"
             >
-              👁️ Voir
+              👁️ <span className="hidden sm:inline">Voir</span>
             </button>
           ) : (
             <button
@@ -538,13 +544,12 @@ function MessageCard({
                 e.stopPropagation();
                 handlePartager();
               }}
-              className="text-xs border border-[#C8A84E]/30 px-3 py-1.5 rounded-lg text-[#C8A84E] hover:bg-[#C8A84E]/10 transition"
+              className="text-[10px] sm:text-xs border border-[#C8A84E]/30 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[#C8A84E] hover:bg-[#C8A84E]/10 transition whitespace-nowrap"
             >
-              📤 Partager
+              📤 <span className="hidden sm:inline">Partager</span>
             </button>
           )}
 
-          {/* Bouton Modifier (seulement si programmé) */}
           {estModifiable && !enEdition && (
             <button
               onClick={(e) => {
@@ -552,27 +557,25 @@ function MessageCard({
                 setExpanded(true);
                 setEnEdition(true);
               }}
-              className="text-xs border border-white/10 px-3 py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition"
+              className="text-[10px] sm:text-xs border border-white/10 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-white/50 hover:border-[#C8A84E]/30 hover:text-[#C8A84E] transition whitespace-nowrap"
             >
-              ✏️ Modifier
+              ✏️ <span className="hidden sm:inline">Modifier</span>
             </button>
           )}
 
-          {/* 🆕 Menu "⋯" pour actions dangereuses */}
           <div className="relative">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 setMenuOuvert((v) => !v);
               }}
-              className="text-lg leading-none border border-white/10 px-3 py-1 rounded-lg text-white/50 hover:border-white/30 hover:text-white transition"
+              className="text-base sm:text-lg leading-none border border-white/10 px-2 sm:px-3 py-1 rounded-lg text-white/50 hover:border-white/30 hover:text-white transition"
             >
               ⋯
             </button>
 
             {menuOuvert && (
               <>
-                {/* Fond invisible pour fermer au clic extérieur */}
                 <div
                   className="fixed inset-0 z-10"
                   onClick={(e) => {
@@ -581,8 +584,8 @@ function MessageCard({
                   }}
                 />
 
-                {/* Menu déroulant */}
-                <div className="absolute right-0 mt-2 w-44 bg-[#0B1120] border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
+                {/* 🔧 MOBILE FIX : menu positionné pour ne pas déborder à droite sur mobile */}
+                <div className="absolute right-0 mt-2 w-40 sm:w-44 bg-[#0B1120] border border-white/10 rounded-xl shadow-xl z-20 overflow-hidden">
                   {estAnnulable && (
                     <button
                       onClick={(e) => {
@@ -591,7 +594,7 @@ function MessageCard({
                         onAnnuler(m.id);
                       }}
                       disabled={estEnCours}
-                      className="w-full text-left text-sm px-4 py-2.5 text-orange-300 hover:bg-white/5 transition disabled:opacity-50"
+                      className="w-full text-left text-xs sm:text-sm px-3 sm:px-4 py-2.5 text-orange-300 hover:bg-white/5 transition disabled:opacity-50"
                     >
                       {estEnCours ? "..." : "🚫 Annuler l'envoi"}
                     </button>
@@ -605,7 +608,7 @@ function MessageCard({
                         onReactiver(m.id);
                       }}
                       disabled={estReactivationEnCours}
-                      className="w-full text-left text-sm px-4 py-2.5 text-green-300 hover:bg-white/5 transition disabled:opacity-50"
+                      className="w-full text-left text-xs sm:text-sm px-3 sm:px-4 py-2.5 text-green-300 hover:bg-white/5 transition disabled:opacity-50"
                     >
                       {estReactivationEnCours ? "..." : "♻️ Réactiver"}
                     </button>
@@ -618,7 +621,7 @@ function MessageCard({
                       onSupprimer(m.id);
                     }}
                     disabled={estSuppressionEnCours}
-                    className="w-full text-left text-sm px-4 py-2.5 text-red-300 hover:bg-red-500/10 transition disabled:opacity-50 border-t border-white/10"
+                    className="w-full text-left text-xs sm:text-sm px-3 sm:px-4 py-2.5 text-red-300 hover:bg-red-500/10 transition disabled:opacity-50 border-t border-white/10"
                   >
                     {estSuppressionEnCours ? "..." : "🗑️ Supprimer"}
                   </button>
@@ -629,47 +632,47 @@ function MessageCard({
         </div>
       </div>
 
-      {/* Message de confirmation de copie (PC) */}
       {partageMsg && (
         <p className="text-xs text-green-300 mt-2 text-right">{partageMsg}</p>
       )}
 
       {expanded && (
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           {enEdition ? (
-            <div className="flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex flex-col gap-2 sm:gap-3" onClick={(e) => e.stopPropagation()}>
               <textarea
                 value={texteEdite}
                 onChange={(e) => setTexteEdite(e.target.value)}
                 rows={6}
-                className="w-full bg-white/5 rounded-xl p-4 text-sm text-white/90 border border-[#C8A84E]/30 focus:outline-none focus:border-[#C8A84E] resize-y"
+                className="w-full bg-white/5 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-white/90 border border-[#C8A84E]/30 focus:outline-none focus:border-[#C8A84E] resize-y"
                 placeholder="Écris ton message ici..."
               />
               <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={sauvegarder}
                   disabled={estSauvegardeEnCours || !texteEdite.trim()}
-                  className="text-sm bg-[#C8A84E] text-[#0B1120] font-bold px-4 py-2 rounded-lg hover:bg-[#D4B85C] transition disabled:opacity-50"
+                  className="text-xs sm:text-sm bg-[#C8A84E] text-[#0B1120] font-bold px-3 sm:px-4 py-2 rounded-lg hover:bg-[#D4B85C] transition disabled:opacity-50"
                 >
                   {estSauvegardeEnCours ? "Enregistrement..." : "💾 Enregistrer"}
                 </button>
                 <button
                   onClick={annulerEdition}
                   disabled={estSauvegardeEnCours}
-                  className="text-sm border border-white/20 px-4 py-2 rounded-lg text-white/60 hover:bg-white/5 transition disabled:opacity-50"
+                  className="text-xs sm:text-sm border border-white/20 px-3 sm:px-4 py-2 rounded-lg text-white/60 hover:bg-white/5 transition disabled:opacity-50"
                 >
                   Annuler
                 </button>
               </div>
             </div>
-                    ) : (
+          ) : (
+            // 🔧 MOBILE FIX : break-words + overflow-hidden sur le message = PLUS D'ÉTIREMENT
             <div
               onClick={handleCopierTexte}
               title="Cliquer pour copier le message"
-              className="group cursor-pointer bg-white/5 rounded-xl p-4 text-sm text-white/70 whitespace-pre-wrap border border-white/10 hover:border-[#C8A84E]/30 hover:bg-white/10 transition relative"
+              className="group cursor-pointer bg-white/5 rounded-xl p-3 sm:p-4 text-xs sm:text-sm text-white/70 whitespace-pre-wrap break-words overflow-hidden border border-white/10 hover:border-[#C8A84E]/30 hover:bg-white/10 transition relative"
             >
               {m.message}
-              <span className="block mt-3 text-[11px] text-white/30 group-hover:text-[#C8A84E]/60 transition">
+              <span className="block mt-3 text-[10px] sm:text-[11px] text-white/30 group-hover:text-[#C8A84E]/60 transition">
                 📋 Cliquer pour copier
               </span>
             </div>

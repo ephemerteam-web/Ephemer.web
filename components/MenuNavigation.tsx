@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 
 type MenuNavigationProps = {
@@ -49,6 +49,10 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
   const router = useRouter()
   const pathname = usePathname()
 
+  // États pour le swipe tactile
+  const [translateX, setTranslateX] = useState(0)
+  const startX = useRef<number | null>(null)
+
   // Bloque le scroll de la page quand le menu est ouvert
   useEffect(() => {
     document.body.style.overflow = ouvert ? 'hidden' : ''
@@ -60,6 +64,36 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
   const naviguerVers = (chemin: string) => {
     onFermer()
     router.push(chemin)
+  }
+
+  // =========================
+  // 👇 GESTION DU SWIPE
+  // =========================
+  const handleTouchStart = (e: React.TouchEvent) => {
+    // On enregistre la position X du doigt au début du touch
+    startX.current = e.touches[0].clientX
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (startX.current === null) return
+
+    const currentX = e.touches[0].clientX
+    const diff = currentX - startX.current
+
+    // Swipe vers la GAUCHE uniquement (diff négatif) pour fermer le menu qui vient de la gauche
+    if (diff < 0) {
+      setTranslateX(diff)
+    }
+  }
+
+  const handleTouchEnd = () => {
+    // Si on a glissé de plus de 100px vers la gauche, on ferme
+    if (translateX < -100) {
+      onFermer()
+    }
+    // Sinon, on remet à zéro (le menu revient à sa place)
+    setTranslateX(0)
+    startX.current = null
   }
 
   // On aplatit tous les liens pour calculer le délai d'animation en cascade
@@ -77,8 +111,22 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
 
       {/* ═══════════ DRAWER (glisse depuis la gauche) ═══════════ */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-full sm:w-72 bg-[#0B1120] border-r border-[#C8A84E]/20 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
-          ouvert ? 'translate-x-0' : '-translate-x-full'
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        style={{
+          // Si translateX n'est pas 0, on l'applique (pendant le swipe)
+          // Sinon, on utilise la classe CSS normale (ouvert/fermé)
+          transform: translateX !== 0 
+            ? `translateX(${translateX}px)` 
+            : undefined,
+          // Pendant le swipe, pas de transition (pour suivre le doigt)
+          // Quand on relâche, on active la transition pour l'effet de rebond
+          transition: translateX !== 0 ? 'none' : 'transform 0.3s ease-out',
+        }}
+        className={`fixed top-0 left-0 z-50 h-full w-full sm:w-72 bg-[#0B1120] border-r border-[#C8A84E]/20 shadow-2xl flex flex-col ${
+          // Si on ne swype pas, on utilise les classes Tailwind normales
+          translateX === 0 && (ouvert ? 'translate-x-0' : '-translate-x-full')
         }`}
       >
         {/* Décor : étoiles discrètes en fond du menu */}

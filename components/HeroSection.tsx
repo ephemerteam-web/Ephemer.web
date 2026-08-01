@@ -133,20 +133,45 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
             <InstallPWAButton />
           </div>
 
-          <p className="text-white/15 text-xs tracking-wider uppercase">
-            © 2026 Ephemer.name — Votre compagnon nocturne
-          </p>
+          {/* ============ FOOTER (AMÉLIORÉ) ============ */}
+          <div className="space-y-4">
+            <p className="text-white/15 text-xs tracking-wider uppercase">
+              © 2026 Ephemer.name — Votre compagnon nocturne
+            </p>
 
-          <div className="flex justify-center gap-6 flex-wrap text-xs">
-            <Link href="/confidentialite" className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200">
-              🔒 Confidentialité
-            </Link>
-            <a
-              href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-              className="text-white/30 hover:text-[#C8A84E] transition-colors duration-200"
-            >
-              💬 Support
-            </a>
+            {/* Boutons d'action du dashboard */}
+            <div className="flex justify-center gap-2 flex-wrap max-w-2xl mx-auto">
+              <a
+                href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+              >
+                💬 Support
+              </a>
+              <Link
+                href="/guide-notifications"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+              >
+                🔔 Tuto Notifications
+              </Link>
+              <Link
+                href="/confidentialite"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+              >
+                🔒 Confidentialité
+              </Link>
+              <Link
+                href="/conditions"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+              >
+                📄 Conditions
+              </Link>
+              <Link
+                href="/patchnote"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+              >
+                📜 Quoi de neuf ?
+              </Link>
+            </div>
           </div>
         </div>
       </div>
