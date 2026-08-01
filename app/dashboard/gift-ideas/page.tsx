@@ -293,10 +293,23 @@ function GiftIdeasForm() {
           )
         : null;
 
-      const res = await fetch("/api/generate-gift-ideas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      // 👇 Récupérer le token de session AVANT l'appel
+const { data: { session } } = await supabase.auth.getSession();
+
+if (!session) {
+  setError("Ta session a expiré. Reconnecte-toi pour continuer.");
+  setLoading(false);
+  return;
+}
+
+const res = await fetch("/api/generate-gift-ideas", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${session.access_token}`, // 👈 AJOUT CRITIQUE
+  },
+  credentials: "include",
+  body: JSON.stringify({
           firstName: selectedContact.prenom,
           lastName: selectedContact.nom,
           dateNaissance: selectedContact.date_naissance,

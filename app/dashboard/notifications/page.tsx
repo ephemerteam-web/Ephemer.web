@@ -95,6 +95,9 @@ export default function CentreNotifications() {
   const [chargement, setChargement] = useState(true)
   const [sauvegardePrefs, setSauvegardePrefs] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  
+  // ✅ CORRECTION : Le useState est ici, au même niveau que les autres
+  const [modaleSuppression, setModaleSuppression] = useState(false)
 
   // Onglet actif : "liste" ou "parametres"
   const [onglet, setOnglet] = useState<'liste' | 'parametres'>('liste')
@@ -170,6 +173,21 @@ export default function CentreNotifications() {
   async function supprimer(id: string) {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
     await supabase.from('notifications').delete().eq('id', id)
+  }
+
+  // Supprimer TOUTES les notifications
+  async function toutSupprimer() {
+    if (!userId) return
+
+    // Mise à jour visuelle immédiate
+    setNotifications([])
+    setModaleSuppression(false)
+
+    // Suppression en base
+    await supabase
+      .from('notifications')
+      .delete()
+      .eq('user_id', userId)
   }
 
   // ─── Sauvegarde des préférences ─────────────────────────────────────────────
@@ -262,14 +280,22 @@ export default function CentreNotifications() {
             {/* ================= ONGLET LISTE ================= */}
             {onglet === 'liste' && (
               <div>
-                {/* Bouton "tout marquer lu" */}
-                {nonLues > 0 && (
-                  <div className="flex justify-end mb-3">
+                {/* Boutons d'actions groupés */}
+                {notifications.length > 0 && (
+                  <div className="flex justify-end gap-4 mb-3">
+                    {nonLues > 0 && (
+                      <button
+                        onClick={toutMarquerLu}
+                        className="text-xs text-indigo-300 hover:text-indigo-200 font-semibold transition"
+                      >
+                        ✓ Tout marquer comme lu
+                      </button>
+                    )}
                     <button
-                      onClick={toutMarquerLu}
-                      className="text-xs text-indigo-300 hover:text-indigo-200 font-semibold transition"
+                      onClick={() => setModaleSuppression(true)}
+                      className="text-xs text-rose-400/70 hover:text-rose-400 font-semibold transition"
                     >
-                      ✓ Tout marquer comme lu
+                      🗑 Tout supprimer
                     </button>
                   </div>
                 )}
@@ -315,11 +341,11 @@ export default function CentreNotifications() {
                           </div>
 
                           {/* Actions */}
-                          <div className="flex flex-col gap-1.5 flex-shrink-0">
+                          <div className="flex flex-col gap-2 flex-shrink-0">
                             {!notif.lue && (
                               <button
                                 onClick={() => marquerLue(notif.id)}
-                                className="text-xs text-indigo-300 hover:text-indigo-200 font-semibold whitespace-nowrap"
+                                className="px-3 py-1.5 text-sm text-indigo-300 hover:text-indigo-200 font-semibold whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition"
                                 title="Marquer comme lu"
                               >
                                 ✓ Lu
@@ -327,10 +353,23 @@ export default function CentreNotifications() {
                             )}
                             <button
                               onClick={() => supprimer(notif.id)}
-                              className="text-xs text-rose-400/70 hover:text-rose-400 font-semibold"
+                              className="p-2 text-rose-400/70 hover:text-rose-400 hover:bg-rose-500/10 rounded-lg transition"
                               title="Supprimer"
                             >
-                              🗑
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                className="h-5 w-5"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                />
+                              </svg>
                             </button>
                           </div>
                         </div>
@@ -420,6 +459,40 @@ export default function CentreNotifications() {
               </div>
             )}
           </>
+        )}
+
+        {/* ===== MODALE DE CONFIRMATION ===== */}
+        {modaleSuppression && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-[#1e1b4b] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+              <div className="text-center">
+                <span className="text-5xl">⚠️</span>
+                <h3 className="text-white font-bold text-xl mt-4">
+                  Supprimer toutes les notifications ?
+                </h3>
+                <p className="text-white/60 text-sm mt-2">
+                  Cette action est <strong className="text-rose-400">irréversible</strong>.
+                  <br />
+                  Tu as actuellement <strong className="text-white">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.
+                </p>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => setModaleSuppression(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={toutSupprimer}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition"
+                >
+                  Oui, tout supprimer
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
