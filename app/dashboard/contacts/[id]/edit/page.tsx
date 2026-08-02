@@ -86,10 +86,11 @@ export default function ModifierContact() {
 
     if (error) {
       setErreur('Erreur lors de la sauvegarde. Réessaie !')
-      console.log(error)
+      console.error('Erreur sauvegarde contact:', error)
     } else {
+      // Ne pas faire router.refresh() ici car cela cause des appels RPC inutiles
+      // La page contacts se rechargera naturellement avec les données fraîches
       router.push('/dashboard/contacts')
-      router.refresh()
     }
 
     setSaving(false)

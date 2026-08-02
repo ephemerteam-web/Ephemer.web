@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation'
 // ── Types (définitions de la forme de nos données) ────────────────
 type NotificationInsert = {
   user_id: string
-  contact_id: number
+  contact_id: string
   type: string
   message: string
   event_date: string
@@ -24,7 +24,7 @@ type Notification = {
   message: string
   lue: boolean
   created_at: string
-  contact_id: number
+  contact_id: string
   jours_restants?: number | null  // ✅ NOUVEAU : pour le code couleur
 }
 
@@ -125,7 +125,7 @@ export default function NotificationBell() {
 
         notificationsToInsert.push({
           user_id: userId,
-          contact_id: Number(ev.contactId),
+          contact_id: ev.contactId.toString(),
           type: ev.type,
           message: `${emoji} C'est ${quoi} de ${nomComplet} ${quand} !${urgence}`,
           event_date: eventDateStr,
@@ -266,23 +266,21 @@ export default function NotificationBell() {
     marquerLue(notif.id)
     setOuvert(false)
 
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    
     const { data: contact } = await supabase
       .from('contacts')
       .select('*')
       .eq('id', notif.contact_id)
+      .eq('user_id', session.user.id)
       .single()
+    
     if (!contact) return
-
-    const { data: { session } } = await supabase.auth.getSession()
-    let estLie = false
-    if (session && contact.email) {
-      const { data: resultat } = await supabase.rpc('est_contact_lie', {
-        mon_user_id: session.user.id,
-        email_du_contact: contact.email,
-      })
-      estLie = resultat === true
-    }
-    ouvrirDrawer({ ...contact, estLie })
+    
+    // Pour l'instant, on désactive la vérification des contacts liés
+    // car la RPC est_contact_lie n'est pas disponible
+    ouvrirDrawer({ ...contact, estLie: false })
   }
 
   // ── Calcul du nombre de notifications non lues ──────────────────

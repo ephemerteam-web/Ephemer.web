@@ -69,32 +69,13 @@ export default function ContactsPage() {
       if (data) {
         const liste = data as Contact[]
 
-        const avecLiens = await Promise.all(
-          liste.map(async (contact) => {
-            if (!contact.email) {
-              return { ...contact, estLie: false }
-            }
-
-            const { data: resultat, error: lienError } = await supabase.rpc(
-              'est_contact_lie',
-              {
-                mon_user_id: session.user.id,
-                email_du_contact: contact.email,
-              }
-            )
-
-            if (lienError) {
-              console.warn(
-                'Impossible de vérifier si le contact est lié :',
-                lienError
-              )
-
-              return { ...contact, estLie: false }
-            }
-
-            return { ...contact, estLie: resultat === true }
-          })
-        )
+        // Pour l'instant, on désactive la vérification des contacts liés
+        // car la RPC est_contact_lie n'est pas disponible
+        // Tous les contacts sont marqués comme non liés
+        const avecLiens = liste.map(contact => ({
+          ...contact,
+          estLie: false
+        }))
 
         setContacts(avecLiens)
       }

@@ -184,14 +184,14 @@ export function calculerDatesJ7J1JourJ(dateEvenement: Date): {
 // ============================================
 
 export type ContactMinimal = {
-  id: number
+  id: string
   prenom: string | null
   nom?: string | null
   date_naissance?: string | null
 }
 
 export type EvenementAVenir = {
-  contactId: number
+  contactId: string
   prenom: string
   nom: string
   type: 'anniversaire' | 'fete_prenomale'

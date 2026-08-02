@@ -12,4 +12,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('⚠️ Variables Supabase manquantes dans .env.local')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Configuration pour éviter les warnings EventEmitter
+// Augmente la limite de listeners pour Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+})
