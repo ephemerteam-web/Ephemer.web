@@ -12,4 +12,13 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('⚠️ Variables Supabase manquantes dans .env.local')
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// ⬇ Configuration pour persister la session dans localStorage (et non sessionStorage)
+// Cela permet de garder l'utilisateur connecté même après fermeture/réouverture du navigateur
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})
