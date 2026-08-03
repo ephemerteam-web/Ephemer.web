@@ -41,6 +41,7 @@ const GROUPES: Groupe[] = [
     titre: 'Mes données',
     pages: [
       { label: 'Contacts', chemin: '/dashboard/contacts', icone: '👥' },
+      { label: 'Inviter des contacts', chemin: '/dashboard/inviter', icone: '📩' }
     ],
   },
 ]
