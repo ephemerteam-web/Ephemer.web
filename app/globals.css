@@ -1,15 +1,43 @@
 @import "tailwindcss";
 
+/* Variables CSS pour le thème clair */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --primary: #C8A84E;
+  --primary-foreground: #0B1120;
+  --secondary: #f4f4f5;
+  --secondary-foreground: #171717;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --accent: #C8A84E;
+  --accent-foreground: #0B1120;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #e4e4e7;
+  --ring: #C8A84E;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* Variables CSS pour le thème sombre */
+.dark {
+  --background: #0B1120;
+  --foreground: #ededed;
+  --card: #152038;
+  --card-foreground: #ededed;
+  --primary: #C8A84E;
+  --primary-foreground: #0B1120;
+  --secondary: #1B2A4A;
+  --secondary-foreground: #ededed;
+  --muted: #1B2A4A;
+  --muted-foreground: #a1a1aa;
+  --accent: #C8A84E;
+  --accent-foreground: #0B1120;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #27272a;
+  --ring: #C8A84E;
 }
 
 body {
