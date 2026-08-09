@@ -39,9 +39,10 @@ export type Notification = {
   type: string
   message: string
   lue: boolean
-  event_date: string
+  event_date: string | null           // 👈 MODIFIÉ : peut être null (invitations)
   created_at: string
   event_description: string | null
+  jours_restants: number | null       // 👈 NOUVEAU
 }
 
 // 📬 Table "rappels"
