@@ -109,89 +109,120 @@ export default function ModifierContact() {
     }
   }
 
-  if (chargement) {
-    return <p className="p-8 text-center text-white/50">Chargement...</p>
+    if (chargement) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh] px-4">
+        <p className="text-center text-white/50 text-sm">Chargement...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="p-6 md:p-8">
-      <div className="max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 md:p-8 overflow-x-hidden">
+      <div className="max-w-2xl mx-auto w-full min-w-0">
 
-        <h1 className="text-2xl font-bold text-white mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-white mb-5 sm:mb-6">
           ✏️ Modifier le contact
         </h1>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Prénom *</label>
+          {/* Prénom */}
+          <div className="min-w-0">
+            <label htmlFor="prenom" className="block text-sm font-semibold text-white/70">
+              Prénom *
+            </label>
             <input
+              id="prenom"
               type="text"
               value={prenom}
               onChange={(e) => setPrenom(e.target.value)}
               required
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+              autoComplete="given-name"
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
             />
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Nom</label>
+          {/* Nom */}
+          <div className="min-w-0">
+            <label htmlFor="nom" className="block text-sm font-semibold text-white/70">
+              Nom
+            </label>
             <input
+              id="nom"
               type="text"
               value={nom}
               onChange={(e) => setNom(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+              autoComplete="family-name"
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
             />
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Date de naissance</label>
+          {/* Date de naissance */}
+          <div className="min-w-0">
+            <label htmlFor="dateNaissance" className="block text-sm font-semibold text-white/70">
+              Date de naissance
+            </label>
             <input
+              id="dateNaissance"
               type="date"
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
             />
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Type de relation</label>
+          {/* Relation */}
+          <div className="min-w-0">
+            <label htmlFor="relation" className="block text-sm font-semibold text-white/70">
+              Type de relation
+            </label>
             <select
-  value={relation}
-  onChange={(e) => setRelation(e.target.value)}
-  className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
->
-  {TYPES_RELATION.map((typeRelation) => (
-    <option
-      key={typeRelation.value}
-      value={typeRelation.value}
-      className="bg-[#0B1120]"
-    >
-      {typeRelation.emoji} {typeRelation.label}
-    </option>
-  ))}
-</select>
-
+              id="relation"
+              value={relation}
+              onChange={(e) => setRelation(e.target.value)}
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+            >
+              {TYPES_RELATION.map((typeRelation) => (
+                <option
+                  key={typeRelation.value}
+                  value={typeRelation.value}
+                  className="bg-[#0B1120]"
+                >
+                  {typeRelation.emoji} {typeRelation.label}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Email</label>
+          {/* Email */}
+          <div className="min-w-0">
+            <label htmlFor="email" className="block text-sm font-semibold text-white/70">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={MESSAGES_UI.placeholder_email}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+              autoComplete="email"
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 placeholder:text-white/30"
             />
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">Téléphone</label>
-            <div className="mt-1 flex gap-2">
+          {/* Téléphone — le point le plus sensible sur mobile */}
+          <div className="min-w-0">
+            <label className="block text-sm font-semibold text-white/70">
+              Téléphone
+            </label>
+            {/* Sur très petit écran : colonne ; à partir de sm : ligne */}
+            <div className="mt-1.5 flex flex-col sm:flex-row gap-2 min-w-0">
               <select
                 value={telephoneIndicatif}
                 onChange={(e) => setTelephoneIndicatif(e.target.value)}
-                className="bg-white/5 border border-white/10 text-white rounded-xl px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+                aria-label="Indicatif pays"
+                className="w-full sm:w-auto sm:max-w-[9.5rem] shrink-0 bg-white/5 border border-white/10 text-white rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
               >
                 {INDICATIFS_PAYS.map((i) => (
                   <option key={i.code} value={i.code} className="bg-[#0B1120]">
@@ -201,83 +232,113 @@ export default function ModifierContact() {
               </select>
               <input
                 type="tel"
+                inputMode="numeric"
                 value={telephoneNumero}
                 onChange={(e) => setTelephoneNumero(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder={MESSAGES_UI.placeholder_telephone}
-                className="flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+                autoComplete="tel-national"
+                className="w-full min-w-0 flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 placeholder:text-white/30"
               />
             </div>
-            <p className="text-xs text-white/40 mt-1">
-             {MESSAGES_UI.info_telephone}
+            <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
+              {MESSAGES_UI.info_telephone}
             </p>
           </div>
 
-          <div>
-            <label className="text-sm font-semibold text-white/70">
+          {/* Note */}
+          <div className="min-w-0">
+            <label htmlFor="note" className="block text-sm font-semibold text-white/70">
               Note / À propos de ce contact
             </label>
             <textarea
+              id="note"
               value={note}
               onChange={(e) => setNote(e.target.value)}
               placeholder={MESSAGES_UI.placeholder_note}
               rows={4}
-              className="mt-1 w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 resize-none"
+              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 resize-none placeholder:text-white/30"
             />
-            <p className="text-xs text-white/40 mt-1">
+            <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
               💡 Plus tu en mets, plus les suggestions de cadeaux seront pertinentes.
             </p>
           </div>
 
+          {/* Favori (toggle) */}
           <div
+            role="button"
+            tabIndex={0}
             onClick={() => setEstFavori(!estFavori)}
-            className={`flex items-center justify-between p-4 rounded-xl border cursor-pointer transition ${
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                setEstFavori(!estFavori)
+              }
+            }}
+            className={`flex items-center justify-between gap-3 p-4 rounded-xl border cursor-pointer transition select-none ${
               estFavori
                 ? 'border-[#C8A84E] bg-[#C8A84E]/10'
                 : 'border-white/10 bg-white/5 hover:border-white/20'
             }`}
           >
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-white">⭐ Contact favori</p>
               <p className="text-xs text-white/40 mt-0.5">Apparaîtra en priorité</p>
             </div>
-            <div className={`w-11 h-6 rounded-full transition-colors ${estFavori ? 'bg-[#C8A84E]' : 'bg-gray-500'}`}>
-              <div className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${estFavori ? 'translate-x-5' : 'translate-x-0.5'}`} />
+            <div
+              className={`shrink-0 w-11 h-6 rounded-full transition-colors ${
+                estFavori ? 'bg-[#C8A84E]' : 'bg-gray-500'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full shadow mt-0.5 transition-transform ${
+                  estFavori ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
             </div>
           </div>
 
-          {erreur && <p className="text-red-400 text-sm">{erreur || MESSAGES_UI.erreur_genérique}</p>}
+          {erreur && (
+            <p className="text-red-400 text-sm break-words">
+              {erreur || MESSAGES_UI.erreur_genérique}
+            </p>
+          )}
 
           <button
             type="submit"
             disabled={saving}
-            className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
-
         </form>
 
+        {/* Suppression */}
         <div className="mt-6 border-t border-white/10 pt-4">
           {!confirmSupprimer ? (
             <button
+              type="button"
               onClick={() => setConfirmSupprimer(true)}
-              className="w-full py-2 rounded-xl text-sm text-red-400 border border-red-500/20 hover:bg-red-500/10 transition"
+              className="w-full py-3 rounded-xl text-sm text-red-400 border border-red-500/20 hover:bg-red-500/10 transition active:scale-[0.98]"
             >
               🗑️ Supprimer ce contact
             </button>
           ) : (
-            <div className="bg-red-500/10 rounded-xl p-4 flex flex-col gap-2">
-              <p className="text-sm text-red-300 font-medium">⚠️ Action irréversible. Confirmer ?</p>
-              <div className="flex gap-2">
+            <div className="bg-red-500/10 rounded-xl p-4 flex flex-col gap-3">
+              <p className="text-sm text-red-300 font-medium leading-relaxed">
+                ⚠️ Action irréversible. Confirmer ?
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
+                  type="button"
                   onClick={handleSupprimer}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition"
+                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition active:scale-[0.98]"
                 >
                   Oui, supprimer
                 </button>
                 <button
+                  type="button"
                   onClick={() => setConfirmSupprimer(false)}
-                  className="flex-1 py-2 rounded-xl text-sm font-medium border border-white/10 text-white/50 hover:text-white transition"
+                  className="flex-1 py-3 rounded-xl text-sm font-medium border border-white/10 text-white/70 hover:text-white transition active:scale-[0.98]"
                 >
                   Annuler
                 </button>

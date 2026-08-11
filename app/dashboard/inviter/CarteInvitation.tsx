@@ -88,10 +88,10 @@ export default function CarteInvitation({
         </div>
       </div>
 
-      {/* ─────── LIGNE 2 : l'URL ─────── */}
+      {/* ─────── LIGNE 2 : l'URL (version raccourcie si trop longue) ─────── */}
       <div className="bg-[#0B1120]/60 border border-white/10 rounded-lg px-3 py-2.5 mb-3">
         <p className="text-[#C8A84E]/90 text-xs font-mono truncate select-all">
-          {url}
+          {url.length > 40 ? `${url.substring(0, 37)}...` : url}
         </p>
       </div>
 
@@ -103,12 +103,12 @@ export default function CarteInvitation({
         />
       </div>
 
-      {/* ─────── LIGNE 4 : boutons ─────── */}
+      {/* ─────── LIGNE 4 : boutons (taille uniformisée) ─────── */}
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => onCopier(invitation)}
           disabled={inactif}
-          className="flex-1 min-w-[100px] text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[80px] text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {copie ? '✓ Copié !' : '📋 Copier'}
         </button>
@@ -116,7 +116,7 @@ export default function CarteInvitation({
         <button
           onClick={() => onPartager(invitation)}
           disabled={inactif}
-          className="flex-1 min-w-[100px] text-xs font-medium text-green-300 hover:text-white border border-green-500/30 hover:bg-green-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[80px] text-xs font-medium text-green-300 hover:text-white border border-green-500/30 hover:bg-green-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           💬 Partager
         </button>
@@ -124,7 +124,7 @@ export default function CarteInvitation({
         <button
           onClick={() => setShowQR(!showQR)}
           disabled={inactif}
-          className="text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-4 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[80px] text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {showQR ? '✕' : '🔲 QR'}
         </button>
@@ -136,26 +136,24 @@ export default function CarteInvitation({
                 onDesactiver(invitation.id)
               }
             }}
-            className="text-xs font-medium text-red-300 hover:text-white border border-red-500/30 hover:bg-red-500/10 px-4 py-2.5 rounded-lg transition active:scale-95"
+            className="flex-1 min-w-[80px] text-xs font-medium text-red-300 hover:text-white border border-red-500/30 hover:bg-red-500/10 px-3 py-2.5 rounded-lg transition active:scale-95"
           >
             🚫
           </button>
         )}
       </div>
 
-      {/* ─────── QR CODE dépliable ─────── */}
+      {/* ─────── QR CODE dépliable (taille adaptée pour mobile) ─────── */}
       {showQR && (
         <div className="mt-4 pt-4 border-t border-white/10 flex flex-col items-center">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={qrUrl}
             alt="QR code du lien d'invitation"
-            className="rounded-xl border border-[#C8A84E]/30"
-            width={220}
-            height={220}
+            className="rounded-xl border border-[#C8A84E]/30 w-48 h-48 max-w-full"
           />
           <p className="text-indigo-300/70 text-xs mt-3 text-center">
-            Fais scanner ce code par tes proches 📱
+            Scanne ce code 📱
           </p>
         </div>
       )}

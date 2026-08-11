@@ -5,20 +5,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
-import { evenementsAVenir, formatDateLocale } from '@/lib/date-utils'
 import { useRouter } from 'next/navigation'
 
 // ── Types (définitions de la forme de nos données) ────────────────
-type NotificationInsert = {
-  user_id: string
-  contact_id: string
-  type: string
-  message: string
-  event_date: string
-  jours_restants: number  // palier (7, 3, 1, 0)
-  lue?: boolean
-}
-
 type Notification = {
   id: string
   message: string
@@ -26,7 +15,7 @@ type Notification = {
   created_at: string
   contact_id: string
   jours_restants?: number | null
-  type?: string | null            // 👈 NOUVEAU : pour distinguer les invitations
+  type?: string | null            // 👈 pour distinguer les invitations
 }
 
 // ── Composant principal ───────────────────────────────────────────
@@ -41,7 +30,7 @@ export default function NotificationBell() {
 
   // ── Fonction utilitaire : couleur selon l'urgence ───────────────
   const getCouleurUrgence = (notif: Notification) => {
-    // 👈 NOUVEAU : les invitations ont leur propre couleur (vert émeraude)
+    // 👈 les invitations ont leur propre couleur (vert émeraude)
     if (notif.type === 'invitation_remplie') return 'border-l-emerald-500'
 
     const jours = notif.jours_restants
@@ -52,106 +41,7 @@ export default function NotificationBell() {
     return 'border-l-blue-500'                      // J-4 à J-7 = bleu 🔵
   }
 
-  // ── 1) Génération des notifications (paliers J-7, J-3, J-1, J) ──
-  const genererNotifications = useCallback(async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user?.id) return
-      const userId = session.user.id
-
-      // Récupérer les contacts
-      const { data: contacts, error: contactsError } = await supabase
-        .from('contacts')
-        .select('id, prenom, nom, date_naissance')
-        .eq('user_id', userId)
-
-      if (contactsError) {
-        console.error('Erreur chargement contacts:', contactsError.message)
-        return
-      }
-      if (!contacts || contacts.length === 0) return
-
-      // 🎯 Événements des 7 prochains jours
-      const events = evenementsAVenir(contacts, 7)
-      if (events.length === 0) return
-
-      // Notifs déjà existantes → anti-doublon
-      const { data: existingNotifications, error: notifError } = await supabase
-        .from('notifications')
-        .select('contact_id, type, event_date, jours_restants')
-        .eq('user_id', userId)
-
-      if (notifError) {
-        console.error('Erreur chargement notifications:', notifError.message)
-        return
-      }
-
-      // Clé = contactId-type-date-jours_restants (évite les doublons par palier)
-      const existingSet = new Set(
-        existingNotifications?.map(n =>
-          `${n.contact_id}-${n.type}-${n.event_date}-${n.jours_restants}`
-        ) || []
-      )
-
-      // Paliers de notification : on ne crée une notif qu'à ces moments précis
-      const PALIERS = [7, 3, 1, 0] // J-7, J-3, J-1, Jour J
-
-      const notificationsToInsert: NotificationInsert[] = []
-
-      for (const ev of events) {
-        const eventDateStr = formatDateLocale(ev.date)
-
-        // Ne créer une notif que si on est exactement à un palier
-        if (!PALIERS.includes(ev.jours)) continue
-
-        const cle = `${ev.contactId}-${ev.type}-${eventDateStr}-${ev.jours}`
-        if (existingSet.has(cle)) continue
-
-        const nomComplet = `${ev.prenom} ${ev.nom || ''}`.trim()
-        const estAnniv = ev.type === 'anniversaire'
-        const emoji = estAnniv ? '🎂' : '🙏'
-        const quoi = estAnniv ? "l'anniversaire" : 'la fête'
-
-        let quand: string
-        let urgence: string = ''
-
-        if (ev.jours === 0) {
-          quand = "aujourd'hui"
-          urgence = ' 🎉'
-        } else if (ev.jours === 1) {
-          quand = 'demain'
-          urgence = ' ⏰'
-        } else {
-          quand = `dans ${ev.jours} jours`
-          urgence = ev.jours <= 3 ? ' ⏳' : ''
-        }
-
-        notificationsToInsert.push({
-          user_id: userId,
-          contact_id: ev.contactId.toString(),
-          type: ev.type,
-          message: `${emoji} C'est ${quoi} de ${nomComplet} ${quand} !${urgence}`,
-          event_date: eventDateStr,
-          jours_restants: ev.jours,
-          lue: false,
-        })
-      }
-
-      if (notificationsToInsert.length > 0) {
-        const { error: insertError } = await supabase
-          .from('notifications')
-          .insert(notificationsToInsert)
-        if (insertError) {
-          console.error('Erreur insertion notifications:', insertError.message)
-        }
-      }
-    } catch (err) {
-      console.error('Erreur inattendue dans genererNotifications:', err)
-      setError('Impossible de générer les notifications')
-    }
-  }, [])
-
-  // ── 2) Charger les notifications déjà existantes ────────────────
+  // ── Charger les notifications déjà existantes ────────────────
   const chargerNotifications = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -159,7 +49,6 @@ export default function NotificationBell() {
 
       const { data, error: fetchError } = await supabase
         .from('notifications')
-        // 👈 NOUVEAU : on récupère aussi "type"
         .select('id, message, lue, created_at, contact_id, jours_restants, type')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
@@ -179,7 +68,7 @@ export default function NotificationBell() {
     setLoading(false)
   }, [])
 
-  // ── 3) Tout marquer comme lu ────────────────────────────────────
+  // ── Tout marquer comme lu ────────────────────────────────────
   const marquerToutCommeLu = useCallback(async () => {
     try {
       const nonLuesIds = notifications.filter(n => !n.lue).map(n => n.id)
@@ -197,7 +86,7 @@ export default function NotificationBell() {
     }
   }, [notifications])
 
-  // ── 4) Realtime : écouter les nouvelles notifs en direct ⚡ ──────
+  // ── Realtime : écouter les nouvelles notifs en direct ⚡ ──────
   useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
 
@@ -234,18 +123,12 @@ export default function NotificationBell() {
     }
   }, [])
 
-  // ── Initialisation au chargement ────────────────────────────────
+  // ── Initialisation au chargement ────────────────────────────
   useEffect(() => {
-    const init = async () => {
-      setLoading(true)
-      setError(null)
-      await genererNotifications()
-      await chargerNotifications()
-    }
-    init()
-  }, [genererNotifications, chargerNotifications])
+    chargerNotifications()
+  }, [chargerNotifications])
 
-  // ── Fermeture avec Échap (accessibilité) ────────────────────────
+  // ── Fermeture avec Échap (accessibilité) ────────────────────
   useEffect(() => {
     if (!ouvert) return
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -255,7 +138,7 @@ export default function NotificationBell() {
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [ouvert])
 
-  // ── Marquer une notification comme lue ──────────────────────────
+  // ── Marquer une notification comme lue ──────────────────────
   async function marquerLue(id: string) {
     try {
       await supabase.from('notifications').update({ lue: true }).eq('id', id)
@@ -265,7 +148,7 @@ export default function NotificationBell() {
     }
   }
 
-  // ── Clic sur une notification ───────────────────────────────────
+  // ── Clic sur une notification ───────────────────────────────
   async function handleNotificationClick(notif: Notification) {
     marquerLue(notif.id)
     setOuvert(false)
@@ -282,16 +165,16 @@ export default function NotificationBell() {
 
     if (!contact) return
 
-    // 👈 NOUVEAU : un contact venu d'une invitation est un contact "lié"
+    // 👈 un contact venu d'une invitation est un contact "lié"
     const estLie = notif.type === 'invitation_remplie'
 
     ouvrirDrawer({ ...contact, estLie })
   }
 
-  // ── Calcul du nombre de notifications non lues ──────────────────
+  // ── Calcul du nombre de notifications non lues ──────────────
   const nbNonLues = notifications.filter(n => !n.lue).length
 
-  // ── Rendu visuel ────────────────────────────────────────────────
+  // ── Rendu visuel ────────────────────────────────────────────
   return (
     <div className="relative">
       {/* ── Bouton cloche ── */}
@@ -380,7 +263,6 @@ export default function NotificationBell() {
                     className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${
                       notif.lue
                         ? 'opacity-70'
-                        // 👈 NOUVEAU : fond vert pour les invitations, violet pour le reste
                         : `${notif.type === 'invitation_remplie' ? 'bg-emerald-900/15' : 'bg-purple-900/10'} border-l-4 ${getCouleurUrgence(notif)}`
                     }`}
                     role="button"
