@@ -22,19 +22,20 @@ const GROUPES: Groupe[] = [
     ],
   },
   {
-    titre: 'Éphéméride',
-    pages: [
-      { label: 'Anniversaires', chemin: '/dashboard/anniversaires', icone: '🎂' },
-      { label: 'Calendrier', chemin: '/dashboard/calendrier', icone: '📅' },
-      { label: 'Calendrier des Saints', chemin: '/dashboard/calendrier_saints', icone: '✝️' },
-    ],
-  },
+  titre: 'Éphéméride',
+  pages: [
+    { label: 'Ce mois-ci', chemin: '/dashboard/ce-mois-ci', icone: '📆' }, // 🆕 Ajouté ici
+    { label: 'Anniversaires', chemin: '/dashboard/anniversaires', icone: '🎂' },
+    { label: 'Fêtes des Saints', chemin: '/dashboard/calendrier_saints', icone: '✝️' },
+  ],
+},
   {
     titre: 'Créer & Planifier',
     pages: [
       { label: 'Générer un message', chemin: '/dashboard/generate', icone: '✨' },
       { label: 'Idées cadeaux', chemin: '/dashboard/gift-ideas', icone: '🎁' },
       { label: 'Messages programmés', chemin: '/dashboard/messages-programmes', icone: '📨' },
+      { label: 'Calendrier', chemin: '/dashboard/calendrier', icone: '📅' },
     ],
   },
   {
