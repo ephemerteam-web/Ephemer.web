@@ -9,36 +9,30 @@ import { resend } from '@/lib/resend'                 // On réutilise ton clien
 // 🧪 API DE TEST : Force le cron pour l'utilisateur connecté
 // ============================================================
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    // 1️⃣ Récupérer les cookies du navigateur (pour savoir qui est connecté)
-    const cookieStore = await cookies()
+    // 1️⃣ Récupérer le token depuis le header Authorization
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: 'Token manquant' }, { status: 401 })
+    }
+    const token = authHeader.substring(7)
 
-    // 2️⃣ Créer le client Supabase "utilisateur" (celui qui lit la session)
+    // 2️⃣ Créer le client Supabase avec le token
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // Ignoré dans les composants serveur
-            }
-          },
+          getAll() { return [] },
+          setAll() {}
         },
       }
     )
 
-    // 3️⃣ Vérifier l'identité de l'utilisateur (Sécurité 🔐)
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+    // 3️⃣ Vérifier l'identité avec le token
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+
     if (authError || !user) {
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 })
     }

@@ -43,16 +43,29 @@ export default function CentreNotifications() {
   const [onglet, setOnglet] = useState<'liste' | 'parametres'>('liste')
 
   async function testerMaintenant() {
-    setTestLoading(true); setTestResult(null)
-    try {
-      const res = await fetch('/api/cron/test-notifications', { method: 'POST', headers: { 'Content-Type': 'application/json' } })
-      const data = await res.json()
-      setTestResult(data.success
-        ? { success: true, message: `✅ Test terminé ! ${data.notifs} notification(s) créée(s), ${data.emails} email(s) envoyé(s).` }
-        : { success: false, message: `❌ Erreur : ${data.error || 'Erreur inconnue'}` })
-    } catch { setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
-    finally { setTestLoading(false) }
-  }
+  setTestLoading(true); setTestResult(null)
+  try {
+    // Récupérer le token de session
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      setTestResult({ success: false, message: '❌ Tu dois être connecté' })
+      return
+    }
+
+    const res = await fetch('/api/cron/test-notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`  // ← Token envoyé ici
+      }
+    })
+    const data = await res.json()
+    setTestResult(data.success
+      ? { success: true, message: `✅ Test terminé ! ${data.notifs} notification(s) créée(s), ${data.emails} email(s) envoyé(s).` }
+      : { success: false, message: `❌ Erreur : ${data.error || 'Erreur inconnue'}` })
+  } catch { setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
+  finally { setTestLoading(false) }
+}
   function flash(type: 'erreur' | 'succes', texte: string) {
     if (type === 'erreur') { setErreur(texte); setTimeout(() => setErreur(null), 5000) }
     else { setSucces(texte); setTimeout(() => setSucces(null), 2500) }
