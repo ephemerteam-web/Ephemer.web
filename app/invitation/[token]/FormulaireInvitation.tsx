@@ -66,7 +66,7 @@ export default function FormulaireInvitation({
     return `${a}-${m}-${j}`
   }
 
-  // ── Envoi final
+    // ── Envoi final
   const envoyer = async () => {
     setEnvoi(true)
     setErreur(null)
@@ -97,6 +97,16 @@ export default function FormulaireInvitation({
       setErreur(res?.message ?? "Une erreur est survenue. Réessaie dans un instant.")
       return
     }
+
+    // ── 🆕 NOTIFIER L'HÔTE (notification + email) ──
+    // Appel en arrière-plan — on ne bloque pas l'écran "Merci"
+    fetch('/api/invitation-notifier', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).catch((err) => {
+      console.error('Erreur notification hôte:', err)
+    })
 
     setTermine(true)
   }
