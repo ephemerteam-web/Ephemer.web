@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { GROUPES_INTERETS, INDICATIFS } from './interets'
 
@@ -17,6 +17,14 @@ const RELATIONS = [
 ]
 
 const TOTAL_ETAPES = 4
+
+// Messages motivants selon l'étape
+const MESSAGES_PROGRESSION = [
+  'On commence !',
+  'Presque !',
+  'Dernière ligne droite !',
+  'C\'est parti !'
+]
 
 export default function FormulaireInvitation({
   token,
@@ -42,6 +50,46 @@ export default function FormulaireInvitation({
   const [email, setEmail] = useState('')
   const [indicatif, setIndicatif] = useState('+33')
   const [tel, setTel] = useState('')
+  const [modalInteretsOuvert, setModalInteretsOuvert] = useState(false)
+
+  // ── 💾 Sauvegarde automatique (localStorage)
+  useEffect(() => {
+    const saved = localStorage.getItem(`invitation-${token}`)
+    if (saved) {
+      try {
+        const data = JSON.parse(saved)
+        setPrenom(data.prenom || '')
+        setNom(data.nom || '')
+        setJour(data.jour || '')
+        setMois(data.mois || '')
+        setAnnee(data.annee || '')
+        setRelation(data.relation || '')
+        setInterets(data.interets || [])
+        setNoteLibre(data.noteLibre || '')
+        setEmail(data.email || '')
+        setIndicatif(data.indicatif || '+33')
+        setTel(data.tel || '')
+      } catch (e) {
+        console.error('Erreur restauration données:', e)
+      }
+    }
+  }, [token])
+
+  // Sauvegarder à chaque changement
+  useEffect(() => {
+    const data = {
+      prenom, nom, jour, mois, annee, relation,
+      interets, noteLibre, email, indicatif, tel
+    }
+    localStorage.setItem(`invitation-${token}`, JSON.stringify(data))
+  }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, token])
+
+  // Nettoyer après succès
+  useEffect(() => {
+    if (termine) {
+      localStorage.removeItem(`invitation-${token}`)
+    }
+  }, [termine, token])
 
   // ── Bascule une bulle (ajoute ou retire)
   const toggleInteret = (item: string) => {
@@ -66,7 +114,7 @@ export default function FormulaireInvitation({
     return `${a}-${m}-${j}`
   }
 
-    // ── Envoi final
+  // ── Envoi final
   const envoyer = async () => {
     setEnvoi(true)
     setErreur(null)
@@ -98,8 +146,7 @@ export default function FormulaireInvitation({
       return
     }
 
-    // ── 🆕 NOTIFIER L'HÔTE (notification + email) ──
-    // Appel en arrière-plan — on ne bloque pas l'écran "Merci"
+    // ── 🆕 NOTIFIER L'HÔTE (notification + email)
     fetch('/api/invitation-notifier', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -188,16 +235,21 @@ export default function FormulaireInvitation({
           </h1>
         </div>
 
-        {/* ── Barre de progression ── */}
-        <div className="flex gap-1.5 mb-8">
-          {Array.from({ length: TOTAL_ETAPES }).map((_, i) => (
-            <div
-              key={i}
-              className={`h-1 flex-1 rounded-full transition-all duration-500 ${
-                i < etape ? 'bg-[#C9A961]' : 'bg-white/10'
-              }`}
-            />
-          ))}
+        {/* ── Barre de progression + message motivant ── */}
+        <div className="mb-8">
+          <div className="flex gap-1.5 mb-2">
+            {Array.from({ length: TOTAL_ETAPES }).map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                  i < etape ? 'bg-[#C9A961]' : 'bg-white/10'
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-center text-xs text-[#C9A961]/70 font-medium">
+            {MESSAGES_PROGRESSION[etape - 1]}
+          </p>
         </div>
 
         {/* ── Carte contenant l'étape ── */}
@@ -227,6 +279,11 @@ export default function FormulaireInvitation({
                   maxLength={80}
                   className="w-full rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-[#C9A961]/50 focus:bg-white/[0.06] transition"
                 />
+                {prenom.trim().length === 0 && (
+                  <p className="text-xs text-white/30 mt-2">
+                    💡 Commence par ton prénom pour continuer
+                  </p>
+                )}
               </div>
 
               <div>
@@ -273,6 +330,18 @@ export default function FormulaireInvitation({
                   L'année n'est pas obligatoire, on ne dira rien 🤫
                 </p>
               </div>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape + 1)}
+                  disabled={!etapeValide()}
+                  className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Continuer
+                </button>
+              </div>
             </div>
           )}
 
@@ -314,10 +383,30 @@ export default function FormulaireInvitation({
                   </button>
                 ))}
               </div>
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape - 1)}
+                  disabled={envoi}
+                  className="rounded-xl border border-white/12 px-5 py-3.5 text-sm text-white/60 hover:text-white hover:border-white/25 transition disabled:opacity-40"
+                >
+                  ← Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape + 1)}
+                  disabled={!etapeValide()}
+                  className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  Continuer
+                </button>
+              </div>
             </div>
           )}
 
-          {/* ════════ ÉTAPE 3 : INTÉRÊTS ════════ */}
+                           {/* ════════ ÉTAPE 3 : INTÉRÊTS ════════ */}
           {etape === 3 && (
             <div className="space-y-6">
               <div>
@@ -328,48 +417,66 @@ export default function FormulaireInvitation({
                   Qu'est-ce qui te fait plaisir ?
                 </h2>
                 <p className="text-sm text-white/40 mt-1.5">
-                  Touche tout ce qui te ressemble. Zéro pression, zéro limite.
+                  Choisis tes centres d'intérêt pour aider {prenomHote} à trouver de bonnes idées.
                 </p>
               </div>
 
-              <div className="space-y-5 max-h-[45vh] overflow-y-auto pr-1 -mr-1">
-                {GROUPES_INTERETS.map((groupe) => (
-                  <div key={groupe.titre}>
-                    <p className="text-xs text-white/35 mb-2.5">
-                      {groupe.emoji} {groupe.titre}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {groupe.items.map((item) => {
-                        const actif = interets.includes(item)
-                        return (
-                          <button
-                            key={item}
-                            type="button"
-                            onClick={() => toggleInteret(item)}
-                            className={`rounded-full border px-3.5 py-2 text-sm transition-all active:scale-95 ${
-                              actif
-                                ? 'border-[#C9A961] bg-[#C9A961] text-[#0F1017] font-medium'
-                                : 'border-white/12 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white'
-                            }`}
-                          >
-                            {item}
-                          </button>
-                        )
-                      })}
+              {/* ── Bouton pour ouvrir le sélecteur plein écran ── */}
+              {interets.length === 0 ? (
+                <button
+                  type="button"
+                  onClick={() => setModalInteretsOuvert(true)}
+                  className="w-full rounded-2xl border-2 border-dashed border-[#C9A961]/30 bg-[#C9A961]/[0.04] px-6 py-5 text-left transition hover:border-[#C9A961]/50 hover:bg-[#C9A961]/[0.08] active:scale-[0.99]"
+                >
+                  <span className="text-2xl block mb-2">🎯</span>
+                  <span className="text-white font-medium block">
+                    Choisir mes centres d'intérêt
+                  </span>
+                  <span className="text-sm text-white/40 mt-1 block">
+                    Touche ce qui te ressemble — c'est rapide !
+                  </span>
+                </button>
+              ) : (
+                <div className="rounded-2xl border border-[#C9A961]/20 bg-[#C9A961]/[0.06] px-5 py-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-full bg-[#C9A961] text-[#0F1017] flex items-center justify-center text-xs font-bold">
+                        {interets.length}
+                      </span>
+                      <span className="text-white font-medium text-sm">
+                        centre{interets.length > 1 ? 's' : ''} d'intérêt choisi{interets.length > 1 ? 's' : ''}
+                      </span>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => setModalInteretsOuvert(true)}
+                      className="text-xs text-[#C9A961] hover:text-[#D4B570] transition flex items-center gap-1"
+                    >
+                      ✏️ Modifier
+                    </button>
                   </div>
-                ))}
-              </div>
-
-              {interets.length > 0 && (
-                <p className="text-xs text-[#C9A961]">
-                  {interets.length} choix — parfait, ça donne déjà de belles idées ✨
-                </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {interets.slice(0, 8).map((item) => (
+                      <span
+                        key={item}
+                        className="rounded-full bg-[#C9A961]/15 border border-[#C9A961]/25 px-2.5 py-1 text-xs text-[#C9A961]"
+                      >
+                        {item}
+                      </span>
+                    ))}
+                    {interets.length > 8 && (
+                      <span className="rounded-full bg-white/[0.05] border border-white/10 px-2.5 py-1 text-xs text-white/40">
+                        +{interets.length - 8} autres
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
 
+              {/* ── Champ "Autre chose" ── */}
               <div>
                 <label className="block text-sm text-white/50 mb-2">
-                  Autre chose ? <span className="text-white/25">(optionnel)</span>
+                  Autre chose à ajouter ? <span className="text-white/25">(optionnel)</span>
                 </label>
                 <textarea
                   value={noteLibre}
@@ -382,6 +489,126 @@ export default function FormulaireInvitation({
                 <p className="text-right text-xs text-white/20 mt-1">
                   {noteLibre.length}/500
                 </p>
+              </div>
+
+              {/* ── Navigation ── */}
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape - 1)}
+                  disabled={envoi}
+                  className="rounded-xl border border-white/12 px-5 py-3.5 text-sm text-white/60 hover:text-white hover:border-white/25 transition disabled:opacity-40"
+                >
+                  ← Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape + 1)}
+                  className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570]"
+                >
+                  Continuer
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEtape(etape + 1)}
+                className="w-full text-center text-xs text-white/30 hover:text-white/50 transition"
+              >
+                Passer cette étape
+              </button>
+            </div>
+          )}
+
+          {/* ════════ MODAL PLEIN ÉCRAN : SÉLECTEUR D'INTÉRÊTS ════════ */}
+          {modalInteretsOuvert && (
+            <div className="fixed inset-0 z-50 flex flex-col bg-[#0F1017]">
+              {/* ── Barre du haut ── */}
+              <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
+                <button
+                  type="button"
+                  onClick={() => setModalInteretsOuvert(false)}
+                  className="text-white/50 hover:text-white transition text-sm flex items-center gap-1"
+                >
+                  ✕ Fermer
+                </button>
+                <div className="flex items-center gap-2">
+                  {interets.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#C9A961]/15 border border-[#C9A961]/30 text-[#C9A961] text-xs font-medium">
+                      {interets.length} choisi{interets.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* ── Titre + suggestions ── */}
+              <div className="flex-shrink-0 px-5 pt-5 pb-3">
+                <h2 className="text-xl font-semibold text-white mb-1">
+                  Qu'est-ce qui te fait plaisir ?
+                </h2>
+                <p className="text-sm text-white/40">
+                  Touche tout ce qui te ressemble.
+                </p>
+                {interets.length === 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const populaires = ['Cinéma', 'Musique', 'Voyage', 'Cuisine', 'Lecture', 'Nature', 'Photographie', 'Jeux vidéo']
+                      const aCocher = populaires.filter(p =>
+                        GROUPES_INTERETS.some(g => g.items.includes(p))
+                      )
+                      setInterets(aCocher)
+                    }}
+                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[#C9A961]/10 border border-[#C9A961]/25 px-4 py-2 text-sm text-[#C9A961] hover:bg-[#C9A961]/20 transition"
+                  >
+                    ⚡ Suggestions populaires
+                  </button>
+                )}
+              </div>
+
+              {/* ── Zone scrollable (tout l'espace restant) ── */}
+              <div className="flex-1 overflow-y-auto px-5 py-3 -webkit-overflow-scrolling-touch">
+                <div className="space-y-6 pb-6">
+                  {GROUPES_INTERETS.map((groupe) => (
+                    <div key={groupe.titre}>
+                      <p className="text-xs text-white/35 mb-2.5 uppercase tracking-wider">
+                        {groupe.emoji} {groupe.titre}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {groupe.items.map((item) => {
+                          const actif = interets.includes(item)
+                          return (
+                            <button
+                              key={item}
+                              type="button"
+                              onClick={() => toggleInteret(item)}
+                              className={`rounded-full border px-4 py-2.5 text-sm transition-all active:scale-95 min-h-[44px] ${
+                                actif
+                                  ? 'border-[#C9A961] bg-[#C9A961] text-[#0F1017] font-medium'
+                                  : 'border-white/12 bg-white/[0.03] text-white/70 hover:border-white/25 hover:text-white hover:bg-white/[0.06]'
+                              }`}
+                            >
+                              {actif && <span className="mr-1">✓</span>}
+                              {item}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Bouton valider en bas (fixe) ── */}
+              <div className="flex-shrink-0 px-5 py-4 border-t border-white/[0.07] bg-[#0F1017]">
+                <button
+                  type="button"
+                  onClick={() => setModalInteretsOuvert(false)}
+                  className="w-full rounded-xl bg-[#C9A961] px-5 py-4 font-medium text-[#0F1017] transition hover:bg-[#D4B570] active:scale-[0.98] text-base"
+                >
+                  {interets.length > 0
+                    ? `Valider mes ${interets.length} choix ✨`
+                    : 'Valider (aucun choix)'}
+                </button>
               </div>
             </div>
           )}
@@ -415,7 +642,7 @@ export default function FormulaireInvitation({
                 />
               </div>
 
-              <div>
+                            <div>
                 <label className="block text-sm text-white/50 mb-2">
                   Téléphone <span className="text-white/25">(optionnel)</span>
                 </label>
@@ -423,7 +650,7 @@ export default function FormulaireInvitation({
                   <select
                     value={indicatif}
                     onChange={(e) => setIndicatif(e.target.value)}
-                    className="rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3.5 text-white outline-none focus:border-[#C9A961]/50 transition"
+                    className="w-[110px] flex-shrink-0 rounded-xl bg-white/[0.04] border border-white/10 px-3 py-3.5 text-white outline-none focus:border-[#C9A961]/50 transition appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff80%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_12px_center] bg-no-repeat pr-8"
                   >
                     {INDICATIFS.map((i) => (
                       <option key={i.code} value={i.code} className="bg-[#15161F]">
@@ -437,8 +664,8 @@ export default function FormulaireInvitation({
                     onChange={(e) => setTel(e.target.value.replace(/[^0-9\s]/g, ''))}
                     placeholder="6 12 34 56 78"
                     inputMode="tel"
-                    maxLength={20}
-                    className="flex-1 rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-[#C9A961]/50 transition"
+                    maxLength={15}
+                    className="flex-1 min-w-0 rounded-xl bg-white/[0.04] border border-white/10 px-4 py-3.5 text-white placeholder-white/25 outline-none focus:border-[#C9A961]/50 transition"
                   />
                 </div>
               </div>
@@ -456,58 +683,32 @@ export default function FormulaireInvitation({
                   <p className="text-sm text-red-300">{erreur}</p>
                 </div>
               )}
+
+              {/* Navigation */}
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setEtape(etape - 1)}
+                  disabled={envoi}
+                  className="rounded-xl border border-white/12 px-5 py-3.5 text-sm text-white/60 hover:text-white hover:border-white/25 transition disabled:opacity-40"
+                >
+                  ← Retour
+                </button>
+                <button
+                  type="button"
+                  onClick={envoyer}
+                  disabled={envoi}
+                  className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] disabled:opacity-50"
+                >
+                  {envoi ? 'Un instant…' : 'C\'est envoyé ✨'}
+                </button>
+              </div>
             </div>
-          )}
-
-          {/* ════════ NAVIGATION ════════ */}
-          <div className="flex items-center gap-3 mt-8">
-            {etape > 1 && (
-              <button
-                type="button"
-                onClick={() => setEtape(etape - 1)}
-                disabled={envoi}
-                className="rounded-xl border border-white/12 px-5 py-3.5 text-sm text-white/60 hover:text-white hover:border-white/25 transition disabled:opacity-40"
-              >
-                ← Retour
-              </button>
-            )}
-
-            {etape < TOTAL_ETAPES ? (
-              <button
-                type="button"
-                onClick={() => setEtape(etape + 1)}
-                disabled={!etapeValide()}
-                className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                Continuer
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={envoyer}
-                disabled={envoi}
-                className="flex-1 rounded-xl bg-[#C9A961] px-5 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] disabled:opacity-50"
-              >
-                {envoi ? 'Un instant…' : 'C\'est envoyé ✨'}
-              </button>
-            )}
-          </div>
-
-          {/* Lien "passer" sur les étapes optionnelles */}
-          {(etape === 3) && (
-            <button
-              type="button"
-              onClick={() => setEtape(etape + 1)}
-              className="w-full text-center text-xs text-white/30 hover:text-white/50 mt-4 transition"
-            >
-              Passer cette étape
-            </button>
           )}
         </div>
 
         {/* ── Pied de page ── */}
         <div className="mt-8 space-y-4 text-center">
-          {/* Invitation discrète à rejoindre Ephemer */}
           <div className="rounded-2xl border border-[#C9A961]/10 bg-[#C9A961]/[0.03] px-5 py-4">
             <p className="text-sm text-white/50 leading-relaxed mb-2">
               Toi aussi, tu as des gens qui comptent&nbsp;?
@@ -521,7 +722,6 @@ export default function FormulaireInvitation({
             </a>
           </div>
 
-          {/* Liens légaux et signature */}
           <div className="flex items-center justify-center gap-4 text-xs">
             <a
               href="/confidentialite"
