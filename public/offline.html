@@ -1,32 +1,187 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hors ligne — Ephemer</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0B1120" />
+  <title>Ephemer — Hors ligne</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      display: flex; align-items: center; justify-content: center;
-      min-height: 100vh; margin: 0; padding: 24px;
-      background: #faf9f7; color: #2d2d2d; text-align: center;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .box { max-width: 380px; }
-    h1 { font-size: 1.4rem; margin-bottom: 12px; }
-    p { line-height: 1.6; color: #666; font-size: 0.95rem; }
-    button {
-      margin-top: 24px; padding: 12px 28px; font-size: 1rem;
-      border: none; border-radius: 8px; background: #4f46e5;
-      color: white; cursor: pointer;
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: linear-gradient(135deg, #0B1120 0%, #1B2A4A 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 400px;
+      animation: fadeIn 0.6s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .moon {
+      width: 120px;
+      height: 120px;
+      margin: 0 auto 32px;
+      position: relative;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+
+    .moon svg {
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 20px rgba(200, 168, 78, 0.3));
+    }
+
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #C8A84E 0%, #E6D07A 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      font-size: 16px;
+      line-height: 1.6;
+      color: rgba(255, 255, 255, 0.7);
+      margin-bottom: 24px;
+    }
+
+    .emoji {
+      font-size: 48px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(135deg, #C8A84E 0%, #D4B85C 100%);
+      color: #0B1120;
+      font-weight: 600;
+      font-size: 15px;
+      padding: 14px 28px;
+      border-radius: 16px;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(200, 168, 78, 0.3);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 24px rgba(200, 168, 78, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .hint {
+      margin-top: 24px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .stars {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: -1;
+    }
+
+    .star {
+      position: absolute;
+      width: 2px;
+      height: 2px;
+      background: #fff;
+      border-radius: 50%;
+      animation: twinkle 3s ease-in-out infinite;
+    }
+
+    @keyframes twinkle {
+      0%, 100% { opacity: 0.2; }
+      50% { opacity: 1; }
     }
   </style>
 </head>
 <body>
-  <div class="box">
-    <div style="font-size:3rem">📡</div>
-    <h1>Pas de connexion</h1>
-    <p>Ephemer a besoin d'internet pour afficher tes contacts et tes rappels. Vérifie ta connexion puis réessaie.</p>
-    <button onclick="location.reload()">Réessayer</button>
+  <!-- Étoiles en arrière-plan -->
+  <div class="stars" id="stars"></div>
+
+  <div class="container">
+    <div class="moon">
+      <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="60" cy="60" r="55" fill="#1B2A4A" stroke="#C8A84E" stroke-width="2"/>
+        <path d="M75 30C60 30 45 45 45 65C45 85 60 100 75 100C55 100 40 85 40 65C40 45 55 30 75 30Z" fill="#C8A84E" opacity="0.9"/>
+        <path d="M70 40L71 43L74 44L71 45L70 48L69 45L66 44L69 43L70 40Z" fill="#fff" opacity="0.9"/>
+        <path d="M85 55L86 57L88 58L86 59L85 61L84 59L82 58L84 57L85 55Z" fill="#fff" opacity="0.7"/>
+        <path d="M75 70L76 72L78 73L76 74L75 76L74 74L72 73L74 72L75 70Z" fill="#fff" opacity="0.5"/>
+      </svg>
+    </div>
+
+    <span class="emoji">📡</span>
+    <h1>Vous êtes hors ligne</h1>
+    <p>
+      Pas de panique ! Ephemer garde en mémoire vos contacts et événements.
+      Reconnectez-vous pour synchroniser les dernières données.
+    </p>
+
+    <button class="btn" onclick="window.location.reload()">
+      🔄 Réessayer
+    </button>
+
+    <p class="hint">
+      💡 Astuce : installez Ephemer sur votre écran d'accueil pour un accès rapide.
+    </p>
   </div>
+
+  <script>
+    // Génère des étoiles aléatoires en arrière-plan
+    const starsContainer = document.getElementById('stars');
+    for (let i = 0; i < 50; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.left = Math.random() * 100 + '%';
+      star.style.top = Math.random() * 100 + '%';
+      star.style.animationDelay = Math.random() * 3 + 's';
+      star.style.animationDuration = (2 + Math.random() * 3) + 's';
+      starsContainer.appendChild(star);
+    }
+
+    // Recharge automatiquement quand la connexion revient
+    window.addEventListener('online', () => {
+      window.location.reload();
+    });
+  </script>
 </body>
 </html>
