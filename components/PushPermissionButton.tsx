@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { getSupabaseClient } from "@/lib/supabase-browser"
+import { supabase } from "@/lib/supabase-browser"
 
 // La clé VAPID est la "clé publique" de ton serveur push
 // Elle doit commencer par NEXT_PUBLIC_ pour être lisible dans le navigateur
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ""
-const supabase = getSupabaseClient()
 
 // Les 6 états possibles du composant
 type PushStatus = "idle" | "loading" | "granted" | "denied" | "unsupported" | "error"
@@ -14,7 +13,6 @@ type PushStatus = "idle" | "loading" | "granted" | "denied" | "unsupported" | "e
 export default function PushPermissionButton() {
   const [status, setStatus] = useState<PushStatus>("idle")
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
-  
 
   // Au chargement : vérifier l'état réel
   useEffect(() => {

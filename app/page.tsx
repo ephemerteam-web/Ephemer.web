@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { getSupabaseClient  } from "@/lib/supabase-browser"
+import { supabase } from "@/lib/supabase-browser"
 import AuthDrawer from "@/components/AuthDrawer"
 import HeroSection from "@/components/HeroSection"
-
-const supabase = getSupabaseClient()
 
 export default function Accueil() {
   const router = useRouter()

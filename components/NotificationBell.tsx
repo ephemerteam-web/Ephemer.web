@@ -3,7 +3,7 @@
 // Il a besoin de React, des clics utilisateur, etc.
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
 import { useRouter } from 'next/navigation'
 
@@ -27,8 +27,6 @@ export default function NotificationBell() {
   const [error, setError] = useState<string | null>(null)
   const { ouvrirDrawer } = useDrawer()
   const panelRef = useRef<HTMLDivElement>(null)
-  const supabase = getSupabaseClient()
-  
 
   // ── Fonction utilitaire : couleur selon l'urgence ───────────────
   const getCouleurUrgence = (notif: Notification) => {
@@ -89,17 +87,15 @@ export default function NotificationBell() {
   }, [notifications])
 
   // ── Realtime : écouter les nouvelles notifs en direct ⚡ ──────
-    useEffect(() => {
+  useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
-    let annule = false   // 🆕 un drapeau pour dire "cet effet est périmé"
 
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user?.id) return
-      if (annule) return   // 🆕 si on a été démonté entre-temps, on arrête tout
 
       channel = supabase
-        .channel(`notifications-${session.user.id}`)  // 🆕 nom unique par utilisateur
+        .channel('notifications-listen')
         .on(
           'postgres_changes',
           {
@@ -123,11 +119,7 @@ export default function NotificationBell() {
     setupRealtime()
 
     return () => {
-      annule = true   // 🆕 on prévient la version en cours d'exécution
-      if (channel) {
-        supabase.removeChannel(channel)
-        channel = null
-      }
+      if (channel) supabase.removeChannel(channel)
     }
   }, [])
 

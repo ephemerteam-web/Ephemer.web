@@ -1,4 +1,4 @@
-import { getSupabaseClient } from './supabase-browser'
+import { supabase } from './supabase-browser'
 import { calculerDateEvenement, TypeEvenement } from './date-utils'
 
 // ============================================================
@@ -74,7 +74,7 @@ export async function programmerRappels(
     }
   ]
 
-  const { data, error } = await getSupabaseClient()
+  const { data, error } = await supabase
     .from('rappels')
     .insert(rappels)
     .select()
@@ -88,7 +88,7 @@ export async function programmerRappels(
 }
 
 export async function getRappelsContact(userId: string, contactId: string) {
-  const { data, error } = await getSupabaseClient()
+  const { data, error } = await supabase
     .from('rappels')
     .select('*')
     .eq('user_id', userId)
@@ -104,7 +104,7 @@ export async function getRappelsContact(userId: string, contactId: string) {
 }
 
 export async function annulerRappelsContact(userId: string, contactId: string) {
-  const { error } = await getSupabaseClient()
+  const { error } = await supabase
     .from('rappels')
     .update({ statut: 'annule' })
     .eq('user_id', userId)
@@ -240,7 +240,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
     })
   }
 
-  const { data, error } = await getSupabaseClient()
+  const { data, error } = await supabase
     .from('rappels')
     .insert(entrees)
     .select()

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement, formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/date-utils";
 import {
@@ -212,7 +212,6 @@ function GiftIdeasForm() {
   // ---------------------------
   const searchParams = useSearchParams();
   const { ouvrirDrawer } = useDrawer();
-  const supabase = getSupabaseClient();
 
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { INDICATIFS_PAYS } from '@/lib/constants'
 
@@ -23,8 +23,6 @@ type ContactTelephone = {
 
 export default function NouveauContact() {
   const router = useRouter()
-  const supabase = getSupabaseClient()
-  
 
   // États du formulaire manuel
   const [prenom, setPrenom] = useState('')

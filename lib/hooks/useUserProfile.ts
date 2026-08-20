@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import type { Profile } from '@/types/database'
 
 export function useUserProfile() {
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const supabase = getSupabaseClient()
-  
 
   useEffect(() => {
     async function fetchProfile() {

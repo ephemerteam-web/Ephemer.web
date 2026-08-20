@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
 import Link from 'next/link'
 import { useUserProfile } from '@/lib/hooks/useUserProfile'
@@ -32,62 +32,22 @@ export default function Dashboard() {
   const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
   const [aideOuverte, setAideOuverte] = useState(false)
   const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | null>(null)
-  const supabase = getSupabaseClient()
-  
 
 
-    useEffect(() => {
+  useEffect(() => {
     const init = async () => {
-      // ✅ getUser() fait un vrai appel réseau → fiable en PWA
-      // (getSession() lit le cache local qui peut être vide au 1er chargement PWA)
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        // Petit délai avant redirection (au cas où la session met du temps à se charger)
-        await new Promise(resolve => setTimeout(resolve, 1000))
-        const { data: { user: retryUser } } = await supabase.auth.getUser()
-        if (!retryUser) {
-          router.push('/connexion')
-          return
-        }
-        // Si on a un user au 2ème essai, on continue avec lui
-        setUserName(retryUser.email?.split('@')[0] ?? null)
-
-        const { data } = await supabase
-          .from('contacts')
-          .select('*')
-          .eq('user_id', retryUser.id)
-          .eq('est_favori', true)
-
-        if (data) setContacts(data as Contact[])
-
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('prenom')
-          .eq('id', retryUser.id)
-
-        if (!profileError && profileData && profileData.length > 0) {
-          const fetchedPrenom = String(profileData[0].prenom || '')
-          if (fetchedPrenom.trim() !== '') {
-            setProfile({ prenom: fetchedPrenom })
-          } else {
-            setProfile(null)
-          }
-        } else {
-          setProfile(null)
-        }
-
-        setLoading(false)
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.push('/connexion')
         return
       }
 
-      // ✅ Premier essai réussi
-      setUserName(user.email?.split('@')[0] ?? null)
+      setUserName(session.user.email?.split('@')[0] ?? null)
 
       const { data } = await supabase
         .from('contacts')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .eq('est_favori', true)
 
       if (data) setContacts(data as Contact[])
@@ -95,7 +55,7 @@ export default function Dashboard() {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('prenom')
-        .eq('id', user.id)
+        .eq('id', session.user.id)
 
       if (!profileError && profileData && profileData.length > 0) {
         const fetchedPrenom = String(profileData[0].prenom || '')

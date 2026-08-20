@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { getSupabaseClient } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase-browser";
 import AccordionGroup from "@/components/AccordionGroup";
 
 type MessageProgramme = {
@@ -86,7 +86,6 @@ function keyHistorique(type: string) {
 
 export default function MessagesProgrammesPage() {
   const router = useRouter();
-  const supabase = getSupabaseClient()
 
   const [messages, setMessages] = useState<MessageProgramme[]>([]);
   const [loading, setLoading] = useState(true);

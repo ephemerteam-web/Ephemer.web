@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import { TYPES_RELATION } from '@/lib/constants'
 import { useDrawer } from '@/components/DrawerContext'
@@ -31,8 +31,7 @@ export default function ContactsPage() {
   const { ouvrirDrawer } = useDrawer()
   const [contacts, setContacts] = useState<ContactAvecLien[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = getSupabaseClient()
-  
+
   const {
     recherche,
     setRecherche,

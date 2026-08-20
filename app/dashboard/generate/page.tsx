@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { getSupabaseClient  } from "@/lib/supabase-browser";
+import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
 import { TypeEvenement, calculerDateEvenement, formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/date-utils";
 import {
@@ -145,7 +145,7 @@ function GenerateForm() {
   const refreshContacts = async () => {
     if (!session) return;
 
-    const { data, error } = await getSupabaseClient()
+    const { data, error } = await supabase
       .from("contacts")
       .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
       .eq("user_id", session.user.id)
@@ -207,11 +207,11 @@ function GenerateForm() {
   // ---------------------------
   useEffect(() => {
     async function loadContactsAndPrefill() {
-      const { data: { session } } = await getSupabaseClient().auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       setSession(session);
       if (!session) return;
 
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from("contacts")
         .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
         .eq("user_id", session.user.id)

@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StarryBackground from '@/components/StarryBackground'
 
 const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email)
-const supabase = getSupabaseClient()
-  
+
 const getPasswordStrength = (password: string) => {
   let score = 0
   if (password.length >= 6) score++

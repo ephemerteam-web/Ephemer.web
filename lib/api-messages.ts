@@ -2,7 +2,7 @@
 // 📡 APPELS API - Génération de messages
 // ============================================================
 
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser';
 
 // Type des paramètres pour générer un message
 export type GenerateMessageParams = {
@@ -24,8 +24,7 @@ export type GenerateMessageParams = {
  * @throws Error si l'API renvoie une erreur
  */
 export async function genererMessage(params: GenerateMessageParams): Promise<string> {
-  // 🔑 On récupère le client Supabase et la session en cours (elle contient le token d'identité)
-  const supabase = getSupabaseClient();
+  // 🔑 On récupère la session en cours (elle contient le token d'identité)
   const { data: { session } } = await supabase.auth.getSession();
 
   if (!session) {

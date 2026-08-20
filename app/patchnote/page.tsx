@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import StarryBackground from '@/components/StarryBackground'
 
 interface PatchNote {
@@ -17,8 +17,6 @@ interface PatchNote {
 export default function PatchNotePage() {
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([])
   const [loading, setLoading] = useState(true)
-  const supabase = getSupabaseClient()
-  
 
   useEffect(() => {
     const fetchPatchNotes = async () => {

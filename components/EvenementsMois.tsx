@@ -2,7 +2,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
 
 // 📐 Types
@@ -48,8 +48,6 @@ export default function EvenementsMois() {
   const [mois, setMois] = useState<number>(new Date().getMonth())
   const [annee, setAnnee] = useState<number>(new Date().getFullYear())
   const [filtreType, setFiltreType] = useState<'tous' | 'anniversaire' | 'fete_prenomale'>('tous')
-  const supabase = getSupabaseClient()
-  
 
   const { ouvrirDrawer } = useDrawer()
   const nomsMois = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']

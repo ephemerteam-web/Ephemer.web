@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import CarteInvitation from './CarteInvitation'
 
@@ -19,8 +19,7 @@ type Invitation = {
 
 export default function InviterPage() {
   const router = useRouter()
-  const supabase = getSupabaseClient()
-  
+
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)

@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { DrawerProvider } from '@/components/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
 import NotificationBell from '@/components/NotificationBell'
@@ -22,8 +22,6 @@ export default function DashboardLayout({
   const estPageAccueilDashboard = pathname === '/dashboard'
   const [navOuverte, setNavOuverte] = useState(false)
   const [menuOuvert, setMenuOuvert] = useState(false)
-  const supabase = getSupabaseClient()
-  
 
   // On remonte le user ici pour le partager avec MenuLateral ET le bouton
   const [user, setUser] = useState<{ email: string; prenom?: string } | null>(null)

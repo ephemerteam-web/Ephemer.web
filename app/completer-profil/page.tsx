@@ -1,16 +1,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { getSupabaseClient } from '@/lib/supabase-browser'
+import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import { MESSAGES_UI } from '@/lib/constants'
 
-
-
 export default function CompleterProfilPage() {
   const router = useRouter()
-  const supabase = getSupabaseClient()
 
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')

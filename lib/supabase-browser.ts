@@ -1,22 +1,23 @@
 // ============================================
 // 🌐 CLIENT SUPABASE BROWSER (côté navigateur)
-// Compatible SSR + TypeScript
+// À utiliser dans les composants React ('use client')
 // ============================================
-'use client'
 
-import { createBrowserClient } from '@supabase/ssr'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-// 🧠 Mémoire : on garde le client créé pour le réutiliser
-let client: SupabaseClient | undefined
-
-// ✅ Retourne TOUJOURS le même client valide
-export const getSupabaseClient = (): SupabaseClient => {
-  if (!client) {
-    client = createBrowserClient(supabaseUrl, supabaseAnonKey)
-  }
-  return client
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('⚠️ Variables Supabase manquantes dans .env.local')
 }
+
+// Configuration pour éviter les warnings EventEmitter
+// Augmente la limite de listeners pour Supabase
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
+  },
+})

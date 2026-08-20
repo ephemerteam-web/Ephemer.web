@@ -1,5 +1,4 @@
 {
-  "version": 2,
   "crons": [
     {
       "path": "/api/envoyer-rappels",
@@ -13,7 +12,5 @@
       "path": "/api/cron/generate-notifications",
       "schedule": "0 8 * * *"
     }
-  ],
-  "installCommand": "npm install --ignore-scripts && npm rebuild sharp",
-  "buildCommand": "npm run build"
+  ]
 }
