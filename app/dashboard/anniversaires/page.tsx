@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/date-utils'
 import { useDrawer } from '@/components/DrawerContext'
 import ProgressRing from '@/components/ProgressRing'
@@ -63,6 +63,8 @@ export default function AnniversairesPage() {
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const { ouvrirDrawer } = useDrawer()
+  const supabase = getSupabaseClient()
+    
 
   // ── Chargement des contacts ──
   useEffect(() => {

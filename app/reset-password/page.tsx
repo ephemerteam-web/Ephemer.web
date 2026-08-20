@@ -1,13 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 
 export default function ResetPasswordPage() {
   const router = useRouter()
-
+  const supabase = getSupabaseClient()
+  
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)

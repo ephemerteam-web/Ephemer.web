@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { SAINTS, SAINTS_PAR_DATE } from '@/lib/saints'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type Contact = {
@@ -36,6 +36,8 @@ export default function CalendrierPage() {
   const [jourSelectionne, setJourSelectionne] = useState<JourSelectionne>(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false) // ✅ Pour mobile
   const calendrierRef = useRef<HTMLDivElement>(null)
+  const supabase = getSupabaseClient()
+  
 
   // ── Chargement initial ─────────────────────────────────────────────────────
   useEffect(() => {

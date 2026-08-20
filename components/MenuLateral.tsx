@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import PushPermissionButton from './PushPermissionButton'
 
 type MenuLateralProps = {
@@ -27,6 +27,8 @@ type MenuSection = {
 export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps) {
   const router = useRouter()
   const pathname = usePathname()
+  const supabase = getSupabaseClient()
+  
 
   const [translateX, setTranslateX] = useState(0)
   const startX = useRef<number | null>(null)

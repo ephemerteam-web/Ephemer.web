@@ -1,14 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'
 
 export default function ConnexionPage() {
   const router = useRouter()
-
+  const supabase = getSupabaseClient()
+  
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')

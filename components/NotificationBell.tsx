@@ -3,7 +3,7 @@
 // Il a besoin de React, des clics utilisateur, etc.
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
 import { useRouter } from 'next/navigation'
 
@@ -27,6 +27,8 @@ export default function NotificationBell() {
   const [error, setError] = useState<string | null>(null)
   const { ouvrirDrawer } = useDrawer()
   const panelRef = useRef<HTMLDivElement>(null)
+  const supabase = getSupabaseClient()
+  
 
   // ── Fonction utilitaire : couleur selon l'urgence ───────────────
   const getCouleurUrgence = (notif: Notification) => {

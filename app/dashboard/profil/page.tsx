@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import AppLayout from '@/components/AppLayout'
 import { INDICATIFS_PAYS, MESSAGES_UI } from '@/lib/constants'
 
 export default function DashboardProfil() {
   const router = useRouter()
-
+  const supabase = getSupabaseClient()
+  
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')

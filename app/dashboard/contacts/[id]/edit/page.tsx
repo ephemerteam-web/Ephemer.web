@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { useRouter, useParams } from 'next/navigation'
 import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants'
 
@@ -10,7 +10,8 @@ export default function ModifierContact() {
   const router = useRouter()
   const params = useParams()
   const contactId = params.id as string
-
+  const supabase = getSupabaseClient()
+  
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')

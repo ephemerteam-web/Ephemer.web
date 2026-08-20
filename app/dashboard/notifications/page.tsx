@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 
 type Notification = {
   id: string; user_id: string; contact_id: number; type: string; message: string
@@ -41,6 +41,8 @@ export default function CentreNotifications() {
   const [succes, setSucces] = useState<string | null>(null)
   const [modaleSuppression, setModaleSuppression] = useState(false)
   const [onglet, setOnglet] = useState<'liste' | 'parametres'>('liste')
+  const supabase = getSupabaseClient()
+  
 
   async function testerMaintenant() {
   setTestLoading(true); setTestResult(null)

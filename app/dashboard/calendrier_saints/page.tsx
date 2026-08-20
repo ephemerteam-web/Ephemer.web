@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
 import { TYPES_RELATION } from '@/lib/constants'
 import { useDrawer } from '@/components/DrawerContext'
@@ -39,7 +39,8 @@ const BADGE_CONFIG = {
   soon: { label: 'Bientôt', classe: 'bg-orange-400/20 text-orange-300 border border-orange-400/40' },
   later: { label: '', classe: 'bg-white/10 text-white/60 border border-white/10' },
 }
-
+const supabase = getSupabaseClient()
+  
 function normaliserPrenom(prenom: string): string {
   return prenom
     .toLowerCase()

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
+import { getSupabaseClient } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
 import Link from 'next/link'
 import { useUserProfile } from '@/lib/hooks/useUserProfile'
@@ -32,6 +32,8 @@ export default function Dashboard() {
   const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
   const [aideOuverte, setAideOuverte] = useState(false)
   const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | null>(null)
+  const supabase = getSupabaseClient()
+  
 
 
     useEffect(() => {
