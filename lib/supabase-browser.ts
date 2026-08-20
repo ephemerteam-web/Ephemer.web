@@ -12,16 +12,11 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('⚠️ Variables Supabase manquantes dans .env.local')
 }
 
-//  CLÉ DE LA SOLUTION :
-// createBrowserClient + localStorage forcé = compatible PWA standalone
-// (les cookies sont bloqués en mode "installé" sur iOS/Android)
+// ✅ createBrowserClient + localStorage = compatible PWA
 export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    // Force le stockage dans localStorage au lieu des cookies
     storage: localStorage,
     storageKey: 'ephemer-auth-token',
-    
-    // Persistance de session (indispensable en PWA)
     persistSession: true,
     autoRefreshToken: true,
     detectSessionInUrl: true,
