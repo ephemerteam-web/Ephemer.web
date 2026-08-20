@@ -89,15 +89,17 @@ export default function NotificationBell() {
   }, [notifications])
 
   // ── Realtime : écouter les nouvelles notifs en direct ⚡ ──────
-  useEffect(() => {
+    useEffect(() => {
     let channel: ReturnType<typeof supabase.channel> | null = null
+    let annule = false   // 🆕 un drapeau pour dire "cet effet est périmé"
 
     const setupRealtime = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user?.id) return
+      if (annule) return   // 🆕 si on a été démonté entre-temps, on arrête tout
 
       channel = supabase
-        .channel('notifications-listen')
+        .channel(`notifications-${session.user.id}`)  // 🆕 nom unique par utilisateur
         .on(
           'postgres_changes',
           {
@@ -121,7 +123,11 @@ export default function NotificationBell() {
     setupRealtime()
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
+      annule = true   // 🆕 on prévient la version en cours d'exécution
+      if (channel) {
+        supabase.removeChannel(channel)
+        channel = null
+      }
     }
   }, [])
 
