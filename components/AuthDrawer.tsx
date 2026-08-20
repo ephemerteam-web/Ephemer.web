@@ -1,6 +1,6 @@
 "use client"
 
-import { supabase } from "@/lib/supabase-browser"
+import { getSupabaseClient } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import IconeLuneIA from "@/components/IconeLuneIA"
@@ -39,6 +39,7 @@ const FacebookIcon = () => (
 // ============================================================
 export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: AuthDrawerProps) {
   const router = useRouter()
+  const supabase = getSupabaseClient()
 
   // Bloque le scroll du body quand le drawer est ouvert
   useEffect(() => {
