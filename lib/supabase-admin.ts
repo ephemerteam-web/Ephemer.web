@@ -1,22 +1,29 @@
 // ============================================
-// 🔐 CLIENT SUPABASE ADMIN (côté serveur uniquement)
-// ⚠️ NE JAMAIS importer dans un composant client !
-// À utiliser UNIQUEMENT dans les API routes (app/api/...)
-// Contourne RLS — pouvoirs admin
+// 🌐 CLIENT SUPABASE BROWSER (côté navigateur)
+// À utiliser dans les composants React ('use client')
 // ============================================
 
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error('⚠️ Variables Supabase Admin manquantes dans .env.local')
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('⚠️ Variables Supabase manquantes dans .env.local')
 }
 
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+// ✅ createBrowserClient + localStorage = compatible PWA
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    autoRefreshToken: false,
-    persistSession: false,
+    storage: localStorage,
+    storageKey: 'ephemer-auth-token',
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10,
+    },
   },
 })
