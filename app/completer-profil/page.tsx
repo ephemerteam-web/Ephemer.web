@@ -96,8 +96,8 @@ export default function CompleterProfilPage() {
       <AppLayout>
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 border-4 border-white/20 border-t-[#C8A84E] rounded-full animate-spin" />
-            <p className="text-white/60 text-sm">Chargement…</p>
+            <div className="w-10 h-10 border-4 border-line border-t-[#C8A84E] rounded-full animate-spin" />
+            <p className="text-muted text-sm">Chargement…</p>
           </div>
         </div>
       </AppLayout>
@@ -115,14 +115,14 @@ export default function CompleterProfilPage() {
         ─────────────────────────────────────────
       */}
       <div className="min-h-screen flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl">
+        <div className="w-full max-w-md bg-ink/5 backdrop-blur-xl border border-line rounded-3xl p-6 sm:p-8 shadow-2xl">
 
           {/* ── EN-TÊTE ── */}
           <div className="mb-6">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-bold text-ink mb-2">
               Compléter mon profil
             </h1>
-            <p className="text-white/50 text-sm leading-relaxed">
+            <p className="text-muted text-sm leading-relaxed">
               Ces informations permettront de personnaliser ton expérience sur Ephemer.
             </p>
           </div>
@@ -131,9 +131,9 @@ export default function CompleterProfilPage() {
           <form onSubmit={handleSaveProfile} className="space-y-5">
 
             {/* Prénom + Nom côte à côte sur mobile (gain de place) */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Prénom
                 </label>
                 <input
@@ -141,15 +141,15 @@ export default function CompleterProfilPage() {
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
                   placeholder="Marie"
-                  className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                             placeholder-white/30 focus:outline-none focus:ring-2
-                             focus:ring-[#C8A84E]/50 focus:border-transparent
+                  className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                             placeholder-muted focus:outline-none focus:ring-2
+                             focus:ring-accent/50 focus:border-transparent
                              transition-all"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Nom
                 </label>
                 <input
@@ -157,9 +157,9 @@ export default function CompleterProfilPage() {
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Dupont"
-                  className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                             placeholder-white/30 focus:outline-none focus:ring-2
-                             focus:ring-[#C8A84E]/50 focus:border-transparent
+                  className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                             placeholder-muted focus:outline-none focus:ring-2
+                             focus:ring-accent/50 focus:border-transparent
                              transition-all"
                 />
               </div>
@@ -167,23 +167,23 @@ export default function CompleterProfilPage() {
 
             {/* Date de naissance */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Date de naissance
               </label>
               <input
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
-                style={{ colorScheme: 'dark' }}
-                className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                           focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50
+                style={{ colorScheme: 'inherit' }}
+                className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                           focus:outline-none focus:ring-2 focus:ring-accent/50
                            focus:border-transparent transition-all"
               />
             </div>
 
             {/* Email (lecture seule) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Email
               </label>
               <div className="relative">
@@ -191,10 +191,10 @@ export default function CompleterProfilPage() {
                   type="email"
                   value={email}
                   disabled
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3
-                             text-white/40 text-sm cursor-not-allowed pr-10"
+                  className="w-full bg-ink/5 border border-line rounded-xl px-3 py-3
+                             text-muted text-sm cursor-not-allowed pr-10"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-sm">
                   🔒
                 </span>
               </div>
@@ -205,8 +205,8 @@ export default function CompleterProfilPage() {
               <div className={`
                 p-3.5 rounded-xl text-sm border leading-relaxed
                 ${message.type === 'success'
-                  ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  ? 'bg-green-500/10 text-success border-green-500/20'
+                  : 'bg-red-500/10 text-danger border-red-500/20'
                 }
               `}>
                 {message.text}
@@ -217,14 +217,14 @@ export default function CompleterProfilPage() {
             <button
               type="submit"
               disabled={saving}
-              className="w-full min-h-[52px] bg-gradient-to-r from-[#C8A84E] to-[#D4B85C]
-                         text-[#0B1120] font-bold text-sm rounded-2xl
+              className="w-full min-h-[52px] bg-gradient-to-r from-action to-action
+                         text-on-action font-bold text-sm rounded-2xl
                          hover:opacity-90 active:scale-95 transition-all
                          disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[#0B1120]/30 border-t-[#0B1120] rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-canvas/30 border-t-[#0B1120] rounded-full animate-spin" />
                   Enregistrement…
                 </span>
               ) : (

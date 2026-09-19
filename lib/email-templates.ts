@@ -11,7 +11,7 @@ export const EMAIL_CONFIG = {
   privacyPolicyUrl: "https://ephemer.name/confidentialite",
   defaultFrom: "noreply@ephemer.name",
   // 📍 Adresse physique (requise par les lois anti-spam CAN-SPAM / CASL)
-  physicalAddress: "Ephemer.name - 123 Rue de la Mémoire, 75001 Paris, France"
+  physicalAddress: "Ephemer.name — 23 route du Mont Agel, 06320 La Turbie, France"
 };
 
 // 📐 INTERFACE TYPESCRIPT (contrat de données attendu par le template)

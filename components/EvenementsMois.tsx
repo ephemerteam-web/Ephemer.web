@@ -33,8 +33,8 @@ const NavButton = ({
     disabled={disabled}
     className={`flex items-center justify-center min-w-[44px] min-h-[44px] p-2 rounded-xl
       ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
-      bg-gray-800/50 backdrop-blur-sm border border-white/10
-      hover:bg-white/10 transition-all duration-200 ${className}`}
+      bg-surface/50 backdrop-blur-sm border border-line
+      hover:bg-ink/10 transition-all duration-200 ${className}`}
   >
     {children}
   </button>
@@ -103,13 +103,13 @@ export default function EvenementsMois() {
       <div className="flex flex-col gap-3">
         {/* Titre + mois/année */}
         <div className="flex items-center gap-3">
-          <div className="p-2.5 bg-gradient-to-br from-[#C8A84E] to-[#A88B3E] rounded-xl">
+          <div className="p-2.5 bg-gradient-to-br from-action to-action rounded-xl">
             <span className="text-xl">📅</span>
           </div>
           <div>
-            <h1 className="text-lg font-bold text-white">Événements</h1>
-            <p className="text-sm text-gray-400">
-              <span className="text-[#C8A84E]">{nomsMois[mois]}</span> {annee}
+            <h1 className="text-lg font-bold text-ink">Événements</h1>
+            <p className="text-sm text-muted">
+              <span className="text-accent">{nomsMois[mois]}</span> {annee}
             </p>
           </div>
         </div>
@@ -117,7 +117,7 @@ export default function EvenementsMois() {
         {/* Contrôles (filtre + navigation) */}
         <div className="flex flex-wrap gap-2">
           {/* 🔍 Filtre sous forme d'onglets (meilleur pour mobile) */}
-          <div className="flex gap-1 bg-gray-800/50 p-1 rounded-xl">
+          <div className="flex gap-1 bg-surface/50 p-1 rounded-xl">
             {[
               { id: 'tous', label: 'Tous', emoji: '📅' },
               { id: 'anniversaire', label: 'Anniv.', emoji: '🎂' },
@@ -128,8 +128,8 @@ export default function EvenementsMois() {
                 onClick={() => setFiltreType(option.id as 'tous' | 'anniversaire' | 'fete_prenomale')}
                 className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition-all
                   ${filtreType === option.id
-                    ? 'bg-[#C8A84E]/10 text-[#C8A84E] border border-[#C8A84E]/20'
-                    : 'text-gray-400 hover:bg-white/5'}`}
+                    ? 'bg-action/10 text-accent border border-accent/20'
+                    : 'text-muted hover:bg-ink/5'}`}
               >
                 <span>{option.emoji}</span>
                 <span>{option.label}</span>
@@ -140,15 +140,15 @@ export default function EvenementsMois() {
           {/* 📅 Navigation mois (boutons larges pour mobile) */}
           <div className="flex gap-1">
             <NavButton onClick={moisPrecedent}>
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </NavButton>
             <NavButton onClick={allerMoisActuel} className="min-w-[44px]">
-              <span className="text-white text-xs">Auj.</span>
+              <span className="text-ink text-xs">Auj.</span>
             </NavButton>
             <NavButton onClick={moisSuivant}>
-              <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 text-ink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </NavButton>
@@ -158,7 +158,7 @@ export default function EvenementsMois() {
 
       {/* ⚠️ Message d'erreur */}
       {error && (
-        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-200 text-sm flex items-center gap-2">
+        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-danger text-sm flex items-center gap-2">
           <span>⚠️</span>
           <p>{error}</p>
         </div>
@@ -168,7 +168,7 @@ export default function EvenementsMois() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-8">
           <div
-            className="w-12 h-12 rounded-full bg-gradient-to-r from-[#C8A84E] to-[#A88B3E] animate-spin"
+            className="w-12 h-12 rounded-full bg-gradient-to-r from-action to-action animate-spin"
             style={{
               maskImage: 'linear-gradient(white, transparent)',
               WebkitMaskImage: 'linear-gradient(white, transparent)',
@@ -176,17 +176,17 @@ export default function EvenementsMois() {
               WebkitMaskComposite: 'xor',
             }}
           />
-          <p className="mt-3 text-gray-400 text-sm">Chargement...</p>
+          <p className="mt-3 text-muted text-sm">Chargement...</p>
         </div>
       ) : (
         /* 📋 Liste des événements (optimisée mobile) */
         <div className="space-y-3">
           {evenementsFiltres.length === 0 ? (
             <div className="text-center py-8">
-              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-gray-800/50 flex items-center justify-center">
+              <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-surface/50 flex items-center justify-center">
                 <span className="text-3xl">📅</span>
               </div>
-              <p className="text-gray-500 text-sm">Aucun événement pour ce mois</p>
+              <p className="text-muted text-sm">Aucun événement pour ce mois</p>
             </div>
           ) : (
             evenementsFiltres.map((evenement) => (
@@ -204,7 +204,7 @@ export default function EvenementsMois() {
                     telephone_numero: null,
                     note: null
                 })}
-                className="group p-4 rounded-xl border border-white/10 bg-gray-800/30 backdrop-blur-sm
+                className="group p-4 rounded-xl border border-line bg-surface/30 backdrop-blur-sm
                   hover:bg-gray-700/40 transition-all duration-200 cursor-pointer
                   active:scale-[0.98] touch-action-manipulation"
               >
@@ -217,24 +217,24 @@ export default function EvenementsMois() {
                   {/* Infos (empilées verticalement sur mobile) */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <h3 className="text-base font-semibold text-white truncate">
-                        {evenement.prenom} <span className="text-gray-400">{evenement.nom}</span>
+                      <h3 className="text-base font-semibold text-ink truncate">
+                        {evenement.prenom} <span className="text-muted">{evenement.nom}</span>
                       </h3>
                       <span className={`text-xs font-medium px-2 py-0.5 rounded-full
                         ${evenement.typeEvenement === 'anniversaire'
-                          ? 'bg-emerald-500/10 text-emerald-300'
-                          : 'bg-purple-500/10 text-purple-300'}`}>
+                          ? 'bg-emerald-500/10 text-success'
+                          : 'bg-purple-500/10 text-info'}`}>
                         {evenement.typeEvenement === 'anniversaire' ? '🎂' : '🎉'}
                       </span>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-muted mt-1">
                       Le {evenement.jour} {nomsMois[mois]}
                     </p>
                   </div>
 
                   {/* Flèche de navigation (plus grande pour mobile) */}
-                  <div className="p-2 rounded-lg hover:bg-white/5 transition-colors">
-                    <svg className="w-5 h-5 text-gray-500 group-hover:text-[#C8A84E]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="p-2 rounded-lg hover:bg-ink/5 transition-colors">
+                    <svg className="w-5 h-5 text-muted group-hover:text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>

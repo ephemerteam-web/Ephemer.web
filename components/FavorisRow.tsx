@@ -61,12 +61,12 @@ export default function FavorisRow({
     <div className="mb-8" ref={conteneurRef}>
       {/* En-tête de la section */}
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base md:text-lg font-bold text-white">
+        <h2 className="text-base md:text-lg font-bold text-ink">
           ⭐ Mes favoris
         </h2>
         <Link
           href="/dashboard/contacts"
-          className="text-indigo-300/70 hover:text-indigo-200 text-xs transition-colors"
+          className="text-info hover:text-info text-xs transition-colors"
         >
           Gérer →
         </Link>
@@ -119,7 +119,7 @@ export default function FavorisRow({
 
                 {/* Badge événement proche */}
                 {afficheBadge && ev && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-[#1e1b4b] whitespace-nowrap pointer-events-none">
+                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-2 border-surface whitespace-nowrap pointer-events-none">
                     {ev.type === 'anniversaire' ? '🎂' : '🙏'}{' '}
                     {ev.jours === 0 ? 'J' : `J-${ev.jours}`}
                   </span>
@@ -127,7 +127,7 @@ export default function FavorisRow({
               </button>
 
               {/* Prénom */}
-              <p className="text-white text-xs mt-2 text-center truncate w-full">
+              <p className="text-ink text-xs mt-2 text-center truncate w-full">
                 {fav.prenom}
               </p>
 
@@ -135,7 +135,7 @@ export default function FavorisRow({
               {menuOuvert && (
                 <div
                   className={`
-                    z-50 bg-[#221f47] border border-white/15 rounded-xl shadow-2xl p-1 min-w-[170px]
+                    z-50 bg-surface border border-line rounded-xl shadow-2xl p-1 min-w-[170px]
                     animate-[fadeIn_0.15s_ease]
                     /* Desktop : attaché à l'avatar */
                     md:absolute md:top-16 md:left-1/2 md:-translate-x-1/2
@@ -149,7 +149,7 @@ export default function FavorisRow({
                       ouvrirDrawer(contactPourDrawer)
                       setFavoriMenuOuvert(null)
                     }}
-                    className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 rounded-lg transition-colors"
+                    className="block w-full text-left px-3 py-2 text-sm text-ink hover:bg-ink/10 rounded-lg transition-colors"
                   >
                     👤 Voir la fiche
                   </button>
@@ -162,7 +162,7 @@ export default function FavorisRow({
                         `/dashboard/generate?contactId=${fav.id}&eventType=${type}`
                       )
                     }}
-                    className="block w-full text-left px-3 py-2 text-sm text-white hover:bg-white/10 rounded-lg transition-colors"
+                    className="block w-full text-left px-3 py-2 text-sm text-ink hover:bg-ink/10 rounded-lg transition-colors"
                   >
                     ✨ Générer un message
                   </button>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
+import ThemeControl from './ThemeControl'
 import PushPermissionButton from './PushPermissionButton'
 import { removePushDevice } from '@/lib/push-device'
 
@@ -136,6 +137,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
 
       {/* DRAWER */}
       <aside
+        inert={!ouvert}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -145,34 +147,34 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
             : 'translateX(100%)',
           transition: translateX === 0 ? 'transform 0.3s ease-out' : 'none',
         }}
-        className="fixed top-0 right-0 z-50 h-full w-full sm:w-80 
-        bg-[#0B1120]/95 backdrop-blur-xl border-l border-white/10 
+        className="fixed top-0 right-0 z-50 h-dvh w-full sm:w-80
+        bg-canvas/95 backdrop-blur-xl border-l border-line
         shadow-2xl flex flex-col"
       >
         {/* HEADER */}
-        <div className="relative p-6 border-b border-white/10">
+        <div className="relative p-6 border-b border-line">
           <button
             onClick={onFermer}
-            className="absolute top-4 right-4 p-2 text-white/60"
+            className="absolute top-4 right-4 p-2 text-muted"
           >
             ✕
           </button>
 
           <div className="flex flex-col items-center text-center mt-4">
-            <div className="w-20 h-20 rounded-full bg-[#C8A84E]/20 flex items-center justify-center mb-3">
+            <div className="w-20 h-20 rounded-full bg-action/20 flex items-center justify-center mb-3">
               {initiale ? (
-                <span className="text-[#C8A84E] font-bold text-3xl">{initiale}</span>
+                <span className="text-accent font-bold text-3xl">{initiale}</span>
               ) : (
-                <span className="text-[#C8A84E] text-xl">👤</span>
+                <span className="text-accent text-xl">👤</span>
               )}
             </div>
 
-            <p className="text-white font-semibold text-lg">
+            <p className="text-ink font-semibold text-lg">
               {user?.prenom || 'Mon compte'}
             </p>
 
             {user?.email && (
-              <p className="text-white/40 text-xs mt-1 truncate">
+              <p className="text-muted text-xs mt-1 truncate">
                 {user.email}
               </p>
             )}
@@ -181,9 +183,10 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
 
         {/* NAV */}
         <nav className="flex-1 overflow-y-auto py-4">
+          <div className="px-6 pb-5 mb-4 border-b border-line"><ThemeControl /></div>
           {SECTIONS.map((section) => (
             <div key={section.titre} className="mb-4">
-              <p className="px-6 pb-2 text-[11px] uppercase text-white/30">
+              <p className="px-6 pb-2 text-[11px] uppercase text-muted">
                 {section.titre}
               </p>
 
@@ -205,17 +208,17 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
                     }}
                     className={`w-full px-6 py-3 flex items-center gap-3 text-sm transition-all duration-300 active:scale-[0.97] ${
                       estActif
-                        ? 'text-[#C8A84E] bg-[#C8A84E]/10'
+                        ? 'text-accent bg-action/10'
                         : estDanger
-                        ? 'text-white/70 hover:text-red-400'
-                        : 'text-white/70 hover:text-white'
+                        ? 'text-muted hover:text-danger'
+                        : 'text-muted hover:text-ink'
                     }`}
                   >
                     <span>{item.icone}</span>
                     <span className="flex-1 text-left">{item.label}</span>
 
                     {estActif && (
-                      <span className="h-2 w-2 rounded-full bg-[#C8A84E]" />
+                      <span className="h-2 w-2 rounded-full bg-action" />
                     )}
                   </button>
                 )
@@ -229,8 +232,8 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
         </nav>
 
         {/* FOOTER */}
-        <div className="px-6 py-4 border-t border-white/5 text-center">
-          <p className="text-white/20 text-xs">Ephemer • v1.0</p>
+        <div className="px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line text-center">
+          <p className="text-muted text-xs">Ephemer • v1.0</p>
         </div>
       </aside>
     </>

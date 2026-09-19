@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Profil introuvable' }, { status: 404 })
     }
 
-    console.log(`\n🧪 === TEST CRON POUR ${userProfile.email} ===`);
+
 
     // 5️⃣ Lancer le traitement pour CET utilisateur uniquement
     const result = await processUser(userProfile)
@@ -59,8 +59,10 @@ export async function POST(request: Request) {
       message: 'Simulation terminée : aucun envoi ni modification de données',
       simulation: true,
       notifs: result.notifs,
-      emails: result.emails
-    })
+      emails: result.emails,
+      preview: result.preview,
+      recipient: result.recipient
+    }, { headers: { 'Cache-Control': 'private, no-store' } })
 
   } catch (error) {
     console.error('❌ Erreur test cron:', error)
@@ -82,14 +84,15 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
       .eq('user_id', user.id);
 
     if (error) throw error;
-    if (!contacts?.length) return { notifs: 0, emails: 0 };
+    if (!contacts?.length) return { notifs: 0, emails: 0, previewNotifs: 0, preview: [], recipient: null };
 
     // Récupérer les préférences
-    const { data: prefs } = await supabaseAdmin
+    const { data: prefs, error: prefsError } = await supabaseAdmin
       .from('notification_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+    if (prefsError) throw prefsError;
 
     const today = parisDay();
 
@@ -135,7 +138,7 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
     }
 
     // Simulation uniquement : aucune insertion, mise à jour ni email.
-    return { notifs: 0, emails: 0, previewNotifs: notifsToInsert.length };
+    return { notifs: 0, emails: 0, previewNotifs: notifsToInsert.length, preview: notifsForEmail, recipient: (prefs?.canal_email ?? true) && user.email ? user.email : null };
   } catch (error) {
     console.error(`❌ Error processing user ${user.id}:`, error);
     throw error;

@@ -82,7 +82,7 @@ export default function PushPermissionButton() {
   if (status === "unsupported") {
     return (
       <div className="mt-2 p-3 bg-gray-700/30 rounded-lg">
-        <p className="text-gray-400 text-xs">
+        <p className="text-muted text-xs">
           ⚠️ Ton navigateur ne supporte pas les notifications push
         </p>
       </div>
@@ -92,7 +92,7 @@ export default function PushPermissionButton() {
   if (status === "denied") {
     return (
       <div className="mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
-        <p className="text-red-300 text-xs font-medium">❌ Notifications bloquées</p>
+        <p className="text-danger text-xs font-medium">❌ Notifications bloquées</p>
         (Chrome : cadenas à gauche de l&apos;adresse • Safari : Préférences {'>'} Sites web)
       </div>
     )
@@ -100,8 +100,8 @@ export default function PushPermissionButton() {
 
   if (status === "loading") {
     return (
-      <div className="mt-2 flex items-center gap-2 text-[#C8A84E]">
-        <div className="w-4 h-4 border-2 border-[#C8A84E]/30 border-t-[#C8A84E] rounded-full animate-spin" />
+      <div className="mt-2 flex items-center gap-2 text-accent">
+        <div className="w-4 h-4 border-2 border-accent/30 border-t-[#C8A84E] rounded-full animate-spin" />
         <span className="text-xs">Vérification en cours...</span>
       </div>
     )
@@ -110,13 +110,13 @@ export default function PushPermissionButton() {
   if (status === "granted") {
     return (
       <div className="mt-2">
-        <div className="flex items-center gap-2 text-green-400 text-xs mb-2">
+        <div className="flex items-center gap-2 text-success text-xs mb-2">
           <span>✅</span>
           <span>Appareil enregistré</span>
         </div>
         <button
           onClick={unsubscribeUser}
-          className="w-full px-4 py-2 bg-gray-700/50 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-gray-500/50"
+          className="w-full px-4 py-2 bg-gray-700/50 text-muted rounded-lg text-sm hover:bg-gray-700 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-gray-500/50"
           aria-label="Désactiver les notifications push"
         >
           🔕 Désactiver les notifications
@@ -129,11 +129,11 @@ export default function PushPermissionButton() {
     return (
       <div className="mt-2">
         <div className="p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
-          <p className="text-red-300 text-xs">❌ {errorMsg || "Une erreur est survenue"}</p>
+          <p className="text-danger text-xs">❌ {errorMsg || "Une erreur est survenue"}</p>
         </div>
         <button
           onClick={() => { setStatus("idle"); setErrorMsg(null) }}
-          className="mt-2 w-full px-4 py-2 bg-[#C8A84E]/20 text-[#C8A84E] rounded-lg text-sm hover:bg-[#C8A84E]/30 transition active:scale-95 touch-manipulation"
+          className="mt-2 w-full px-4 py-2 bg-action/20 text-accent rounded-lg text-sm hover:bg-action/30 transition active:scale-95 touch-manipulation"
         >
           🔄 Réessayer
         </button>
@@ -145,7 +145,7 @@ export default function PushPermissionButton() {
   return (
     <button
       onClick={subscribeUser}
-      className="mt-2 w-full px-4 py-3 bg-[#C8A84E]/20 text-[#C8A84E] rounded-lg text-sm font-medium hover:bg-[#C8A84E]/30 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+      className="mt-2 w-full px-4 py-3 bg-action/20 text-accent rounded-lg text-sm font-medium hover:bg-action/30 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-accent/50"
       aria-label="Activer les notifications push"
     >
       🔔 Activer les rappels push

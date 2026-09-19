@@ -1,3 +1,4 @@
+import { minimalAIInput } from './ai-privacy';
 // ============================================================
 // 📡 APPELS API - Génération de messages
 // ============================================================
@@ -38,7 +39,7 @@ export async function genererMessage(params: GenerateMessageParams): Promise<str
       // 🔑 On joint le token de session pour prouver notre identité au serveur
       Authorization: `Bearer ${session.access_token}`,
     },
-    body: JSON.stringify(params),
+    body: JSON.stringify(minimalAIInput(params)),
   });
 
   // Lecture sécurisée du JSON (même si la réponse est vide ou invalide)
@@ -58,5 +59,6 @@ export async function genererMessage(params: GenerateMessageParams): Promise<str
     throw new Error("Aucun message reçu du serveur");
   }
 
-  return responseData.message;
+  const firstName = params.firstName.trim().slice(0, 80);
+  return firstName ? `${firstName}, ${responseData.message}` : responseData.message;
 }

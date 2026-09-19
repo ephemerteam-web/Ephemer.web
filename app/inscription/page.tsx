@@ -119,7 +119,7 @@ export default function InscriptionPage() {
       <nav className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between z-10">
         <Link href="/" className="flex items-center gap-3 group">
           <svg
-            className="w-8 h-8 text-[#C8A84E] transition-transform duration-300 group-hover:rotate-12"
+            className="w-8 h-8 text-accent transition-transform duration-300 group-hover:rotate-12"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -127,7 +127,7 @@ export default function InscriptionPage() {
             <path
               d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
               fill="currentColor"
-              className="text-[#1B2A4A]"
+              className="text-on-action"
             />
             <path
               d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
@@ -138,9 +138,9 @@ export default function InscriptionPage() {
             <circle cx="15" cy="9" r="1" fill="currentColor" />
           </svg>
           <span className="text-xl font-semibold tracking-tight">
-            <span className="text-white">Ephemer</span>
-            <span className="text-white/40 font-light">
-              <span className="text-[#C8A84E]">.</span>name
+            <span className="text-ink">Ephemer</span>
+            <span className="text-muted font-light">
+              <span className="text-accent">.</span>name
             </span>
           </span>
         </Link>
@@ -149,21 +149,21 @@ export default function InscriptionPage() {
       {/* CONTENU CENTRÉ */}
       <div className="flex-1 flex items-center justify-center w-full px-4 py-8 z-10">
         <div className="w-full max-w-md">
-          <div className="bg-white/5 border border-[#C8A84E]/10 rounded-3xl p-8 backdrop-blur-sm relative">
+          <div className="bg-ink/5 border border-accent/10 rounded-3xl p-8 backdrop-blur-sm relative">
 
             {/* FLÈCHE RETOUR */}
             <button
               type="button"
               onClick={() => router.back()}
               aria-label="Revenir à la page précédente"
-              className="absolute top-5 left-5 flex h-9 w-9 items-center justify-center rounded-full border border-[#C8A84E]/30 bg-black/30 text-[#C8A84E] backdrop-blur-sm transition hover:bg-[#C8A84E] hover:text-black"
+              className="absolute top-5 left-5 flex h-9 w-9 items-center justify-center rounded-full border border-accent/30 bg-black/30 text-accent backdrop-blur-sm transition hover:bg-action hover:text-on-action"
             >
               ←
             </button>
 
             <div className="text-center mb-8 pt-6">
-              <h1 className="text-3xl font-black text-white">Créer un compte</h1>
-              <p className="text-white/40 text-sm mt-2">
+              <h1 className="text-3xl font-black text-ink">Créer un compte</h1>
+              <p className="text-muted text-sm mt-2">
                 Rejoins Ephemer.name et ne rate plus aucune date importante.
               </p>
             </div>
@@ -171,30 +171,30 @@ export default function InscriptionPage() {
             <form onSubmit={handleInscription} className="flex flex-col gap-5">
               {/* EMAIL */}
               <div>
-                <label className="text-sm text-white/70">Email</label>
+                <label className="text-sm text-muted">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="exemple@email.com"
-                  className="mt-1 bg-white text-black border border-white/20 rounded-xl px-4 py-3 w-full placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  className="mt-1 bg-canvas text-ink border border-line rounded-xl px-4 py-3 w-full placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 {email && !isValidEmail(email) && (
-                  <span className="text-red-400 text-xs">Email invalide</span>
+                  <span className="text-danger text-xs">Email invalide</span>
                 )}
               </div>
 
               {/* MOT DE PASSE */}
               <div>
-                <label className="text-sm text-white/70">Mot de passe</label>
+                <label className="text-sm text-muted">Mot de passe</label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 6 caractères"
-                  className="mt-1 bg-white text-black border border-white/20 rounded-xl px-4 py-3 w-full placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  className="mt-1 bg-canvas text-ink border border-line rounded-xl px-4 py-3 w-full placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
                 />
-                <div className="h-2 bg-white/10 rounded mt-2 overflow-hidden">
+                <div className="h-2 bg-ink/10 rounded mt-2 overflow-hidden">
                   <div
                     className={`h-2 rounded transition-all ${
                       passwordStrength <= 1
@@ -211,22 +211,22 @@ export default function InscriptionPage() {
 
               {/* CONFIRMATION */}
               <div>
-                <label className="text-sm text-white/70">Confirmer le mot de passe</label>
+                <label className="text-sm text-muted">Confirmer le mot de passe</label>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Retape ton mot de passe"
-                  className="mt-1 bg-white text-black border border-white/20 rounded-xl px-4 py-3 w-full placeholder-black/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  className="mt-1 bg-canvas text-ink border border-line rounded-xl px-4 py-3 w-full placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent"
                 />
                 {confirmPassword && !passwordsMatch && (
-                  <span className="text-red-400 text-xs">
+                  <span className="text-danger text-xs">
                     Les mots de passe ne correspondent pas.
                   </span>
                 )}
               </div>
 
-              <label className="text-xs text-white/60 flex gap-2 items-center">
+              <label className="text-xs text-muted flex gap-2 items-center">
                 <input
                   type="checkbox"
                   checked={showPassword}
@@ -237,7 +237,7 @@ export default function InscriptionPage() {
 
               <button
                 disabled={!isFormValid || loading || cooldown > 0}
-                className="bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-black py-3 rounded-xl font-bold transition disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.01]"
+                className="bg-gradient-to-r from-action to-action text-on-action py-3 rounded-xl font-bold transition disabled:opacity-40 disabled:cursor-not-allowed hover:scale-[1.01]"
               >
                 {loading
                   ? 'Création...'
@@ -251,17 +251,17 @@ export default function InscriptionPage() {
               <div
                 className={`mt-4 p-3 rounded-xl text-sm ${
                   isError
-                    ? 'bg-red-500/10 text-red-300 border border-red-500/20'
-                    : 'bg-green-500/10 text-green-300 border border-green-500/20'
+                    ? 'bg-red-500/10 text-danger border border-red-500/20'
+                    : 'bg-green-500/10 text-success border border-green-500/20'
                 }`}
               >
                 {message}
               </div>
             )}
 
-            <p className="text-center text-sm text-white/40 mt-6">
+            <p className="text-center text-sm text-muted mt-6">
               Déjà un compte ?{' '}
-              <Link href="/connexion" className="text-[#C8A84E] hover:underline">
+              <Link href="/connexion" className="text-accent hover:underline">
                 Se connecter
               </Link>
             </p>

@@ -91,7 +91,7 @@ export default function ContactsPage() {
     const config = TYPES_RELATION.find((t) => t.value === relationSecurisee)
 
     if (!config) {
-      return 'bg-white/10 text-indigo-200 border border-white/20'
+      return 'bg-ink/10 text-info border border-line'
     }
 
     return config.couleur
@@ -126,7 +126,7 @@ export default function ContactsPage() {
           <div className="animate-pulse mb-4">
             <span className="text-6xl">📒</span>
           </div>
-          <p className="text-indigo-200">Chargement...</p>
+          <p className="text-info">Chargement...</p>
         </div>
       </div>
     )
@@ -136,16 +136,16 @@ export default function ContactsPage() {
     <div className="p-4 md:p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-          <h1 className="text-2xl font-bold text-white">
+          <h1 className="text-2xl font-bold text-ink">
             📒 Mes contacts
-            <span className="ml-2 text-sm font-normal text-indigo-300">
+            <span className="ml-2 text-sm font-normal text-info">
               ({contacts.length})
             </span>
           </h1>
 
           <Link
             href="/dashboard/contacts/nouveau"
-            className="w-full sm:w-auto text-center bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
+            className="w-full sm:w-auto text-center bg-action hover:bg-action text-on-action font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
           >
             + Nouveau
           </Link>
@@ -163,11 +163,11 @@ export default function ContactsPage() {
         {contacts.length === 0 ? (
           <div className="text-center mt-16">
             <span className="text-6xl mb-4 block">👥</span>
-            <p className="text-indigo-300">Aucun contact pour le moment.</p>
+            <p className="text-info">Aucun contact pour le moment.</p>
 
             <Link
               href="/dashboard/contacts/nouveau"
-              className="inline-block mt-4 text-sm text-[#C8A84E] hover:text-white underline transition"
+              className="inline-block mt-4 text-sm text-accent hover:text-ink underline transition"
             >
               Ajouter mon premier contact →
             </Link>
@@ -175,7 +175,7 @@ export default function ContactsPage() {
         ) : contactsFiltres.length === 0 ? (
           <div className="text-center mt-16">
             <span className="text-6xl mb-4 block">🔍</span>
-            <p className="text-indigo-300">
+            <p className="text-info">
               Aucun contact ne correspond à ta recherche.
             </p>
           </div>
@@ -185,15 +185,15 @@ export default function ContactsPage() {
               <div
                 key={contact.id}
                 onClick={() => ouvrirDrawer(contact)}
-                className={`group relative bg-white/5 backdrop-blur-lg border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all duration-300 ${
+                className={`group relative bg-ink/5 backdrop-blur-lg border rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 cursor-pointer transition-all duration-300 ${
                   contact.est_favori
-                    ? 'border-[#C8A84E]/40 hover:border-[#C8A84E]/70 shadow-[0_0_15px_-3px_rgba(200,168,78,0.15)]'
-                    : 'border-white/10 hover:bg-white/10 hover:border-white/20'
+                    ? 'border-accent/40 hover:border-accent/70 shadow-[0_0_15px_-3px_rgba(200,168,78,0.15)]'
+                    : 'border-line hover:bg-ink/10 hover:border-line'
                 }`}
               >
                 {/* Lueur dorée subtile en arrière-plan si favori */}
                 {contact.est_favori && (
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#C8A84E]/5 to-transparent opacity-50 pointer-events-none rounded-xl" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-action/5 to-transparent opacity-50 pointer-events-none rounded-xl" />
                 )}
 
                 <div className="flex items-center gap-4 min-w-0 relative z-10">
@@ -201,15 +201,15 @@ export default function ContactsPage() {
                   <div className="relative flex-shrink-0">
                     {/* Le cercle doré (visible seulement si favori) */}
                     {contact.est_favori && (
-                      <div className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-[#C8A84E] via-[#F4E5BC] to-[#C8A84E] animate-pulse-slow" />
+                      <div className="absolute -inset-[3px] rounded-full bg-gradient-to-tr from-action via-action to-action animate-pulse-slow" />
                     )}
                     
                     {/* L'avatar lui-même */}
                     <div 
                       className={`relative w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors ${
                         contact.est_favori
-                          ? 'bg-[#0B1120] text-[#C8A84E] border-[#0B1120]' // Fond sombre pour faire ressortir l'or
-                          : 'bg-indigo-500/30 text-white border-indigo-400/40'
+                          ? 'bg-canvas text-accent border-canvas' // Fond sombre pour faire ressortir l'or
+                          : 'bg-indigo-500/30 text-ink border-indigo-400/40'
                       }`}
                     >
                       {getInitiales(contact)}
@@ -218,7 +218,7 @@ export default function ContactsPage() {
 
                   <div className="min-w-0">
                     <p className={`font-semibold truncate transition-colors ${
-                      contact.est_favori ? 'text-[#C8A84E]' : 'text-white'
+                      contact.est_favori ? 'text-accent' : 'text-ink'
                     }`}>
                       {getNomComplet(contact)}
                     </p>
@@ -237,13 +237,13 @@ export default function ContactsPage() {
                   {/* On a retiré l'étoile ici car elle est maintenant sur l'avatar */}
 
                   {contact.estLie && (
-                    <span className="text-xs bg-green-500/20 text-green-300 border border-green-500/30 font-medium px-2 py-1 rounded-full">
+                    <span className="text-xs bg-green-500/20 text-success border border-green-500/30 font-medium px-2 py-1 rounded-full">
                       🤝 Lié
                     </span>
                   )}
 
                   {contact.date_naissance && (
-                    <span className="text-gray-400">🎂</span>
+                    <span className="text-muted">🎂</span>
                   )}
 
                   <button
@@ -251,7 +251,7 @@ export default function ContactsPage() {
                       e.stopPropagation()
                       router.push(`/dashboard/generate?contactId=${contact.id}`)
                     }}
-                    className="text-xs text-indigo-300 hover:text-white font-medium border border-indigo-400/30 px-3 py-1 rounded-lg hover:bg-indigo-500/10 transition"
+                    className="text-xs text-info hover:text-ink font-medium border border-indigo-400/30 px-3 py-1 rounded-lg hover:bg-indigo-500/10 transition"
                   >
                     ✨ Générer
                   </button>
@@ -261,7 +261,7 @@ export default function ContactsPage() {
                       e.stopPropagation()
                       router.push(`/dashboard/contacts/${contact.id}/edit`)
                     }}
-                    className="text-xs text-[#C8A84E]/70 hover:text-white font-medium border border-[#C8A84E]/30 px-3 py-1 rounded-lg hover:bg-[#C8A84E]/10 transition"
+                    className="text-xs text-accent/70 hover:text-ink font-medium border border-accent/30 px-3 py-1 rounded-lg hover:bg-action/10 transition"
                   >
                     ✏️ Modifier
                   </button>

@@ -1,5 +1,7 @@
 'use client'
 
+import { duplicateReason } from '@/lib/contact-quality'
+import { readOwnRows } from '@/lib/user-data'
 import { useState } from 'react'
 import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
 type PickedContact = { name?: string[]; email?: string[]; tel?: string[] }
@@ -202,6 +204,14 @@ const sauvegarderContactEdite = () => {
 }))
 
 
+      const existing = await readOwnRows('contacts', userData.user.id)
+      const warnings: string[] = []
+      for (let i = 0; i < contactsPourSupabase.length; i++) {
+        const candidate = contactsPourSupabase[i]
+        const match = [...existing, ...contactsPourSupabase.slice(0, i)].find(other => duplicateReason(candidate, other))
+        if (match) warnings.push(`${candidate.prenom} ${candidate.nom ?? ''} : ${duplicateReason(candidate, match)}`)
+      }
+      if (warnings.length && !window.confirm(`Doublons possibles :\n${warnings.join('\n')}\n\nAucune fusion ne sera effectuée. Importer quand même ces fiches séparées ? Annule pour modifier la sélection.`)) return
       const { error } = await supabase.from('contacts').insert(contactsPourSupabase)
 
       if (error) {
@@ -238,6 +248,12 @@ const sauvegarderContactEdite = () => {
       return
     }
 
+    try {
+      const existing = await readOwnRows('contacts', userData.user.id)
+      const candidate = { prenom, nom, email, telephone_indicatif: telephoneIndicatif, telephone_numero: telephoneNumero }
+      const match = existing.find(other => duplicateReason(candidate, other))
+      if (match && !window.confirm(`Doublon possible : ${duplicateReason(candidate, match)}. Créer quand même une fiche distincte ?`)) { setChargement(false); return }
+    } catch { setErreur('Impossible de vérifier les doublons. Réessaie.'); setChargement(false); return }
     const { error } = await supabase.from('contacts').insert({
       user_id: userData.user.id,
       prenom: prenom.trim(),
@@ -274,11 +290,11 @@ const sauvegarderContactEdite = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#0B1120] pb-12">
+    <div className="min-h-screen bg-canvas pb-12">
       <div className="mx-auto max-w-lg px-4 pt-8">
-        <h1 className="mb-2 text-3xl font-bold text-white">👤 Nouveau contact</h1>
+        <h1 className="mb-2 text-3xl font-bold text-ink">👤 Nouveau contact</h1>
 
-        <p className="mb-8 text-white/60">
+        <p className="mb-8 text-muted">
           Ajoute manuellement ou importe depuis ton téléphone
         </p>
 
@@ -288,14 +304,14 @@ const sauvegarderContactEdite = () => {
               type="button"
               onClick={importerDepuisTelephone}
               disabled={importEnCours}
-              className="flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-5 text-lg font-semibold text-white shadow-xl transition-all active:scale-[0.985] disabled:opacity-70"
+              className="flex w-full items-center justify-center gap-3 rounded-3xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-5 text-lg font-semibold text-ink shadow-xl transition-all active:scale-[0.985] disabled:opacity-70"
             >
               {importEnCours
                 ? '📖 Ouverture du carnet...'
                 : '📱 Importer depuis mes contacts'}
             </button>
 
-            <p className="mt-3 text-center text-xs leading-relaxed text-white/50">
+            <p className="mt-3 text-center text-xs leading-relaxed text-muted">
               Le téléphone ouvrira ton carnet d’adresses.
               <br />
               Choisis un ou plusieurs contacts.
@@ -305,7 +321,7 @@ const sauvegarderContactEdite = () => {
 
         {isMobile && !supporteContactPicker && (
           <div className="mb-8 rounded-3xl border border-amber-500/30 bg-amber-500/10 p-5">
-            <p className="text-sm text-amber-400">
+            <p className="text-sm text-warning">
               ⚠️ L’import automatique n’est pas disponible sur ton navigateur.
               <br />
               Remplis le formulaire ci-dessous.
@@ -317,8 +333,8 @@ const sauvegarderContactEdite = () => {
           <div
             className={`mb-8 rounded-3xl border p-5 text-sm ${
               erreur.includes('✅') || erreur.includes('🎉')
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-red-500/30 bg-red-500/10 text-red-400'
+                ? 'border-emerald-500/30 bg-emerald-500/10 text-success'
+                : 'border-red-500/30 bg-red-500/10 text-danger'
             }`}
           >
             {erreur}
@@ -326,13 +342,13 @@ const sauvegarderContactEdite = () => {
         )}
 
         {contactsTelephone.length > 0 && (
-          <div className="mb-10 rounded-3xl border border-white/10 bg-white/[0.03] p-4">
+          <div className="mb-10 rounded-3xl border border-line bg-ink/[0.03] p-4">
             <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-lg font-bold text-white">
+                <h2 className="text-lg font-bold text-ink">
                   Contacts à importer
                 </h2>
-                <p className="text-sm text-white/50">
+                <p className="text-sm text-muted">
                   Décoche les contacts que tu ne veux pas enregistrer.
                 </p>
               </div>
@@ -340,7 +356,7 @@ const sauvegarderContactEdite = () => {
               <button
                 type="button"
                 onClick={() => setContactsTelephone([])}
-                className="rounded-full bg-white/10 px-3 py-1 text-xs text-white/70 active:scale-95"
+                className="rounded-full bg-ink/10 px-3 py-1 text-xs text-muted active:scale-95"
               >
                 Vider
               </button>
@@ -352,8 +368,8 @@ const sauvegarderContactEdite = () => {
                   key={contact.id}
                   className={`flex gap-3 rounded-2xl border p-4 transition-all active:scale-[0.99] ${
                     contact.selectionne
-                      ? 'border-[#C8A84E]/50 bg-[#C8A84E]/10'
-                      : 'border-white/10 bg-white/5'
+                      ? 'border-accent/50 bg-action/10'
+                      : 'border-line bg-ink/5'
                   }`}
                 >
                   <input
@@ -364,11 +380,11 @@ const sauvegarderContactEdite = () => {
                   />
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold text-white">
+                    <p className="truncate font-bold text-ink">
                       {contact.nomComplet || 'Contact sans nom'}
                     </p>
 
-                    <div className="mt-1 space-y-1 text-sm text-white/55">
+                    <div className="mt-1 space-y-1 text-sm text-muted">
                       {contact.telephoneNumero && (
                         <p className="truncate">
                           📞 {contact.telephoneIndicatif}{' '}
@@ -381,7 +397,7 @@ const sauvegarderContactEdite = () => {
                       )}
 
                       {!contact.telephoneNumero && !contact.email && (
-                        <p className="text-amber-300">
+                        <p className="text-warning">
                           Aucun téléphone ou email détecté
                         </p>
                       )}
@@ -391,7 +407,7 @@ const sauvegarderContactEdite = () => {
     e.preventDefault()
     setContactEnEdition(contact)
   }}
-  className="mt-3 rounded-xl bg-white/10 px-4 py-2 text-sm font-semibold text-white active:scale-95"
+  className="mt-3 rounded-xl bg-ink/10 px-4 py-2 text-sm font-semibold text-ink active:scale-95"
 >
   Modifier
 </button>
@@ -410,7 +426,7 @@ const sauvegarderContactEdite = () => {
                 contactsTelephone.filter((contact) => contact.selectionne)
                   .length === 0
               }
-              className="mt-5 w-full rounded-3xl bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] px-4 py-5 text-lg font-bold text-[#0B1120] shadow-xl transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-5 w-full rounded-3xl bg-gradient-to-r from-action to-action px-4 py-5 text-lg font-bold text-on-action shadow-xl transition active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {importEnCours
                 ? 'Import en cours...'
@@ -424,7 +440,7 @@ const sauvegarderContactEdite = () => {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Prénom *
             </label>
             <input
@@ -433,12 +449,12 @@ const sauvegarderContactEdite = () => {
               onChange={(e) => setPrenom(e.target.value)}
               required
               placeholder="Marie"
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Nom
             </label>
             <input
@@ -446,30 +462,30 @@ const sauvegarderContactEdite = () => {
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               placeholder="Dupont"
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Date de naissance
             </label>
             <input
               type="date"
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Relation
             </label>
             <select
               value={relation}
               onChange={(e) => setRelation(e.target.value)}
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             >
               <option value="ami">👫 Ami(e)</option>
               <option value="famille">👨‍👩‍👧 Famille</option>
@@ -479,7 +495,7 @@ const sauvegarderContactEdite = () => {
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Email
             </label>
             <input
@@ -487,12 +503,12 @@ const sauvegarderContactEdite = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="marie@email.com"
-              className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Téléphone
             </label>
 
@@ -500,7 +516,7 @@ const sauvegarderContactEdite = () => {
               <select
                 value={telephoneIndicatif}
                 onChange={(e) => setTelephoneIndicatif(e.target.value)}
-                className="w-28 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+                className="w-28 rounded-2xl border border-line bg-ink/5 px-4 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
               >
                 {INDICATIFS_PAYS.map((i) => (
                   <option key={i.code} value={i.code}>
@@ -516,17 +532,17 @@ const sauvegarderContactEdite = () => {
                   setTelephoneNumero(e.target.value.replace(/[^0-9]/g, ''))
                 }
                 placeholder="612345678"
-                className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+                className="min-w-0 flex-1 rounded-2xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
               />
             </div>
 
-            <p className="mt-3 text-xs text-white/40">
+            <p className="mt-3 text-xs text-muted">
               Sans le 0 initial, ex : 612345678.
             </p>
           </div>
 
           <div>
-            <label className="mb-2 block text-sm font-semibold text-white/70">
+            <label className="mb-2 block text-sm font-semibold text-muted">
               Note / À propos
             </label>
             <textarea
@@ -534,10 +550,10 @@ const sauvegarderContactEdite = () => {
               onChange={(e) => setNote(e.target.value)}
               placeholder="Aime le foot, cuisine italienne, vit à Lyon..."
               rows={4}
-              className="w-full resize-y rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-base text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-full resize-y rounded-3xl border border-line bg-ink/5 px-5 py-4 text-base text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
 
-            <p className="mt-3 text-xs text-white/40">
+            <p className="mt-3 text-xs text-muted">
               💡 Plus tu donnes de détails, meilleures seront les idées de
               cadeaux.
             </p>
@@ -547,20 +563,20 @@ const sauvegarderContactEdite = () => {
             onClick={() => setEstFavori(!estFavori)}
             className={`flex cursor-pointer items-center justify-between rounded-3xl border p-5 transition-all active:scale-[0.985] ${
               estFavori
-                ? 'border-[#C8A84E] bg-[#C8A84E]/10'
-                : 'border-white/10 bg-white/5 hover:border-white/20'
+                ? 'border-accent bg-action/10'
+                : 'border-line bg-ink/5 hover:border-line'
             }`}
           >
             <div>
-              <p className="font-semibold text-white">⭐ Contact favori</p>
-              <p className="text-xs text-white/50">
+              <p className="font-semibold text-ink">⭐ Contact favori</p>
+              <p className="text-xs text-muted">
                 Apparaîtra en premier dans ta liste
               </p>
             </div>
 
             <div
               className={`relative h-7 w-12 rounded-full transition-colors ${
-                estFavori ? 'bg-[#C8A84E]' : 'bg-gray-600'
+                estFavori ? 'bg-action' : 'bg-gray-600'
               }`}
             >
               <div
@@ -574,7 +590,7 @@ const sauvegarderContactEdite = () => {
           <button
             type="submit"
             disabled={chargement || !prenom.trim()}
-            className="mt-6 w-full rounded-3xl bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] py-5 text-lg font-bold text-[#0B1120] shadow-xl transition-all active:scale-[0.985] disabled:opacity-60"
+            className="mt-6 w-full rounded-3xl bg-gradient-to-r from-action to-action py-5 text-lg font-bold text-on-action shadow-xl transition-all active:scale-[0.985] disabled:opacity-60"
           >
             {chargement ? 'Enregistrement en cours...' : '💾 Enregistrer le contact'}
           </button>
@@ -582,13 +598,13 @@ const sauvegarderContactEdite = () => {
       </div>
       {contactEnEdition && (
   <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 px-4 sm:items-center">
-    <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-white/10 bg-[#0B1120] p-5 shadow-2xl sm:rounded-3xl">
+    <div className="max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-line bg-canvas p-5 shadow-2xl sm:rounded-3xl">
       <div className="mb-5 flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-xl font-bold text-white">
+          <h2 className="text-xl font-bold text-ink">
             Modifier le contact
           </h2>
-          <p className="text-sm text-white/50">
+          <p className="text-sm text-muted">
             Complète les informations avant import.
           </p>
         </div>
@@ -596,7 +612,7 @@ const sauvegarderContactEdite = () => {
         <button
           type="button"
           onClick={() => setContactEnEdition(null)}
-          className="rounded-full bg-white/10 px-3 py-2 text-white"
+          className="rounded-full bg-ink/10 px-3 py-2 text-ink"
         >
           ✕
         </button>
@@ -604,7 +620,7 @@ const sauvegarderContactEdite = () => {
 
       <div className="space-y-5">
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Prénom *
           </label>
           <input
@@ -616,12 +632,12 @@ const sauvegarderContactEdite = () => {
                 prenom: e.target.value,
               })
             }
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Nom
           </label>
           <input
@@ -633,12 +649,12 @@ const sauvegarderContactEdite = () => {
                 nom: e.target.value,
               })
             }
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Date de naissance
           </label>
           <input
@@ -650,12 +666,12 @@ const sauvegarderContactEdite = () => {
                 dateNaissance: e.target.value,
               })
             }
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Relation
           </label>
           <select
@@ -666,7 +682,7 @@ const sauvegarderContactEdite = () => {
                 relation: e.target.value,
               })
             }
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           >
             <option value="ami">👫 Ami(e)</option>
             <option value="famille">👨‍👩‍👧 Famille</option>
@@ -676,7 +692,7 @@ const sauvegarderContactEdite = () => {
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Email
           </label>
           <input
@@ -688,12 +704,12 @@ const sauvegarderContactEdite = () => {
                 email: e.target.value,
               })
             }
-            className="w-full rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           />
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Téléphone
           </label>
 
@@ -706,7 +722,7 @@ const sauvegarderContactEdite = () => {
                   telephoneIndicatif: e.target.value,
                 })
               }
-              className="w-28 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="w-28 rounded-2xl border border-line bg-ink/5 px-4 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             >
               {INDICATIFS_PAYS.map((i) => (
                 <option key={i.code} value={i.code}>
@@ -724,13 +740,13 @@ const sauvegarderContactEdite = () => {
                   telephoneNumero: e.target.value.replace(/[^0-9]/g, ''),
                 })
               }
-              className="min-w-0 flex-1 rounded-2xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+              className="min-w-0 flex-1 rounded-2xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
             />
           </div>
         </div>
 
         <div>
-          <label className="mb-2 block text-sm font-semibold text-white/70">
+          <label className="mb-2 block text-sm font-semibold text-muted">
             Note / À propos
           </label>
           <textarea
@@ -742,7 +758,7 @@ const sauvegarderContactEdite = () => {
               })
             }
             rows={4}
-            className="w-full resize-y rounded-3xl border border-white/10 bg-white/5 px-5 py-4 text-white focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/60"
+            className="w-full resize-y rounded-3xl border border-line bg-ink/5 px-5 py-4 text-ink focus:outline-none focus:ring-2 focus:ring-accent/60"
           />
         </div>
 
@@ -755,20 +771,20 @@ const sauvegarderContactEdite = () => {
           }
           className={`flex cursor-pointer items-center justify-between rounded-3xl border p-5 transition-all active:scale-[0.985] ${
             contactEnEdition.estFavori
-              ? 'border-[#C8A84E] bg-[#C8A84E]/10'
-              : 'border-white/10 bg-white/5'
+              ? 'border-accent bg-action/10'
+              : 'border-line bg-ink/5'
           }`}
         >
           <div>
-            <p className="font-semibold text-white">⭐ Contact favori</p>
-            <p className="text-xs text-white/50">
+            <p className="font-semibold text-ink">⭐ Contact favori</p>
+            <p className="text-xs text-muted">
               Apparaîtra en premier dans ta liste
             </p>
           </div>
 
           <div
             className={`relative h-7 w-12 rounded-full transition-colors ${
-              contactEnEdition.estFavori ? 'bg-[#C8A84E]' : 'bg-gray-600'
+              contactEnEdition.estFavori ? 'bg-action' : 'bg-gray-600'
             }`}
           >
             <div
@@ -783,7 +799,7 @@ const sauvegarderContactEdite = () => {
           type="button"
           onClick={sauvegarderContactEdite}
           disabled={!contactEnEdition.prenom.trim()}
-          className="w-full rounded-3xl bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] py-5 text-lg font-bold text-[#0B1120] shadow-xl active:scale-[0.985] disabled:opacity-50"
+          className="w-full rounded-3xl bg-gradient-to-r from-action to-action py-5 text-lg font-bold text-on-action shadow-xl active:scale-[0.985] disabled:opacity-50"
         >
           Enregistrer les modifications
         </button>

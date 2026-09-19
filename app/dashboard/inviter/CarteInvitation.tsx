@@ -45,19 +45,19 @@ export default function CarteInvitation({
 
   return (
     <div
-      className={`relative bg-white/5 backdrop-blur-lg border rounded-xl p-4 transition-all duration-300 ${
+      className={`relative bg-ink/5 backdrop-blur-lg border rounded-xl p-4 transition-all duration-300 ${
         inactif
-          ? 'border-white/10 opacity-50'
-          : 'border-[#C8A84E]/30 hover:border-[#C8A84E]/60 shadow-[0_0_15px_-3px_rgba(200,168,78,0.12)]'
+          ? 'border-line opacity-50'
+          : 'border-accent/30 hover:border-accent/60 shadow-[0_0_15px_-3px_rgba(200,168,78,0.12)]'
       }`}
     >
       {/* ─────── LIGNE 1 : titre + compteur ─────── */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">
-          <h3 className="font-semibold text-white text-sm md:text-base truncate">
+          <h3 className="font-semibold text-ink text-sm md:text-base truncate">
             {invitation.label || '🔗 Lien sans nom'}
           </h3>
-          <p className="text-indigo-300/70 text-xs mt-0.5">
+          <p className="text-info text-xs mt-0.5">
             {expire
               ? '⏱️ Expiré'
               : complet
@@ -73,8 +73,8 @@ export default function CarteInvitation({
         <div
           className={`shrink-0 text-xs font-bold px-2.5 py-1 rounded-full border ${
             complet
-              ? 'bg-green-500/20 text-green-300 border-green-500/30'
-              : 'bg-[#C8A84E]/15 text-[#C8A84E] border-[#C8A84E]/30'
+              ? 'bg-green-500/20 text-success border-green-500/30'
+              : 'bg-action/15 text-accent border-accent/30'
           }`}
         >
           {invitation.nb_utilisations}/{invitation.max_utilisations}
@@ -82,16 +82,16 @@ export default function CarteInvitation({
       </div>
 
       {/* ─────── LIGNE 2 : l'URL (version raccourcie si trop longue) ─────── */}
-      <div className="bg-[#0B1120]/60 border border-white/10 rounded-lg px-3 py-2.5 mb-3">
-        <p className="text-[#C8A84E]/90 text-xs font-mono truncate select-all">
+      <div className="bg-canvas/60 border border-line rounded-lg px-3 py-2.5 mb-3">
+        <p className="text-accent/90 text-xs font-mono truncate select-all">
           {url.length > 40 ? `${url.substring(0, 37)}...` : url}
         </p>
       </div>
 
       {/* ─────── LIGNE 3 : barre de progression ─────── */}
-      <div className="h-1.5 bg-white/10 rounded-full overflow-hidden mb-4">
+      <div className="h-1.5 bg-ink/10 rounded-full overflow-hidden mb-4">
         <div
-          className="h-full bg-gradient-to-r from-[#C8A84E] to-[#F4E5BC] rounded-full transition-all duration-500"
+          className="h-full bg-gradient-to-r from-action to-action rounded-full transition-all duration-500"
           style={{ width: `${Math.min(pourcentage, 100)}%` }}
         />
       </div>
@@ -101,7 +101,7 @@ export default function CarteInvitation({
         <button
           onClick={() => onCopier(invitation)}
           disabled={inactif}
-          className="flex-1 min-w-[80px] text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[80px] text-xs font-medium text-info hover:text-ink border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {copie ? '✓ Copié !' : '📋 Copier'}
         </button>
@@ -109,7 +109,7 @@ export default function CarteInvitation({
         <button
           onClick={() => onPartager(invitation)}
           disabled={inactif}
-          className="flex-1 min-w-[80px] text-xs font-medium text-green-300 hover:text-white border border-green-500/30 hover:bg-green-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="flex-1 min-w-[80px] text-xs font-medium text-success hover:text-ink border border-green-500/30 hover:bg-green-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
         >
           💬 Partager
         </button>
@@ -121,7 +121,7 @@ export default function CarteInvitation({
                 onDesactiver(invitation.id)
               }
             }}
-            className="flex-1 min-w-[80px] text-xs font-medium text-red-300 hover:text-white border border-red-500/30 hover:bg-red-500/10 px-3 py-2.5 rounded-lg transition active:scale-95"
+            className="flex-1 min-w-[80px] text-xs font-medium text-danger hover:text-ink border border-red-500/30 hover:bg-red-500/10 px-3 py-2.5 rounded-lg transition active:scale-95"
           >
             🚫
           </button>

@@ -12,23 +12,22 @@ export default function ProgressRing({ joursRestants, estAujourdhui }: ProgressR
   const offset = circulaire * (progression / 100)
 
   // ── Calcul du pulse : plus fort si proche (J-0), très léger si loin (J-365) ──
-  const intensitePulse = Math.max(0.1, Math.min(1, 1 - joursRestants / 365))
 
   // Classes d'animation conditionnelles
   const pulseClass = estAujourdhui
     ? `animate-pulse`
     : joursRestants <= 30
-    ? `animate-pulse opacity-${Math.round(intensitePulse * 100)}`
+    ? 'animate-pulse'
     : ''
 
   return (
     <div className={`relative w-16 h-16 flex items-center justify-center shrink-0 ${pulseClass}`} style={{
-      opacity: estAujourdhui ? 1 : intensitePulse,
+      opacity: 1,
     }}>
       {/* SVG pour le cercle */}
       <svg className="absolute w-full h-full" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 8px rgba(200, 168, 78, 0.3))' }}>
         {/* Cercle de fond gris */}
-        <circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="2.5" />
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--line)" strokeWidth="2.5" />
 
         {/* Cercle de progression doré */}
         <circle
@@ -36,7 +35,7 @@ export default function ProgressRing({ joursRestants, estAujourdhui }: ProgressR
           cy="50"
           r="45"
           fill="none"
-          stroke="#C8A84E"
+          stroke="var(--accent)"
           strokeWidth="2.5"
           strokeDasharray={`${offset} ${circulaire}`}
           strokeLinecap="round"
@@ -52,8 +51,8 @@ export default function ProgressRing({ joursRestants, estAujourdhui }: ProgressR
           <div className="text-2xl animate-bounce">🎉</div>
         ) : (
           <div className="flex items-baseline gap-0.5 justify-center">
-  <span className="text-sm font-bold text-white">J-</span>
-  <span className="text-sm font-bold text-white">
+  <span className="text-sm font-bold text-ink">J-</span>
+  <span className="text-sm font-bold text-ink">
     {joursRestants}
   </span>
 </div>

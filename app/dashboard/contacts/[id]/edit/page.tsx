@@ -112,7 +112,7 @@ export default function ModifierContact() {
     if (chargement) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] px-4">
-        <p className="text-center text-white/50 text-sm">Chargement...</p>
+        <p className="text-center text-muted text-sm">Chargement...</p>
       </div>
     )
   }
@@ -121,7 +121,7 @@ export default function ModifierContact() {
     <div className="p-4 sm:p-6 md:p-8 overflow-x-hidden">
       <div className="max-w-2xl mx-auto w-full min-w-0">
 
-        <h1 className="text-xl sm:text-2xl font-bold text-white mb-5 sm:mb-6">
+        <h1 className="text-xl sm:text-2xl font-bold text-ink mb-5 sm:mb-6">
           ✏️ Modifier le contact
         </h1>
 
@@ -129,7 +129,7 @@ export default function ModifierContact() {
 
           {/* Prénom */}
           <div className="min-w-0">
-            <label htmlFor="prenom" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="prenom" className="block text-sm font-semibold text-muted">
               Prénom *
             </label>
             <input
@@ -139,13 +139,13 @@ export default function ModifierContact() {
               onChange={(e) => setPrenom(e.target.value)}
               required
               autoComplete="given-name"
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40"
             />
           </div>
 
           {/* Nom */}
           <div className="min-w-0">
-            <label htmlFor="nom" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="nom" className="block text-sm font-semibold text-muted">
               Nom
             </label>
             <input
@@ -154,13 +154,13 @@ export default function ModifierContact() {
               value={nom}
               onChange={(e) => setNom(e.target.value)}
               autoComplete="family-name"
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40"
             />
           </div>
 
           {/* Date de naissance */}
           <div className="min-w-0">
-            <label htmlFor="dateNaissance" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="dateNaissance" className="block text-sm font-semibold text-muted">
               Date de naissance
             </label>
             <input
@@ -168,26 +168,26 @@ export default function ModifierContact() {
               type="date"
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40"
             />
           </div>
 
           {/* Relation */}
           <div className="min-w-0">
-            <label htmlFor="relation" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="relation" className="block text-sm font-semibold text-muted">
               Type de relation
             </label>
             <select
               id="relation"
               value={relation}
               onChange={(e) => setRelation(e.target.value)}
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40"
             >
               {TYPES_RELATION.map((typeRelation) => (
                 <option
                   key={typeRelation.value}
                   value={typeRelation.value}
-                  className="bg-[#0B1120]"
+                  className="bg-canvas"
                 >
                   {typeRelation.emoji} {typeRelation.label}
                 </option>
@@ -197,7 +197,7 @@ export default function ModifierContact() {
 
           {/* Email */}
           <div className="min-w-0">
-            <label htmlFor="email" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="email" className="block text-sm font-semibold text-muted">
               Email
             </label>
             <input
@@ -207,13 +207,13 @@ export default function ModifierContact() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder={MESSAGES_UI.placeholder_email}
               autoComplete="email"
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 placeholder:text-white/30"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40 placeholder:text-muted"
             />
           </div>
 
           {/* Téléphone — le point le plus sensible sur mobile */}
           <div className="min-w-0">
-            <label className="block text-sm font-semibold text-white/70">
+            <label className="block text-sm font-semibold text-muted">
               Téléphone
             </label>
             {/* Sur très petit écran : colonne ; à partir de sm : ligne */}
@@ -222,10 +222,10 @@ export default function ModifierContact() {
                 value={telephoneIndicatif}
                 onChange={(e) => setTelephoneIndicatif(e.target.value)}
                 aria-label="Indicatif pays"
-                className="w-full sm:w-auto sm:max-w-[9.5rem] shrink-0 bg-white/5 border border-white/10 text-white rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40"
+                className="w-full sm:w-auto sm:max-w-[9.5rem] shrink-0 bg-ink/5 border border-line text-ink rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40"
               >
                 {INDICATIFS_PAYS.map((i) => (
-                  <option key={i.code} value={i.code} className="bg-[#0B1120]">
+                  <option key={i.code} value={i.code} className="bg-canvas">
                     {i.pays} ({i.code})
                   </option>
                 ))}
@@ -237,17 +237,17 @@ export default function ModifierContact() {
                 onChange={(e) => setTelephoneNumero(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder={MESSAGES_UI.placeholder_telephone}
                 autoComplete="tel-national"
-                className="w-full min-w-0 flex-1 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 placeholder:text-white/30"
+                className="w-full min-w-0 flex-1 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40 placeholder:text-muted"
               />
             </div>
-            <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
+            <p className="text-xs text-muted mt-1.5 leading-relaxed">
               {MESSAGES_UI.info_telephone}
             </p>
           </div>
 
           {/* Note */}
           <div className="min-w-0">
-            <label htmlFor="note" className="block text-sm font-semibold text-white/70">
+            <label htmlFor="note" className="block text-sm font-semibold text-muted">
               Note / À propos de ce contact
             </label>
             <textarea
@@ -256,9 +256,9 @@ export default function ModifierContact() {
               onChange={(e) => setNote(e.target.value)}
               placeholder={MESSAGES_UI.placeholder_note}
               rows={4}
-              className="mt-1.5 w-full min-w-0 bg-white/5 border border-white/10 text-white rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 resize-none placeholder:text-white/30"
+              className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40 resize-none placeholder:text-muted"
             />
-            <p className="text-xs text-white/40 mt-1.5 leading-relaxed">
+            <p className="text-xs text-muted mt-1.5 leading-relaxed">
               💡 Plus tu en mets, plus les suggestions de cadeaux seront pertinentes.
             </p>
           </div>
@@ -276,17 +276,17 @@ export default function ModifierContact() {
             }}
             className={`flex items-center justify-between gap-3 p-4 rounded-xl border cursor-pointer transition select-none ${
               estFavori
-                ? 'border-[#C8A84E] bg-[#C8A84E]/10'
-                : 'border-white/10 bg-white/5 hover:border-white/20'
+                ? 'border-accent bg-action/10'
+                : 'border-line bg-ink/5 hover:border-line'
             }`}
           >
             <div className="min-w-0">
-              <p className="text-sm font-semibold text-white">⭐ Contact favori</p>
-              <p className="text-xs text-white/40 mt-0.5">Apparaîtra en priorité</p>
+              <p className="text-sm font-semibold text-ink">⭐ Contact favori</p>
+              <p className="text-xs text-muted mt-0.5">Apparaîtra en priorité</p>
             </div>
             <div
               className={`shrink-0 w-11 h-6 rounded-full transition-colors ${
-                estFavori ? 'bg-[#C8A84E]' : 'bg-gray-500'
+                estFavori ? 'bg-action' : 'bg-gray-500'
               }`}
             >
               <div
@@ -298,7 +298,7 @@ export default function ModifierContact() {
           </div>
 
           {erreur && (
-            <p className="text-red-400 text-sm break-words">
+            <p className="text-danger text-sm break-words">
               {erreur || MESSAGES_UI.erreur_genérique}
             </p>
           )}
@@ -306,25 +306,25 @@ export default function ModifierContact() {
           <button
             type="submit"
             disabled={saving}
-            className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3.5 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
         </form>
 
         {/* Suppression */}
-        <div className="mt-6 border-t border-white/10 pt-4">
+        <div className="mt-6 border-t border-line pt-4">
           {!confirmSupprimer ? (
             <button
               type="button"
               onClick={() => setConfirmSupprimer(true)}
-              className="w-full py-3 rounded-xl text-sm text-red-400 border border-red-500/20 hover:bg-red-500/10 transition active:scale-[0.98]"
+              className="w-full py-3 rounded-xl text-sm text-danger border border-red-500/20 hover:bg-red-500/10 transition active:scale-[0.98]"
             >
               🗑️ Supprimer ce contact
             </button>
           ) : (
             <div className="bg-red-500/10 rounded-xl p-4 flex flex-col gap-3">
-              <p className="text-sm text-red-300 font-medium leading-relaxed">
+              <p className="text-sm text-danger font-medium leading-relaxed">
                 ⚠️ Action irréversible. Confirmer ?
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -338,7 +338,7 @@ export default function ModifierContact() {
                 <button
                   type="button"
                   onClick={() => setConfirmSupprimer(false)}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium border border-white/10 text-white/70 hover:text-white transition active:scale-[0.98]"
+                  className="flex-1 py-3 rounded-xl text-sm font-medium border border-line text-muted hover:text-ink transition active:scale-[0.98]"
                 >
                   Annuler
                 </button>

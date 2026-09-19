@@ -1,4 +1,7 @@
 "use client";
+import { AI_NOTICE } from '@/lib/ai-privacy';
+import { ageKnown } from '@/lib/contact-quality';
+import { nameDays, chosenNameDay } from '@/lib/name-days';
 
 import { useState, useEffect, Suspense } from "react";
 import type { Session } from '@supabase/supabase-js';
@@ -78,6 +81,7 @@ function GenerateForm() {
   const [age, setAge] = useState("");
   const [relation, setRelation] = useState("ami");
   const [tone, setTone] = useState("familier");
+  const [preferredFeast, setPreferredFeast] = useState('');
   const [eventType, setEventType] = useState("anniversaire");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -108,22 +112,9 @@ function GenerateForm() {
     setLastName(contact.nom);
     setRelation(contact.relation || "ami");
 
-    if (contact.date_naissance) {
-      const naissance = parseLocalDay(contact.date_naissance);
-      const aujourdhui = new Date();
-      let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
-      const anniversaireCetteAnnee = new Date(
-        aujourdhui.getFullYear(),
-        naissance.getMonth(),
-        naissance.getDate()
-      );
-      if (anniversaireCetteAnnee > aujourdhui) {
-        ageCalcule -= 1;
-      }
-      setAge(String(ageCalcule));
-    } else {
-      setAge("");
-    }
+    const knownAge = ageKnown(contact.date_naissance);
+    setAge(knownAge === null ? '' : String(knownAge));
+    setPreferredFeast('');
   }
 
   // Fonction pour ouvrir le drawer d'édition avec le contact actuel
@@ -258,6 +249,10 @@ function GenerateForm() {
       return calculerDatesJ7J1JourJ(parseLocalDay(eventDate));
     }
 
+    if (eventType === 'fete_prenomale') {
+      const chosen = chosenNameDay(firstName, preferredFeast, formatDateLocale(new Date()));
+      return chosen ? calculerDatesJ7J1JourJ(parseLocalDay(chosen)) : null;
+    }
     const typeEvt = EVENT_TYPE_MAP[eventType];
     if (!typeEvt) return null;
 
@@ -315,9 +310,9 @@ function GenerateForm() {
   // 5. RENDU
   // ---------------------------
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white p-4 md:p-8">
+    <div className="min-h-screen bg-canvas text-ink p-4 md:p-8">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] bg-clip-text text-transparent">
+        <h1 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-action to-action bg-clip-text text-transparent">
           Générateur de messages personnalisés
         </h1>
 
@@ -326,8 +321,8 @@ function GenerateForm() {
           <div className="space-y-6">
             {/* Sélection de contact */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-2">
-                👤 Contact <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-muted mb-2">
+                👤 Contact <span className="text-danger">*</span>
               </label>
 
               {/* Barre de recherche */}
@@ -342,13 +337,13 @@ function GenerateForm() {
                       setContactListOpen(true);
                     }
                   }}
-                  className="w-full border border-white/10 rounded-2xl px-5 py-3 text-sm bg-white/5 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+                  className="w-full border border-line rounded-2xl px-5 py-3 text-sm bg-ink/5 text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
                 />
                 {searchContact && (
                   <button
                     type="button"
                     onClick={() => setSearchContact("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/70"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
                   >
                     ✕
                   </button>
@@ -361,13 +356,13 @@ function GenerateForm() {
                   <button
                     type="button"
                     onClick={() => setContactListOpen((ouvert) => !ouvert)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-white/10 bg-white/5 text-white hover:bg-white/10 active:bg-white/15 transition"
+                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-line bg-ink/5 text-ink hover:bg-ink/10 active:bg-ink/15 transition"
                   >
                     <span className="font-medium">
                       {contactListOpen ? "Masquer mes contacts" : "📇 Choisir un contact existant"}
                     </span>
                     <span
-                      className={`text-[#C8A84E] transition-transform duration-200 ${
+                      className={`text-accent transition-transform duration-200 ${
                         contactListOpen ? "rotate-180" : ""
                       }`}
                     >
@@ -376,7 +371,7 @@ function GenerateForm() {
                   </button>
 
                   {contactListOpen && (
-                    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-white/10 bg-white/5 divide-y divide-white/10">
+                    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-line bg-ink/5 divide-y divide-line">
                       {contactsFiltres.length > 0 ? (
                         contactsFiltres.map((contact) => (
                           <button
@@ -387,19 +382,19 @@ function GenerateForm() {
                               setSearchContact("");
                               setContactListOpen(false);
                             }}
-                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/10 active:bg-white/15 transition"
+                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-ink/10 active:bg-ink/15 transition"
                           >
                             <div>
-                              <div className="font-medium text-white">
+                              <div className="font-medium text-ink">
                                 {contact.prenom} {contact.nom}
                               </div>
-                              <div className="text-xs text-white/60 capitalize">{contact.relation}</div>
+                              <div className="text-xs text-muted capitalize">{contact.relation}</div>
                             </div>
-                            <div className="text-[#C8A84E] text-sm">→</div>
+                            <div className="text-accent text-sm">→</div>
                           </button>
                         ))
                       ) : (
-                        <div className="px-4 py-6 text-center text-sm text-white/50">
+                        <div className="px-4 py-6 text-center text-sm text-muted">
                           Aucun contact trouvé
                         </div>
                       )}
@@ -410,14 +405,14 @@ function GenerateForm() {
 
               {/* Badge du contact sélectionné */}
               {selectedContact && (
-                <div className="flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
+                <div className="flex items-center justify-between bg-ink/5 border border-line rounded-2xl px-4 py-3">
                   <div>
-                    <div className="font-semibold text-white">
+                    <div className="font-semibold text-ink">
                       {selectedContact.prenom} {selectedContact.nom}
                     </div>
-                    <div className="text-xs text-white/60 capitalize">{selectedContact.relation}</div>
+                    <div className="text-xs text-muted capitalize">{selectedContact.relation}</div>
                     {!selectedContact.email && (
-                      <div className="text-xs text-orange-400 mt-1">
+                      <div className="text-xs text-warning mt-1">
                         ⚠️ Email manquant
                       </div>
                     )}
@@ -427,7 +422,7 @@ function GenerateForm() {
                     <button
                       type="button"
                       onClick={handleEditContact}
-                      className="text-xs px-3 py-1.5 rounded-full bg-white/10 text-white/80 hover:bg-white/20 active:bg-white/30 transition"
+                      className="text-xs px-3 py-1.5 rounded-full bg-ink/10 text-muted hover:bg-ink/20 active:bg-ink/30 transition"
                     >
                       ✏️ Détails du contact
                     </button>
@@ -442,7 +437,7 @@ function GenerateForm() {
                         setRelation("ami");
                         setSearchContact("");
                       }}
-                      className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-red-400 hover:bg-red-500/20 active:bg-red-500/30 transition"
+                      className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-danger hover:bg-red-500/20 active:bg-red-500/30 transition"
                     >
                       ❌
                     </button>
@@ -452,26 +447,26 @@ function GenerateForm() {
             </div>
 
             {/* Prénom et Nom */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">
-                  Prénom <span className="text-red-400">*</span>
+                <label className="block text-sm font-medium text-muted mb-1">
+                  Prénom <span className="text-danger">*</span>
                 </label>
                 <input
                   type="text"
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
+                  className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
                   placeholder="Jean"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-white/60 mb-1">Nom</label>
+                <label className="block text-sm font-medium text-muted mb-1">Nom</label>
                 <input
                   type="text"
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
-                  className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
+                  className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
                   placeholder="Dupont"
                 />
               </div>
@@ -479,22 +474,22 @@ function GenerateForm() {
 
             {/* Âge */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">Âge</label>
+              <label className="block text-sm font-medium text-muted mb-1">Âge</label>
               <input
                 type="number"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
                 min="0"
                 max="120"
-                className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
+                className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
                 placeholder="30"
               />
             </div>
 
             {/* Relation */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                Relation <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-muted mb-1">
+                Relation <span className="text-danger">*</span>
               </label>
               <AppSelect
                 options={TYPES_RELATION.map((type) => ({ value: type.value, label: type.label }))}
@@ -505,8 +500,8 @@ function GenerateForm() {
 
             {/* Type d'événement */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                Type d&apos;événement <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-muted mb-1">
+                Type d&apos;événement <span className="text-danger">*</span>
               </label>
               <AppSelect
                 options={TYPES_EVENEMENT.map((type) => ({ value: type.value, label: type.label }))}
@@ -523,39 +518,48 @@ function GenerateForm() {
 
             {/* Champs pour date manuelle */}
             {needsManualDate && (
-              <div className="space-y-4 pt-4 border-t border-white/10">
+              <div className="space-y-4 pt-4 border-t border-line">
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1">
-                    📅 Date de l&apos;événement <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium text-muted mb-1">
+                    📅 Date de l&apos;événement <span className="text-danger">*</span>
                   </label>
                   <input
                     type="date"
                     value={eventDate}
                     onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white"
+                    className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-white/60 mb-1">
-                    📝 Description <span className="text-red-400">*</span>
+                  <label className="block text-sm font-medium text-muted mb-1">
+                    📝 Description <span className="text-danger">*</span>
                   </label>
                   <input
                     type="text"
                     value={eventDescription}
                     onChange={(e) => setEventDescription(e.target.value)}
                     placeholder="Ex: Rencontre au café"
-                    className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-white/5 text-white placeholder-white/30"
+                    className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink placeholder-muted"
                     required
                   />
                 </div>
               </div>
             )}
 
+            <p className="text-sm text-muted">{AI_NOTICE}</p>
+            <p className="text-sm text-muted">Chaque message programmé correspond à un envoi unique. Les anniversaires proposent la prochaine occurrence annuelle ; une date personnalisée reste ponctuelle et ne se renouvelle pas automatiquement.</p>
+            {eventType === 'fete_prenomale' && <label className="block text-sm text-muted">Fête retenue pour ce message
+              <select value={preferredFeast} onChange={e => setPreferredFeast(e.target.value)} className="mt-2 w-full bg-surface border border-line rounded-xl p-3">
+                <option value="">Choisir une date</option>
+                {nameDays(firstName).map(day => <option key={day} value={day}>{day.split('-').reverse().join('/')}</option>)}
+              </select>
+              <span className="block mt-2">Ce choix est propre au message en cours ; il ne change pas le calendrier du contact. Si aucune date ne convient, utilise un jour spécial.</span>
+            </label>}
             {/* Ton du message */}
             <div>
-              <label className="block text-sm font-medium text-white/60 mb-1">
-                Ton du message <span className="text-red-400">*</span>
+              <label className="block text-sm font-medium text-muted mb-1">
+                Ton du message <span className="text-danger">*</span>
               </label>
               <AppSelect
                 options={TONS_MESSAGE.map((ton) => ({ value: ton.value, label: ton.label }))}
@@ -572,42 +576,42 @@ function GenerateForm() {
                 !firstName ||
                 (needsManualDate && (!eventDate || !eventDescription))
               }
-              className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? "⏳ Génération en cours..." : "✨ Générer le message"}
             </button>
 
             {error && (
-              <p className="text-sm text-red-400 bg-red-500/10 rounded-lg px-3 py-2">❌ {error}</p>
+              <p className="text-sm text-danger bg-red-500/10 rounded-lg px-3 py-2">❌ {error}</p>
             )}
           </div>
 
           {/* COLONNE DROITE : RÉSULTAT */}
           <div className="space-y-6">
             {message && (
-              <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+              <div className="bg-ink/5 rounded-xl p-4 border border-line">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-[#C8A84E]">💌 Message généré (modifiable)</h3>
+                  <h3 className="font-semibold text-accent">💌 Message généré (modifiable)</h3>
                 </div>
 
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  className="w-full min-h-[140px] bg-white/5 border border-white/10 rounded-xl p-4 text-white/90 resize-y focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 text-sm leading-relaxed"
+                  className="w-full min-h-[140px] bg-ink/5 border border-line rounded-xl p-4 text-muted resize-y focus:outline-none focus:ring-2 focus:ring-accent/50 text-sm leading-relaxed"
                   placeholder="Votre message personnalisé..."
                 />
 
-                <div className="grid grid-cols-2 gap-3 mt-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
                   <button
                     onClick={handleCopy}
-                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
                   >
                     {copied ? "✅ Copié !" : "Copier"}
                   </button>
                   <button
                     onClick={handleShare}
                     disabled={!message}
-                    className="w-full bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
+                    className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
                   >
                     📤 Partager
                   </button>
@@ -618,7 +622,7 @@ function GenerateForm() {
             {message && selectedContact && session && (
               <>
                 <ProgrammerRappel
-                  key={String(selectedContact.id) + eventType + eventDate + message}
+                  key={String(selectedContact.id) + eventType + eventDate + preferredFeast + message}
                   session={session}
                   selectedContact={selectedContact}
                   message={message}
@@ -629,7 +633,7 @@ function GenerateForm() {
 
                 {/* Avertissements */}
                 {!datesPossibles && (
-                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
+                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-warning">
                     ℹ️ Pas de date automatique pour cet événement.
                     {eventType === "fete_prenomale" && (
                       <p className="mt-1">
@@ -650,7 +654,7 @@ function GenerateForm() {
 
                 {/* ✅ Avertissement email manquant */}
                 {!selectedContact.email && (
-                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
+                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-warning">
                     ℹ️ Ce contact n&apos;a pas d&apos;<strong>adresse email</strong> renseignée.
                     <p className="mt-2">
                       👉 Clique sur <strong>✏️ Modifier</strong> pour ajouter un email 
@@ -672,7 +676,7 @@ export default function GeneratePage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-white/50">Chargement...</p>
+          <p className="text-muted">Chargement...</p>
         </div>
       }
     >

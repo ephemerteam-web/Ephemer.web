@@ -22,7 +22,7 @@ export default function GuideNotificationsPage() {
       <nav className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between z-10">
         <Link href="/" className="flex items-center gap-3 group">
           <svg
-            className="w-8 h-8 text-[#C8A84E] transition-transform duration-300 group-hover:rotate-12"
+            className="w-8 h-8 text-accent transition-transform duration-300 group-hover:rotate-12"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -30,7 +30,7 @@ export default function GuideNotificationsPage() {
             <path
               d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
               fill="currentColor"
-              className="text-[#1B2A4A]"
+              className="text-on-action"
             />
             <path
               d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
@@ -41,9 +41,9 @@ export default function GuideNotificationsPage() {
             <circle cx="15" cy="9" r="1" fill="currentColor" />
           </svg>
           <span className="text-xl font-semibold tracking-tight">
-            <span className="text-white">Ephemer</span>
-            <span className="text-white/40 font-light">
-              <span className="text-[#C8A84E]">.</span>name
+            <span className="text-ink">Ephemer</span>
+            <span className="text-muted font-light">
+              <span className="text-accent">.</span>name
             </span>
           </span>
         </Link>
@@ -54,18 +54,19 @@ export default function GuideNotificationsPage() {
         {/* Bouton retour (style Ephemer.name) */}
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-[#C8A84E] hover:text-white transition-all text-sm font-medium mb-6"
+          className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-ink/10 hover:bg-ink/20 text-accent hover:text-ink transition-all text-sm font-medium mb-6"
         >
           <span>←</span>
           Retour au Dashboard
         </Link>
 
         {/* En-tête (style Ephemer.name) */}
-        <header className="mb-8 border-b border-white/10 pb-6">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-white">
+        <header className="mb-8 border-b border-line pb-6">
+          <h1 className="text-3xl sm:text-4xl font-bold mb-2 text-ink">
             Notifications push
           </h1>
-          <p className="text-lg text-white/50">
+<p role="status" className="rounded-xl border border-amber-400/40 p-4 my-4 text-sm text-warning">Les notifications push ne sont pas encore opérationnelles : aucun expéditeur serveur n’est identifié. Les étapes ci-dessous préparent seulement cet appareil. Une permission accordée ne garantit aucun envoi.</p>
+          <p className="text-lg text-muted">
             Active les rappels pour ne plus oublier les dates importantes.
           </p>
         </header>
@@ -78,8 +79,8 @@ export default function GuideNotificationsPage() {
               onClick={() => setActiveTab(tab.key)}
               className={`flex-shrink-0 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                 activeTab === tab.key
-                  ? "bg-[#C8A84E] text-white shadow-lg"
-                  : "bg-white/10 text-white/40 hover:bg-white/20"
+                  ? "bg-action text-ink shadow-lg"
+                  : "bg-ink/10 text-muted hover:bg-ink/20"
               }`}
             >
               <span className="mr-1">{tab.emoji}</span>
@@ -89,7 +90,7 @@ export default function GuideNotificationsPage() {
         </div>
 
         {/* Contenu des onglets (style Ephemer.name) */}
-        <div className="bg-white/5 border border-[#C8A84E]/10 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
+        <div className="bg-ink/5 border border-accent/10 rounded-2xl p-6 sm:p-8 backdrop-blur-sm">
           {activeTab === "android" && <AndroidGuide />}
           {activeTab === "iphone" && <IPhoneGuide />}
           {activeTab === "reactivate" && <ReactivateGuide />}
@@ -98,7 +99,7 @@ export default function GuideNotificationsPage() {
 
         {/* Lien vidéo tutorielle (style adapté) */}
         <div className="mt-8 text-center">
-          <p className="text-white/50 text-sm mb-3">
+          <p className="text-muted text-sm mb-3">
             🎥 Tu préfères une vidéo ? Regarde ces tutoriels :
           </p>
           <div className="flex gap-3 justify-center flex-wrap">
@@ -106,7 +107,7 @@ export default function GuideNotificationsPage() {
               href="https://www.youtube.com/results?search_query=activer+notifications+push+chrome+android"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-600/40 rounded-lg text-red-300 text-sm hover:bg-red-600/30 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-600/40 rounded-lg text-danger text-sm hover:bg-red-600/30 transition-colors"
             >
               ▶️ Android (Chrome)
             </a>
@@ -114,7 +115,7 @@ export default function GuideNotificationsPage() {
               href="https://www.youtube.com/results?search_query=activer+notifications+safari+iphone+pwa"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-600/40 rounded-lg text-red-300 text-sm hover:bg-red-600/30 transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600/20 border border-red-600/40 rounded-lg text-danger text-sm hover:bg-red-600/30 transition-colors"
             >
               ▶️ iPhone (Safari)
             </a>
@@ -133,12 +134,12 @@ function AndroidGuide() {
   return (
     <div className="space-y-4">
       <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-3">
-        <p className="text-green-300 text-sm font-medium">
+        <p className="text-success text-sm font-medium">
           ✅ Simple ! Les notifications fonctionnent directement depuis ton navigateur.
         </p>
       </div>
 
-      <h3 className="text-white font-semibold text-base">📱 Étapes à suivre</h3>
+      <h3 className="text-ink font-semibold text-base">📱 Étapes à suivre</h3>
 
       <ol className="space-y-4">
         <Step
@@ -172,7 +173,7 @@ function AndroidGuide() {
       </ol>
 
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
-        <p className="text-blue-300 text-xs">
+        <p className="text-info text-xs">
           💡 <strong>Astuce :</strong> Pour une meilleure expérience, tu peux aussi
           ajouter Ephemer à ton écran d&apos;accueil :
           menu du navigateur (⋮) → « Ajouter à l&apos;écran d&apos;accueil ».
@@ -186,20 +187,20 @@ function IPhoneGuide() {
   return (
     <div className="space-y-4">
       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
-        <p className="text-amber-300 text-sm font-medium">
+        <p className="text-warning text-sm font-medium">
           ⚠️ Important : Sur iPhone, les notifications ne fonctionnent que via
           <strong> Safari</strong> et après avoir ajouté le site à l&apos;écran d&apos;accueil.
         </p>
       </div>
 
-      <div className="bg-white/5 rounded-lg p-3">
-        <p className="text-white/70 text-xs">
+      <div className="bg-ink/5 rounded-lg p-3">
+        <p className="text-muted text-xs">
           🍎 C&apos;est une restriction d&apos;Apple. Chrome et Firefox sur iPhone ne
           permettent pas les notifications web. Utilise <strong>Safari</strong> pour cette manipulation.
         </p>
       </div>
 
-      <h3 className="text-white font-semibold text-base">📱 Étapes à suivre</h3>
+      <h3 className="text-ink font-semibold text-base">📱 Étapes à suivre</h3>
 
       <ol className="space-y-4">
         <Step
@@ -233,7 +234,7 @@ function IPhoneGuide() {
       </ol>
 
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
-        <p className="text-blue-300 text-xs">
+        <p className="text-info text-xs">
           💡 <strong>Bon à savoir :</strong> Une fois ajouté à l&apos;écran d&apos;accueil,
           Ephemer fonctionne comme une vraie application. Tu n&apos;as à faire
           cette manipulation qu&apos;une seule fois !
@@ -246,13 +247,13 @@ function IPhoneGuide() {
 function ReactivateGuide() {
   return (
     <div className="space-y-4">
-      <p className="text-white/70 text-sm">
+      <p className="text-muted text-sm">
         Tu as bloqué les notifications par erreur ? Pas de panique, voici comment les réactiver :
       </p>
 
       {/* Android */}
       <div>
-        <h3 className="text-white font-semibold text-base mb-3">🤖 Sur Android</h3>
+        <h3 className="text-ink font-semibold text-base mb-3">🤖 Sur Android</h3>
         <ol className="space-y-3">
           <Step
             number={1}
@@ -272,11 +273,11 @@ function ReactivateGuide() {
         </ol>
       </div>
 
-      <div className="border-t border-white/10 my-4" />
+      <div className="border-t border-line my-4" />
 
       {/* iPhone */}
       <div>
-        <h3 className="text-white font-semibold text-base mb-3">🍎 Sur iPhone</h3>
+        <h3 className="text-ink font-semibold text-base mb-3">🍎 Sur iPhone</h3>
         <ol className="space-y-3">
           <Step
             number={1}
@@ -347,22 +348,22 @@ function FAQGuide() {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-white font-semibold text-base mb-4">
+      <h3 className="text-ink font-semibold text-base mb-4">
         Questions fréquentes
       </h3>
 
       {faqs.map((faq, index) => (
         <div
           key={index}
-          className="bg-white/5 border border-white/10 rounded-lg overflow-hidden"
+          className="bg-ink/5 border border-line rounded-lg overflow-hidden"
         >
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-white/10 transition-colors"
+            className="w-full px-4 py-3 text-left flex items-center justify-between gap-3 hover:bg-ink/10 transition-colors"
           >
-            <span className="text-white text-sm font-medium">{faq.question}</span>
+            <span className="text-ink text-sm font-medium">{faq.question}</span>
             <span
-              className={`text-white/40 transition-transform flex-shrink-0 ${
+              className={`text-muted transition-transform flex-shrink-0 ${
                 openIndex === index ? "rotate-180" : ""
               }`}
             >
@@ -371,18 +372,18 @@ function FAQGuide() {
           </button>
           {openIndex === index && (
             <div className="px-4 pb-3 pt-0">
-              <p className="text-white/70 text-sm leading-relaxed">{faq.answer}</p>
+              <p className="text-muted text-sm leading-relaxed">{faq.answer}</p>
             </div>
           )}
         </div>
       ))}
 
       <div className="mt-6 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
-        <p className="text-indigo-300 text-sm">
+        <p className="text-info text-sm">
           💬 Tu as une autre question ? Contacte-nous à{" "}
           <a
             href="mailto:support@ephemer.name"
-            className="underline hover:text-indigo-200"
+            className="underline hover:text-info"
           >
             support@ephemer.name
           </a>
@@ -408,12 +409,12 @@ function Step({
 }) {
   return (
     <li className="flex gap-3">
-      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-[#C8A84E] text-white text-sm font-bold flex items-center justify-center">
+      <div className="flex-shrink-0 w-7 h-7 rounded-full bg-action text-ink text-sm font-bold flex items-center justify-center">
         {number}
       </div>
       <div className="flex-1">
-        <p className="text-white text-sm font-medium">{title}</p>
-        <p className="text-white/70 text-xs mt-0.5">{description}</p>
+        <p className="text-ink text-sm font-medium">{title}</p>
+        <p className="text-muted text-xs mt-0.5">{description}</p>
         {mockup && <MockupScreen type={mockup} />}
       </div>
     </li>
@@ -425,9 +426,9 @@ function Step({
    ═══════════════════════════════════════════════════ */
 function MockupScreen({ type }: { type: string }) {
   return (
-    <div className="mt-3 mb-2 mx-auto max-w-[280px] bg-white/5 border-2 border-white/10 rounded-2xl p-3 shadow-xl backdrop-blur-sm">
+    <div className="mt-3 mb-2 mx-auto max-w-[280px] bg-ink/5 border-2 border-line rounded-2xl p-3 shadow-xl backdrop-blur-sm">
       {/* Barre de statut */}
-      <div className="flex justify-between items-center text-[10px] text-white/40 mb-2 px-1">
+      <div className="flex justify-between items-center text-[10px] text-muted mb-2 px-1">
         <span>9:41</span>
         <div className="flex gap-1">
           <span>📶</span>
@@ -438,23 +439,23 @@ function MockupScreen({ type }: { type: string }) {
       {/* Contenu selon le type */}
       {type === "android-lock" && (
         <div className="space-y-2">
-          <div className="bg-white/10 rounded-lg p-2">
+          <div className="bg-ink/10 rounded-lg p-2">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs">🔒</span>
-              <span className="text-white text-xs font-medium">ephemer.name</span>
+              <span className="text-ink text-xs font-medium">ephemer.name</span>
             </div>
             <div className="space-y-1.5">
               <div className="flex justify-between items-center">
-                <span className="text-white/40 text-[10px]">Notifications</span>
-                <span className="text-green-400 text-[10px] font-medium">✓ Autoriser</span>
+                <span className="text-muted text-[10px]">Notifications</span>
+                <span className="text-success text-[10px] font-medium">✓ Autoriser</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-white/40 text-[10px]">Localisation</span>
-                <span className="text-white/50 text-[10px]">Bloquer</span>
+                <span className="text-muted text-[10px]">Localisation</span>
+                <span className="text-muted text-[10px]">Bloquer</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-white/40 text-[10px]">Caméra</span>
-                <span className="text-white/50 text-[10px]">Demander</span>
+                <span className="text-muted text-[10px]">Caméra</span>
+                <span className="text-muted text-[10px]">Demander</span>
               </div>
             </div>
           </div>
@@ -462,11 +463,11 @@ function MockupScreen({ type }: { type: string }) {
       )}
 
       {type === "android-notif" && (
-        <div className="bg-white/10 rounded-lg p-2">
-          <div className="text-white text-xs font-medium mb-2">Paramètres du site</div>
+        <div className="bg-ink/10 rounded-lg p-2">
+          <div className="text-ink text-xs font-medium mb-2">Paramètres du site</div>
           <div className="space-y-2">
-            <div className="flex justify-between items-center bg-white/20 rounded p-1.5">
-              <span className="text-white/70 text-[10px]">🔔 Notifications</span>
+            <div className="flex justify-between items-center bg-ink/20 rounded p-1.5">
+              <span className="text-muted text-[10px]">🔔 Notifications</span>
               <div className="bg-green-500 w-8 h-4 rounded-full relative">
                 <div className="absolute right-0.5 top-0.5 bg-white w-3 h-3 rounded-full"></div>
               </div>
@@ -476,19 +477,19 @@ function MockupScreen({ type }: { type: string }) {
       )}
 
       {type === "android-prompt" && (
-        <div className="bg-white/10 rounded-lg p-3">
+        <div className="bg-ink/10 rounded-lg p-3">
           <div className="text-center mb-2">
             <div className="text-2xl mb-1">🔔</div>
-            <p className="text-white text-[10px] font-medium">ephemer.name</p>
-            <p className="text-white/50 text-[9px] mt-0.5">
+            <p className="text-ink text-[10px] font-medium">ephemer.name</p>
+            <p className="text-muted text-[9px] mt-0.5">
               souhaite t&apos;envoyer des notifications
             </p>
           </div>
           <div className="flex gap-2 mt-3">
-            <button className="flex-1 py-1.5 bg-white/20 text-white/50 text-[10px] rounded font-medium">
+            <button className="flex-1 py-1.5 bg-ink/20 text-muted text-[10px] rounded font-medium">
               Bloquer
             </button>
-            <button className="flex-1 py-1.5 bg-[#C8A84E] text-white text-[10px] rounded font-medium">
+            <button className="flex-1 py-1.5 bg-action text-ink text-[10px] rounded font-medium">
               Autoriser
             </button>
           </div>
@@ -496,66 +497,66 @@ function MockupScreen({ type }: { type: string }) {
       )}
 
       {type === "iphone-share" && (
-        <div className="bg-white/10 rounded-lg p-2">
-          <div className="text-white text-xs font-medium mb-2 text-center">Partager</div>
+        <div className="bg-ink/10 rounded-lg p-2">
+          <div className="text-ink text-xs font-medium mb-2 text-center">Partager</div>
           <div className="grid grid-cols-4 gap-2">
             <div className="text-center">
-              <div className="bg-white/20 rounded-lg p-2 mb-1">
+              <div className="bg-ink/20 rounded-lg p-2 mb-1">
                 <span className="text-sm">💬</span>
               </div>
-              <span className="text-white/40 text-[8px]">Message</span>
+              <span className="text-muted text-[8px]">Message</span>
             </div>
             <div className="text-center">
-              <div className="bg-white/20 rounded-lg p-2 mb-1">
+              <div className="bg-ink/20 rounded-lg p-2 mb-1">
                 <span className="text-sm">📧</span>
               </div>
-              <span className="text-white/40 text-[8px]">Mail</span>
+              <span className="text-muted text-[8px]">Mail</span>
             </div>
             <div className="text-center">
               <div className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-2 mb-1">
                 <span className="text-sm">📱</span>
               </div>
-              <span className="text-blue-300 text-[8px] font-medium">Écran d&apos;accueil</span>
+              <span className="text-info text-[8px] font-medium">Écran d&apos;accueil</span>
             </div>
             <div className="text-center">
-              <div className="bg-white/20 rounded-lg p-2 mb-1">
+              <div className="bg-ink/20 rounded-lg p-2 mb-1">
                 <span className="text-sm">📋</span>
               </div>
-              <span className="text-white/40 text-[8px]">Copier</span>
+              <span className="text-muted text-[8px]">Copier</span>
             </div>
           </div>
         </div>
       )}
 
       {type === "iphone-add" && (
-        <div className="bg-white/10 rounded-lg p-3">
+        <div className="bg-ink/10 rounded-lg p-3">
           <div className="text-center mb-2">
             <div className="text-2xl mb-1">📱</div>
-            <p className="text-white text-[10px] font-medium">Ajouter à l&apos;écran d&apos;accueil</p>
+            <p className="text-ink text-[10px] font-medium">Ajouter à l&apos;écran d&apos;accueil</p>
           </div>
-          <div className="flex items-center gap-2 bg-white/20 rounded-lg p-2 mb-3">
-            <div className="w-8 h-8 bg-[#C8A84E] rounded-lg flex items-center justify-center text-white text-xs font-bold">
+          <div className="flex items-center gap-2 bg-ink/20 rounded-lg p-2 mb-3">
+            <div className="w-8 h-8 bg-action rounded-lg flex items-center justify-center text-ink text-xs font-bold">
               E
             </div>
-            <span className="text-white text-[10px]">Ephemer</span>
+            <span className="text-ink text-[10px]">Ephemer</span>
           </div>
-          <button className="w-full py-1.5 bg-[#C8A84E] text-white text-[10px] rounded-lg font-medium">
+          <button className="w-full py-1.5 bg-action text-ink text-[10px] rounded-lg font-medium">
             Ajouter
           </button>
         </div>
       )}
 
       {type === "iphone-prompt" && (
-        <div className="bg-white/10 rounded-lg p-3">
+        <div className="bg-ink/10 rounded-lg p-3">
           <div className="text-center mb-2">
             <div className="text-2xl mb-1">🔔</div>
-            <p className="text-white text-[10px] font-medium">{"\"ephemer.name\" souhaite t'envoyer des notifications"}</p>
+            <p className="text-ink text-[10px] font-medium">{"\"ephemer.name\" souhaite t'envoyer des notifications"}</p>
           </div>
           <div className="flex gap-2 mt-3">
-            <button className="flex-1 py-1.5 bg-white/20 text-white/50 text-[10px] rounded font-medium">
+            <button className="flex-1 py-1.5 bg-ink/20 text-muted text-[10px] rounded font-medium">
               Refuser
             </button>
-            <button className="flex-1 py-1.5 bg-[#C8A84E] text-white text-[10px] rounded font-medium">
+            <button className="flex-1 py-1.5 bg-action text-ink text-[10px] rounded font-medium">
               Autoriser
             </button>
           </div>

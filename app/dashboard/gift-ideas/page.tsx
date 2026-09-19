@@ -1,4 +1,5 @@
 "use client";
+import { AI_NOTICE, minimalAIInput } from "@/lib/ai-privacy";
 
 import { useState, useEffect, Suspense } from "react";
 import type { Session } from '@supabase/supabase-js';
@@ -53,23 +54,23 @@ type Idea = {
 const CATEGORIE_STYLES: Record<CategorieCadeau, { borderColor: string; gradient: string }> = {
   loisir: {
     borderColor: "border-[#7C3AED]/70",
-    gradient: "from-[#53257F]/40 to-[#1F2937]/20",
+    gradient: "from-[#53257F]/40 to-surface/20",
   },
   bien_etre: {
     borderColor: "border-[#0F766E]/70",
-    gradient: "from-[#134E4A]/40 to-[#0F172A]/20",
+    gradient: "from-[#134E4A]/40 to-canvas/20",
   },
   tech: {
     borderColor: "border-[#0284C7]/70",
-    gradient: "from-[#0369A1]/40 to-[#0F172A]/20",
+    gradient: "from-[#0369A1]/40 to-canvas/20",
   },
   decoration: {
     borderColor: "border-[#BE123C]/70",
-    gradient: "from-[#9D174D]/40 to-[#111827]/20",
+    gradient: "from-[#9D174D]/40 to-surface/20",
   },
   gourmand: {
     borderColor: "border-[#EA580C]/70",
-    gradient: "from-[#C2410C]/40 to-[#111827]/20",
+    gradient: "from-[#C2410C]/40 to-surface/20",
   },
 };
 
@@ -84,8 +85,8 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
   // Couleurs dynamiques selon la catégorie (fallback si non trouvé)
   const { borderColor, gradient } =
     CATEGORIE_STYLES[idea.categorie] ?? {
-      borderColor: "border-white/10",
-      gradient: "from-white/5 to-white/10",
+      borderColor: "border-line",
+      gradient: "from-ink/5 to-ink/10",
     };
 
   return (
@@ -104,7 +105,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
         <div
           className={`
             absolute inset-0 rounded-2xl border ${borderColor}
-            bg-gradient-to-br from-[#162035] to-[#0f1524]
+            bg-gradient-to-br from-surface to-canvas
             backdrop-blur-md
             [backface-visibility:hidden]
             flex flex-col items-center justify-center p-6 text-center
@@ -112,27 +113,27 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
           `}
         >
           {/* Effet de brillance interne */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#C8A84E]/50 to-transparent opacity-50" />
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-action/50 to-transparent opacity-50" />
           
           <span className="text-5xl mb-4 drop-shadow-md filter transition-transform duration-500 group-hover:scale-110">
             {idea.emoji || "🎁"}
           </span>
           
-          <h3 className="text-white font-bold text-lg leading-tight mb-2 line-clamp-2">
+          <h3 className="text-ink font-bold text-lg leading-tight mb-2 line-clamp-2">
             {idea.idee}
           </h3>
           
           {categorie && (
             <span className={`
               inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium
-              bg-white/5 border border-white/10 text-white/70
+              bg-ink/5 border border-line text-muted
             `}>
               {categorie.emoji} {categorie.nom}
             </span>
           )}
 
           {/* Indication Tactile / Souris */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1 text-[10px] text-white/30">
+          <div className="absolute bottom-3 right-3 flex items-center gap-1 text-[10px] text-muted">
             <span className="inline-block animate-pulse">👆</span>
             <span className="hidden sm:inline">survoler</span>
             <span className="sm:hidden">tap pour voir</span>
@@ -153,17 +154,17 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
           `}
         >
           {/* Lumière décorative d'ambiance */}
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-ink/5 rounded-full blur-2xl" />
           <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-black/20 rounded-full blur-2xl" />
 
           <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
-            <p className="text-emerald-200/90 text-sm leading-relaxed italic mb-4">
+            <p className="text-success text-sm leading-relaxed italic mb-4">
               &quot;{idea.raison}&quot;
             </p>
             
             {/* Liste des marchands */}
             <div className="space-y-2">
-              <p className="text-xs font-bold text-white/40 uppercase tracking-wider">
+              <p className="text-xs font-bold text-muted uppercase tracking-wider">
                 Où trouver ça ?
               </p>
               <div className="flex flex-wrap gap-2">
@@ -190,7 +191,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
 
           {/* Bouton retour (optionnel pour UX mobile) */}
           <button 
-            className="mt-auto w-full py-2 text-center text-xs text-white/40 hover:text-white transition"
+            className="mt-auto w-full py-2 text-center text-xs text-muted hover:text-ink transition"
             onClick={(e) => {
               e.stopPropagation();
               setIsFlipped(false);
@@ -287,12 +288,7 @@ function GiftIdeasForm() {
     setIdeas([]);
 
     try {
-      const age = selectedContact.date_naissance
-        ? Math.floor(
-            (new Date().getTime() - new Date(selectedContact.date_naissance).getTime()) /
-              31557600000
-          )
-        : null;
+
 
       // 👇 Récupérer le token de session AVANT l'appel
 const { data: { session } } = await supabase.auth.getSession();
@@ -310,19 +306,7 @@ const res = await fetch("/api/generate-gift-ideas", {
     "Authorization": `Bearer ${session.access_token}`, // 👈 AJOUT CRITIQUE
   },
   credentials: "include",
-  body: JSON.stringify({
-          firstName: selectedContact.prenom,
-          lastName: selectedContact.nom,
-          dateNaissance: selectedContact.date_naissance,
-          age,
-          relation: selectedContact.relation || "ami",
-          email: selectedContact.email,
-          estFavori: selectedContact.est_favori,
-          telephoneIndicatif: selectedContact.telephone_indicatif,
-          telephoneNumero: selectedContact.telephone_numero,
-          note: selectedContact.note,
-          eventType,
-        }),
+  body: JSON.stringify(minimalAIInput({ relation: selectedContact.relation || 'ami', eventType })),
       });
 
       const data = await res.json();
@@ -400,10 +384,10 @@ const res = await fetch("/api/generate-gift-ideas", {
   // RENDU
   // ---------------------------
   return (
-    <div className="min-h-screen bg-[#0B1120] text-white relative overflow-hidden font-sans selection:bg-[#C8A84E] selection:text-black">
+    <div className="min-h-screen bg-canvas text-ink relative overflow-hidden font-sans selection:bg-action selection:text-on-action">
       {/* ── Arrière-plan décoratif ── */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-[#C8A84E]/10 rounded-full blur-3xl" />
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-action/10 rounded-full blur-3xl" />
         <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl" />
         <div className="absolute top-1/3 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-[100px]" />
       </div>
@@ -412,12 +396,12 @@ const res = await fetch("/api/generate-gift-ideas", {
         
         {/* ── Titre ── */}
         <div className="text-center mb-8 md:mb-12">
-          <h1 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-[#C8A84E] via-[#E5C565] to-[#C8A84E] bg-clip-text text-transparent mb-3 drop-shadow-sm">
+          <h1 className="text-3xl md:text-5xl font-black bg-gradient-to-r from-action via-action to-action bg-clip-text text-transparent mb-3 drop-shadow-sm">
             🎁 Idées Cadeaux
           </h1>
-          <p className="text-sm md:text-base text-white/50 max-w-lg mx-auto leading-relaxed">
+          <p className="text-sm md:text-base text-muted max-w-lg mx-auto leading-relaxed">
             Trouve le cadeau parfait en quelques secondes pour{" "}
-            <span className="text-[#C8A84E] font-medium">chaque personne</span> importante.
+            <span className="text-accent font-medium">chaque personne</span> importante.
           </p>
         </div>
 
@@ -430,12 +414,12 @@ const res = await fetch("/api/generate-gift-ideas", {
           <div className="w-full md:col-span-2 space-y-6 order-1">
             
             {/* Carte Formulaire */}
-            <div className="bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-3xl p-5 md:p-6 shadow-2xl">
+            <div className="bg-ink/[0.03] backdrop-blur-xl border border-line rounded-3xl p-5 md:p-6 shadow-2xl">
               
               {/* Étape 1 : Contact */}
               <div className="mb-6">
-                <h2 className="text-xs font-bold text-white/60 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-[#C8A84E]/20 border border-[#C8A84E]/40 flex items-center justify-center text-[10px] text-[#C8A84E]">1</span>
+                <h2 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-action/20 border border-accent/40 flex items-center justify-center text-[10px] text-accent">1</span>
                   Sélectionner un contact
                 </h2>
 
@@ -449,13 +433,13 @@ const res = await fetch("/api/generate-gift-ideas", {
                       setSearchContact(e.target.value);
                       if (e.target.value.trim() !== "") setContactListOpen(true);
                     }}
-                    className="w-full border border-white/10 rounded-xl pl-4 pr-10 py-3 text-sm bg-white/5 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/30 transition-all"
+                    className="w-full border border-line rounded-xl pl-4 pr-10 py-3 text-sm bg-ink/5 text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/30 transition-all"
                   />
                   {searchContact && (
                     <button
                       type="button"
                       onClick={() => { setSearchContact(""); setContactListOpen(false); }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/10"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink w-6 h-6 flex items-center justify-center rounded-full hover:bg-ink/10"
                     >
                       ✕
                     </button>
@@ -464,7 +448,7 @@ const res = await fetch("/api/generate-gift-ideas", {
 
                 {/* Liste déroulante */}
                 {!selectedContact && contactListOpen && (
-                  <div className="mt-2 max-h-[200px] overflow-y-auto rounded-xl border border-white/10 bg-[#0B1120] shadow-xl z-20 relative">
+                  <div className="mt-2 max-h-[200px] overflow-y-auto rounded-xl border border-line bg-canvas shadow-xl z-20 relative">
                     {contactsFiltres.length > 0 ? (
                       contactsFiltres.map((contact) => (
                         <button
@@ -474,32 +458,32 @@ const res = await fetch("/api/generate-gift-ideas", {
                             setSearchContact("");
                             setContactListOpen(false);
                           }}
-                          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 active:bg-white/10 transition border-b border-white/5 last:border-0"
+                          className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-ink/5 active:bg-ink/10 transition border-b border-line last:border-0"
                         >
                           <div>
-                            <div className="font-medium text-white text-sm">{contact.prenom} {contact.nom}</div>
-                            <div className="text-xs text-white/40 capitalize">{contact.relation}</div>
+                            <div className="font-medium text-ink text-sm">{contact.prenom} {contact.nom}</div>
+                            <div className="text-xs text-muted capitalize">{contact.relation}</div>
                           </div>
                         </button>
                       ))
                     ) : (
-                      <div className="p-4 text-center text-xs text-white/30">Aucun résultat</div>
+                      <div className="p-4 text-center text-xs text-muted">Aucun résultat</div>
                     )}
                   </div>
                 )}
 
                 {/* Badge Contact Sélectionné */}
                 {selectedContact && (
-                  <div className="bg-[#C8A84E]/10 border border-[#C8A84E]/30 rounded-xl p-3 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
+                  <div className="bg-action/10 border border-accent/30 rounded-xl p-3 flex items-center justify-between animate-in fade-in slide-in-from-bottom-2">
                     <div className="min-w-0">
-                      <div className="font-semibold text-white text-sm truncate">
+                      <div className="font-semibold text-ink text-sm truncate">
                         {selectedContact.prenom} {selectedContact.nom}
                       </div>
-                      <div className="text-xs text-[#C8A84E]/80 capitalize truncate">
+                      <div className="text-xs text-accent/80 capitalize truncate">
                         {selectedContact.relation}
                       </div>
                       {selectedContact.note && (
-                        <div className="text-[10px] text-white/40 mt-1 italic truncate max-w-[180px]">
+                        <div className="text-[10px] text-muted mt-1 italic truncate max-w-[180px]">
                           &quot;{selectedContact.note}&quot;
                         </div>
                       )}
@@ -507,7 +491,7 @@ const res = await fetch("/api/generate-gift-ideas", {
                     <div className="flex gap-2 ml-2">
                        <button
                         onClick={handleEditContact}
-                        className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white/70 transition"
+                        className="p-1.5 rounded-lg bg-ink/10 hover:bg-ink/20 text-muted transition"
                         title="Modifier"
                       >
                         ✎
@@ -517,7 +501,7 @@ const res = await fetch("/api/generate-gift-ideas", {
                           setSelectedContact(null);
                           setSearchContact("");
                         }}
-                        className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-400 transition"
+                        className="p-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-danger transition"
                         title="Changer"
                       >
                         ✕
@@ -529,8 +513,8 @@ const res = await fetch("/api/generate-gift-ideas", {
 
               {/* Étape 2 : Occasion */}
               <div>
-                <h2 className="text-xs font-bold text-white/60 uppercase tracking-wider mb-4 flex items-center gap-2">
-                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[10px] text-emerald-400">2</span>
+                <h2 className="text-xs font-bold text-muted uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[10px] text-success">2</span>
                   Type d&apos;événement
                 </h2>
                 
@@ -547,24 +531,24 @@ const res = await fetch("/api/generate-gift-ideas", {
                 />
 
                 {needsManualDate && (
-                  <div className="mt-4 space-y-3 p-4 bg-white/5 rounded-xl border border-white/5 animate-in fade-in">
+                  <div className="mt-4 space-y-3 p-4 bg-ink/5 rounded-xl border border-line animate-in fade-in">
                     <div>
-                      <label className="text-[10px] uppercase text-white/50 font-bold tracking-wider">Date</label>
+                      <label className="text-[10px] uppercase text-muted font-bold tracking-wider">Date</label>
                       <input
                         type="date"
                         value={eventDate}
                         onChange={(e) => setEventDate(e.target.value)}
-                        className="mt-1 w-full bg-[#0B1120] border border-white/10 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#C8A84E]/50 outline-none"
+                        className="mt-1 w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50 outline-none"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase text-white/50 font-bold tracking-wider">Quoi ?</label>
+                      <label className="text-[10px] uppercase text-muted font-bold tracking-wider">Quoi ?</label>
                       <input
                         type="text"
                         placeholder="Ex: Départ à la retraite..."
                         value={eventDescription}
                         onChange={(e) => setEventDescription(e.target.value)}
-                        className="mt-1 w-full bg-[#0B1120] border border-white/10 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-[#C8A84E]/50 outline-none"
+                        className="mt-1 w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50 outline-none"
                       />
                     </div>
                   </div>
@@ -572,12 +556,13 @@ const res = await fetch("/api/generate-gift-ideas", {
               </div>
 
               {/* Bouton Générer */}
+              <p className="text-sm text-muted mb-3">{AI_NOTICE}</p>
               <button
                 onClick={handleGenerate}
                 disabled={loading || !selectedContact || (needsManualDate && (!eventDate || !eventDescription))}
-                className="w-full mt-6 relative group overflow-hidden bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-[#0B1120] font-bold py-3.5 rounded-xl shadow-lg shadow-[#C8A84E]/20 hover:shadow-[#C8A84E]/40 active:scale-[0.98] transition-all disabled:opacity-50 disabled:shadow-none"
+                className="w-full mt-6 relative group overflow-hidden bg-gradient-to-r from-action to-action text-on-action font-bold py-3.5 rounded-xl shadow-lg shadow-[#C8A84E]/20 hover:shadow-[#C8A84E]/40 active:scale-[0.98] transition-all disabled:opacity-50 disabled:shadow-none"
               >
-                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-ink/30 to-transparent" />
                 <span className="relative flex items-center justify-center gap-2">
                   {loading ? (
                     <>
@@ -593,7 +578,7 @@ const res = await fetch("/api/generate-gift-ideas", {
               </button>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-red-300 flex items-start gap-2 animate-in fade-in">
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-danger flex items-start gap-2 animate-in fade-in">
                   <span>⚠️</span>
                   <span>{error}</span>
                 </div>
@@ -608,14 +593,14 @@ const res = await fetch("/api/generate-gift-ideas", {
             
             {/* Header Résultats */}
             {ideas.length > 0 && (
-              <div className="flex items-end justify-between mb-6 px-1 border-b border-white/10 pb-4">
+              <div className="flex items-end justify-between mb-6 px-1 border-b border-line pb-4">
                 <div>
-                  <p className="text-xs text-[#C8A84E] font-bold uppercase tracking-widest mb-1">Sélection</p>
-                  <h3 className="text-xl font-bold text-white">
+                  <p className="text-xs text-accent font-bold uppercase tracking-widest mb-1">Sélection</p>
+                  <h3 className="text-xl font-bold text-ink">
                     {ideas.length} pépites pour {selectedContact?.prenom}
                   </h3>
                 </div>
-                <p className="text-xs text-white/30 hidden sm:block">
+                <p className="text-xs text-muted hidden sm:block">
                   Tap pour retourner la carte
                 </p>
               </div>
@@ -631,10 +616,10 @@ const res = await fetch("/api/generate-gift-ideas", {
             {/* État Vide (Initial) */}
             {!loading && ideas.length === 0 && !error && (
               <div className="h-full flex flex-col items-center justify-center py-20 text-center opacity-60">
-                <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center text-5xl mb-4 animate-[float_3s_ease-in-out_infinite]">
+                <div className="w-24 h-24 bg-ink/5 rounded-full flex items-center justify-center text-5xl mb-4 animate-[float_3s_ease-in-out_infinite]">
                   🎁
                 </div>
-                <p className="text-white/50 text-sm max-w-xs">
+                <p className="text-muted text-sm max-w-xs">
                   Remplis le formulaire à gauche pour découvrir des idées sur mesure.
                 </p>
               </div>
@@ -644,12 +629,12 @@ const res = await fetch("/api/generate-gift-ideas", {
             {loading && (
               <div className="space-y-6">
                 <div className="animate-pulse flex items-center gap-2 px-1 mb-4">
-                  <div className="w-20 h-4 bg-white/10 rounded"></div>
-                  <div className="w-32 h-4 bg-white/10 rounded"></div>
+                  <div className="w-20 h-4 bg-ink/10 rounded"></div>
+                  <div className="w-32 h-4 bg-ink/10 rounded"></div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5">
                   {[0, 1, 2, 3].map((i) => (
-                    <div key={i} className="h-[250px] bg-white/5 rounded-2xl border border-white/5 animate-pulse"></div>
+                    <div key={i} className="h-[250px] bg-ink/5 rounded-2xl border border-line animate-pulse"></div>
                   ))}
                 </div>
               </div>
@@ -669,10 +654,10 @@ export default function GiftIdeasPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center min-h-[60vh] bg-[#0B1120]">
+        <div className="flex items-center justify-center min-h-[60vh] bg-canvas">
           <div className="flex flex-col items-center gap-4">
             <span className="text-4xl animate-bounce">🎁</span>
-            <p className="text-white/50 text-sm">Chargement de l&apos;application...</p>
+            <p className="text-muted text-sm">Chargement de l&apos;application...</p>
           </div>
         </div>
       }

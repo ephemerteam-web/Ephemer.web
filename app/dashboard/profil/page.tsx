@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import AppLayout from '@/components/AppLayout'
@@ -168,8 +169,8 @@ export default function DashboardProfil() {
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="flex flex-col items-center gap-3">
             {/* Spinner animé */}
-            <div className="w-10 h-10 border-4 border-white/20 border-t-[#C8A84E] rounded-full animate-spin" />
-            <p className="text-white/60 text-sm">Chargement de ton profil…</p>
+            <div className="w-10 h-10 border-4 border-line border-t-[#C8A84E] rounded-full animate-spin" />
+            <p className="text-muted text-sm">Chargement de ton profil…</p>
           </div>
         </div>
       </AppLayout>
@@ -194,35 +195,35 @@ export default function DashboardProfil() {
             text-2xl sur mobile (au lieu de 3xl) = moins imposant,
             plus de place pour le contenu
           */}
-          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-1">
+          <h1 className="text-2xl sm:text-3xl font-bold text-ink mb-1">
             Mon Profil
           </h1>
-          <p className="text-white/50 text-sm">
+          <p className="text-muted text-sm">
             Gère tes informations personnelles
           </p>
         </div>
 
         {/* ── CARTE PRINCIPALE ── */}
-        <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl p-5">
+        <div className="bg-ink/5 backdrop-blur-xl border border-line rounded-2xl p-5">
 
           {/* Avatar + nom affiché (compact sur mobile) */}
-          <div className="flex items-center gap-4 mb-6 pb-5 border-b border-white/10">
+          <div className="flex items-center gap-4 mb-6 pb-5 border-b border-line">
             {/*
               Avatar plus petit (16x16 au lieu de 24x24)
               pour ne pas gaspiller l'espace vertical
             */}
-            <div className="w-16 h-16 flex-shrink-0 bg-gradient-to-br from-[#C8A84E] to-[#D4B85C] rounded-2xl flex items-center justify-center text-3xl">
+            <div className="w-16 h-16 flex-shrink-0 bg-gradient-to-br from-action to-action rounded-2xl flex items-center justify-center text-3xl">
               👤
             </div>
             <div className="min-w-0">
               {/* min-w-0 permet à truncate de fonctionner dans un flex */}
-              <p className="text-white font-semibold truncate">
+              <p className="text-ink font-semibold truncate">
                 {prenom || nom
                   ? `${prenom} ${nom}`.trim()
                   : 'Profil incomplet'}
               </p>
               {/* Email tronqué si trop long */}
-              <p className="text-white/40 text-xs truncate mt-0.5">
+              <p className="text-muted text-xs truncate mt-0.5">
                 {email}
               </p>
             </div>
@@ -232,9 +233,9 @@ export default function DashboardProfil() {
           <div className="flex flex-col gap-4">
 
             {/* Prénom + Nom côte à côte sur mobile (gain de place) */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Prénom
                 </label>
                 <input
@@ -242,15 +243,15 @@ export default function DashboardProfil() {
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
                   placeholder="Jean"
-                  className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                             placeholder-white/30 focus:outline-none focus:ring-2
-                             focus:ring-[#C8A84E]/50 focus:border-transparent
+                  className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                             placeholder-muted focus:outline-none focus:ring-2
+                             focus:ring-accent/50 focus:border-transparent
                              transition-all"
                 />
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Nom
                 </label>
                 <input
@@ -258,9 +259,9 @@ export default function DashboardProfil() {
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Dupont"
-                  className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                             placeholder-white/30 focus:outline-none focus:ring-2
-                             focus:ring-[#C8A84E]/50 focus:border-transparent
+                  className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                             placeholder-muted focus:outline-none focus:ring-2
+                             focus:ring-accent/50 focus:border-transparent
                              transition-all"
                 />
               </div>
@@ -268,7 +269,7 @@ export default function DashboardProfil() {
 
             {/* Email (lecture seule) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Email
               </label>
               <div className="relative">
@@ -276,11 +277,11 @@ export default function DashboardProfil() {
                   type="email"
                   value={email}
                   disabled
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-3
-                             text-white/40 text-sm cursor-not-allowed pr-10"
+                  className="w-full bg-ink/5 border border-line rounded-xl px-3 py-3
+                             text-muted text-sm cursor-not-allowed pr-10"
                 />
                 {/* Icône cadenas pour signaler visuellement que c'est verrouillé */}
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 text-sm">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted text-sm">
                   🔒
                 </span>
               </div>
@@ -288,7 +289,7 @@ export default function DashboardProfil() {
 
             {/* Date de naissance */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Date de naissance
               </label>
               <input
@@ -300,16 +301,16 @@ export default function DashboardProfil() {
                   à s'afficher en thème sombre — sinon il est blanc cassé
                   et illisible sur notre fond foncé
                 */
-                style={{ colorScheme: 'dark' }}
-                className="bg-white/8 border border-white/10 rounded-xl px-3 py-3 text-white text-sm
-                           focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50
+                style={{ colorScheme: 'inherit' }}
+                className="bg-ink/8 border border-line rounded-xl px-3 py-3 text-ink text-sm
+                           focus:outline-none focus:ring-2 focus:ring-accent/50
                            focus:border-transparent transition-all"
               />
             </div>
 
             {/* ── TÉLÉPHONE ── version empilée sur mobile */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-white/60 uppercase tracking-wide">
+              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Téléphone
               </label>
 
@@ -324,9 +325,9 @@ export default function DashboardProfil() {
                 <select
                   value={telephoneIndicatif}
                   onChange={(e) => setTelephoneIndicatif(e.target.value)}
-                  className="bg-zinc-900 border border-white/20 text-white rounded-xl
+                  className="bg-surface border border-line text-ink rounded-xl
                              px-3 py-3 text-sm focus:outline-none focus:ring-2
-                             focus:ring-[#C8A84E]/50 focus:border-transparent
+                             focus:ring-accent/50 focus:border-transparent
                              appearance-none cursor-pointer
                              w-full sm:w-auto sm:min-w-[160px]"
                 >
@@ -334,7 +335,7 @@ export default function DashboardProfil() {
                     <option
                       key={item.code}
                       value={item.code}
-                      className="bg-zinc-900 text-white"
+                      className="bg-surface text-ink"
                     >
                       {item.pays}
                     </option>
@@ -347,14 +348,14 @@ export default function DashboardProfil() {
                   value={telephoneNumero}
                   onChange={(e) => setTelephoneNumero(e.target.value)}
                   placeholder={MESSAGES_UI.placeholder_telephone}
-                  className="flex-1 bg-white/8 border border-white/10 rounded-xl
-                             px-3 py-3 text-white text-sm placeholder-white/30
-                             focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50
+                  className="flex-1 bg-ink/8 border border-line rounded-xl
+                             px-3 py-3 text-ink text-sm placeholder-muted
+                             focus:outline-none focus:ring-2 focus:ring-accent/50
                              focus:border-transparent transition-all"
                 />
               </div>
 
-              <p className="text-xs text-white/35 leading-relaxed">
+              <p className="text-xs text-muted leading-relaxed">
                 {MESSAGES_UI.info_telephone}
               </p>
             </div>
@@ -364,8 +365,8 @@ export default function DashboardProfil() {
               <div className={`
                 p-3.5 rounded-xl text-sm border leading-relaxed
                 ${message.type === 'success'
-                  ? 'bg-green-500/10 text-green-400 border-green-500/20'
-                  : 'bg-red-500/10 text-red-400 border-red-500/20'
+                  ? 'bg-green-500/10 text-success border-green-500/20'
+                  : 'bg-red-500/10 text-danger border-red-500/20'
                 }
               `}>
                 {message.text}
@@ -380,14 +381,14 @@ export default function DashboardProfil() {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="w-full min-h-[52px] bg-gradient-to-r from-[#C8A84E] to-[#D4B85C]
-                         text-[#0B1120] font-bold text-sm rounded-2xl
+              className="w-full min-h-[52px] bg-gradient-to-r from-action to-action
+                         text-on-action font-bold text-sm rounded-2xl
                          hover:opacity-90 active:scale-95 transition-all
                          disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="w-4 h-4 border-2 border-[#0B1120]/30 border-t-[#0B1120] rounded-full animate-spin" />
+                  <span className="w-4 h-4 border-2 border-canvas/30 border-t-[#0B1120] rounded-full animate-spin" />
                   Enregistrement…
                 </span>
               ) : (
@@ -396,12 +397,12 @@ export default function DashboardProfil() {
             </button>
 
             {/* ── SÉPARATEUR ── */}
-            <div className="border-t border-white/10 pt-2" />
+            <div className="border-t border-line pt-2" />
 
             {/* ── CHANGER MOT DE PASSE ── */}
             <button
               onClick={handleChangePassword}
-              className="w-full min-h-[48px] py-3 text-blue-400 text-sm
+              className="w-full min-h-[48px] py-3 text-info text-sm
                          border border-blue-400/25 rounded-2xl
                          hover:bg-blue-500/10 active:scale-95 transition-all"
             >
@@ -412,7 +413,7 @@ export default function DashboardProfil() {
             {!showDeleteConfirm ? (
               <button
                 onClick={() => setShowDeleteConfirm(true)}
-                className="w-full min-h-[48px] py-3 text-red-400 text-sm
+                className="w-full min-h-[48px] py-3 text-danger text-sm
                            border border-red-500/25 rounded-2xl
                            hover:bg-red-500/10 active:scale-95 transition-all"
               >
@@ -424,21 +425,21 @@ export default function DashboardProfil() {
                 Plus compact sur mobile : texte court, boutons bien espacés
               */
               <div className="border border-red-500/30 rounded-2xl p-4 bg-red-500/5">
-                <p className="text-red-400 font-semibold text-sm mb-1">
+                <p className="text-danger font-semibold text-sm mb-1">
                   ⚠️ Es-tu sûr(e) ?
                 </p>
-                <p className="text-white/50 text-xs leading-relaxed mb-4">
+                <p className="text-muted text-xs leading-relaxed mb-4">
                   Cette action est{' '}
-                  <strong className="text-white/70">irréversible</strong>.
+                  <strong className="text-muted">irréversible</strong>.
                   Ton compte, tes contacts et toutes tes données seront supprimés définitivement.
                 </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
                     disabled={deleting}
-                    className="flex-1 min-h-[44px] text-white/70 text-sm
-                               border border-white/20 rounded-xl
-                               hover:bg-white/10 active:scale-95 transition-all
+                    className="flex-1 min-h-[44px] text-muted text-sm
+                               border border-line rounded-xl
+                               hover:bg-ink/10 active:scale-95 transition-all
                                disabled:opacity-50"
                   >
                     Annuler
@@ -446,14 +447,14 @@ export default function DashboardProfil() {
                   <button
                     onClick={handleDeleteAccount}
                     disabled={deleting}
-                    className="flex-1 min-h-[44px] bg-red-500/80 text-white text-sm
+                    className="flex-1 min-h-[44px] bg-red-500/80 text-ink text-sm
                                font-semibold rounded-xl
                                hover:bg-red-500 active:scale-95 transition-all
                                disabled:opacity-50"
                   >
                     {deleting ? (
                       <span className="flex items-center justify-center gap-2">
-                        <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <span className="w-3.5 h-3.5 border-2 border-line border-t-line rounded-full animate-spin" />
                         Suppression…
                       </span>
                     ) : (
@@ -467,6 +468,7 @@ export default function DashboardProfil() {
           </div>
         </div>
 
+        <Link href="/dashboard/donnees" className="block rounded-xl border border-line p-4 mt-6 text-center">Exporter mes données et diagnostiquer les rappels</Link>
         {/* Espace en bas pour ne pas être caché par la nav mobile */}
         <div className="h-6" />
       </div>

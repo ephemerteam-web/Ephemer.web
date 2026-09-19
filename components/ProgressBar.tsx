@@ -23,7 +23,7 @@ export default function ProgressBar({
   return (
     <div className="flex items-center gap-2 w-full">
       <div
-        className="w-full bg-white/10 rounded-full overflow-hidden"
+        className="w-full bg-ink/10 rounded-full overflow-hidden"
         style={{ height: `${hauteur}px` }}
       >
         <div
@@ -36,7 +36,7 @@ export default function ProgressBar({
       </div>
 
       {afficherPourcentage && (
-        <span className="text-xs text-white/50 whitespace-nowrap">
+        <span className="text-xs text-muted whitespace-nowrap">
           {Math.round(valeurSecurisee)}%
         </span>
       )}

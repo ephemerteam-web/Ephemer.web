@@ -1,21 +1,97 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* Palette céleste commune. Les composants utilisent des rôles, pas des couleurs fixes. */
+:root, [data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0b1425;
+  --surface: #14243b;
+  --ink: #f7f2e9;
+  --muted: #b8c3d4;
+  --line: #35465d;
+  --accent: #d8b568;
+  --action: #d8b568;
+  --action-hover: #e5c783;
+  --on-action: #132b4d;
+  --danger: #fb7185;
+  --celestial: #31557e;
+  --success: #86efac;
+  --warning: #fcd58b;
+  --info: #b8c8f5;
+  --message-start: #263b62;
+  --message-end: #18283f;
+  --gift-start: #493452;
+  --gift-end: #28223d;
 }
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #faf6ef;
+  --surface: #fffdf8;
+  --ink: #173456;
+  --muted: #526277;
+  --line: #c7cbd0;
+  --accent: #805d1d;
+  --action: #173456;
+  --action-hover: #264c76;
+  --on-action: #fffaf0;
+  --danger: #b4233b;
+  --celestial: #173456;
+  --success: #176437;
+  --warning: #805614;
+  --info: #34578a;
+  --message-start: #e5edf7;
+  --message-end: #f4f6fa;
+  --gift-start: #f1e5ec;
+  --gift-end: #fbf3ed;
+}
+/* Avant l’hydratation, l’appareil décide du thème si aucun choix n’est appliqué. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --canvas: #faf6ef;
+    --surface: #fffdf8;
+    --ink: #173456;
+    --muted: #526277;
+    --line: #c7cbd0;
+    --accent: #805d1d;
+    --action: #173456;
+    --action-hover: #264c76;
+    --on-action: #fffaf0;
+    --danger: #b4233b;
+    --celestial: #173456;
+    --success: #176437;
+    --warning: #805614;
+    --info: #34578a;
+    --message-start: #e5edf7;
+    --message-end: #f4f6fa;
+    --gift-start: #f1e5ec;
+    --gift-end: #fbf3ed;
   }
 }
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-action: var(--action);
+  --color-action-hover: var(--action-hover);
+  --color-on-action: var(--on-action);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-message-start: var(--message-start);
+  --color-message-end: var(--message-end);
+  --color-gift-start: var(--gift-start);
+  --color-gift-end: var(--gift-end);
+}
+body { background: var(--canvas); color: var(--ink); font-family: var(--font-geist-sans), Arial, sans-serif; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+input, select, textarea { color-scheme: inherit; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 @keyframes slide-in {
   from { transform: translateX(100%); }
@@ -62,11 +138,11 @@ body {
   background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--line);
   border-radius: 9999px;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--muted);
 }
 
 /* Sur mobile : pas d'effet de hover sur les flip-cards (on utilise le tap) */
@@ -75,4 +151,13 @@ body {
     /* Optionnel : décommenter la ligne ci-dessous si tu veux que la carte se retourne AU SURVOL sur desktop */
     /* transform: rotateY(180deg); */
   }
+}
+/* Petits écrans et PWA : champs rétractables, pas de zoom forcé sur iOS. */
+html, body { min-width: 0; overflow-wrap: anywhere; }
+input, select, textarea { min-width: 0; max-width: 100%; }
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
+}
+@media (pointer: coarse) {
+  button, select, input:not([type="checkbox"]):not([type="radio"]) { min-height: 44px; }
 }

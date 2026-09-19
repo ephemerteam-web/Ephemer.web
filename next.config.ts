@@ -43,8 +43,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Appliqué UNIQUEMENT aux fichiers statiques (icônes, images, CSS, JS)
-        source: "/(.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|css|js|woff2?))",
+        // Assets publics uniquement : Next gère lui-même ses chunks et leur revalidation.
+        source: "/((?!_next/).*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif|css|js|woff2?))",
         headers: [
           {
             key: "Cache-Control",
@@ -79,6 +79,12 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // En développement, les noms de chunks peuvent être réutilisés après une modification.
+      // Ne jamais garder une ancienne version du graphe de modules dans le navigateur.
+      ...(process.env.NODE_ENV === 'development' ? [{
+        source: '/(.*)',
+        headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }],
+      }] : []),
     ];
   },
 

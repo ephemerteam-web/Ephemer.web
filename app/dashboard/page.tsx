@@ -183,7 +183,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-pulse mb-4"><span className="text-6xl">🌙</span></div>
-          <p className="text-indigo-200">Chargement...</p>
+          <p className="text-info">Chargement...</p>
         </div>
       </div>
     )
@@ -211,7 +211,7 @@ export default function Dashboard() {
     titre: 'Générateur IA',
     sous: 'Crée un message personnalisé pour SMS, email ou réseaux sociaux en quelques secondes.',
     path: '/dashboard/generate',
-    gradient: 'from-violet-600 via-indigo-600 to-purple-700',
+    gradient: 'from-message-start to-message-end',
     badge: 'Vedette',
   }
 
@@ -219,7 +219,7 @@ export default function Dashboard() {
     titre: 'Idées Cadeaux',
     sous: 'Trouve l\'inspiration parfaite et offre le cadeau idéal adapté à chaque événement.',
     path: '/dashboard/gift-ideas',
-    gradient: 'from-fuchsia-600 via-rose-600 to-pink-700', // Un dégradé rose/fuchsia super chaleureux
+    gradient: 'from-gift-start to-gift-end',
     badge: 'Nouveau',
   }
 
@@ -227,9 +227,9 @@ export default function Dashboard() {
   // 📆 OUTILS ÉPHÉMÉRIDE (tons indigo/violet/cyan)
   // ============================================
   const outilsEphemeride = [
-    { id: 1, icon: '🎂', titre: 'Anniversaires', couleur: 'from-indigo-500 to-indigo-600', path: '/dashboard/anniversaires' },
-    { id: 2, icon: '🙏', titre: 'Fêtes des Saints', couleur: 'from-violet-500 to-purple-600', path: '/dashboard/calendrier_saints' },
-    { id: 3, icon: '📅', titre: 'Calendrier', couleur: 'from-sky-500 to-cyan-600', path: '/dashboard/calendrier' },
+    { id: 1, icon: '🎂', titre: 'Anniversaires', couleur: 'from-surface to-canvas', path: '/dashboard/anniversaires' },
+    { id: 2, icon: '🙏', titre: 'Fêtes des Saints', couleur: 'from-surface to-canvas', path: '/dashboard/calendrier_saints' },
+    { id: 3, icon: '📅', titre: 'Calendrier', couleur: 'from-surface to-canvas', path: '/dashboard/calendrier' },
   ]
 
   // ============================================
@@ -245,13 +245,13 @@ export default function Dashboard() {
 
       {/* ============ EN-TÊTE ============ */}
       <div className="mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-white">Tableau de bord</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-ink">Tableau de bord</h2>
         {profile?.prenom ? (
-          <p className="text-indigo-200 text-sm mt-1">
+          <p className="text-info text-sm mt-1">
             Bienvenue, <span className="font-semibold">{profile.prenom}</span> 👋
           </p>
         ) : userName && (
-          <p className="text-indigo-200 text-sm mt-1">
+          <p className="text-info text-sm mt-1">
             Bienvenue, <span className="font-semibold">{userName}</span> 👋
           </p>
         )}
@@ -262,41 +262,41 @@ export default function Dashboard() {
 
         {/* Fête du jour */}
         <div>
-          <p className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-3">
+          <p className="text-xs font-semibold text-info uppercase tracking-wider mb-3">
             ✨ Fête du jour
           </p>
           {feteDuJour.length > 0 ? (
             <div className="flex flex-wrap gap-2.5">
               {feteDuJour.map((saint, idx) => (
                 <div key={idx} className="bg-purple-500/10 border border-purple-400/20 rounded-2xl px-4 py-3">
-                  <p className="text-white font-bold text-sm">{saint.nomSaint}</p>
-                  <p className="text-purple-300 text-xs mt-0.5 capitalize">{saint.prenoms.join(', ')}</p>
+                  <p className="text-ink font-bold text-sm">{saint.nomSaint}</p>
+                  <p className="text-info text-xs mt-0.5 capitalize">{saint.prenoms.join(', ')}</p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-white/30 text-sm">Aucune fête répertoriée aujourd&apos;hui.</p>
+            <p className="text-muted text-sm">Aucune fête répertoriée aujourd&apos;hui.</p>
           )}
         </div>
 
-        <div className="border-t border-white/10" />
+        <div className="border-t border-line" />
 
         {/* Anniversaires aujourd'hui */}
         <div>
-          <p className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-3">
+          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">
             🎂 Anniversaire(s) aujourd&apos;hui
           </p>
           {anniversairesAujourdhui.length > 0 ? (
             <div className="flex flex-wrap gap-2.5">
               {anniversairesAujourdhui.map((c) => (
                 <div key={c.id} className="bg-rose-500/10 border border-rose-400/20 rounded-2xl px-4 py-3">
-                  <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
-                  <p className="text-rose-300 text-xs mt-0.5">🎉 C&apos;est son anniversaire !</p>
+                  <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
+                  <p className="text-danger text-xs mt-0.5">🎉 C&apos;est son anniversaire !</p>
                 </div>
               ))}
             </div>
           ) : (
-            <p className="text-white/40 text-sm italic">
+            <p className="text-muted text-sm italic">
               Pas d&apos;anniversaire aujourd&apos;hui — profite de la tranquillité 😄
             </p>
           )}
@@ -305,16 +305,16 @@ export default function Dashboard() {
         {/* Anniversaires passés */}
         {anniversairesPassés.length > 0 && (
           <>
-            <div className="border-t border-white/10" />
+            <div className="border-t border-line" />
             <div>
-              <p className="text-xs font-semibold text-orange-400 uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-warning uppercase tracking-wider mb-3">
                 ⏳ Anniversaires récents (7 derniers jours)
               </p>
               <div className="flex flex-wrap gap-2.5">
                 {anniversairesPassés.map((c) => (
                   <div key={c.id} className="bg-orange-500/10 border border-orange-400/20 rounded-2xl px-4 py-3">
-                    <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
-                    <p className="text-orange-300 text-xs mt-0.5">
+                    <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
+                    <p className="text-warning text-xs mt-0.5">
                       Il y a {c.joursPassés} jour{c.joursPassés > 1 ? 's' : ''} — il est encore temps ! 💌
                     </p>
                   </div>
@@ -327,16 +327,16 @@ export default function Dashboard() {
         {/* Anniversaires à venir */}
         {anniversairesBientot.length > 0 && (
           <>
-            <div className="border-t border-white/10" />
+            <div className="border-t border-line" />
             <div>
-              <p className="text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-3">
+              <p className="text-xs font-semibold text-info uppercase tracking-wider mb-3">
                 📅 Bientôt (dans les 30 prochains jours)
               </p>
               <div className="flex flex-wrap gap-2.5">
                 {anniversairesBientot.map((c) => (
                   <div key={c.id} className="bg-cyan-500/10 border border-cyan-400/20 rounded-2xl px-4 py-3">
-                    <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
-                    <p className="text-cyan-300 text-xs mt-0.5">
+                    <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
+                    <p className="text-info text-xs mt-0.5">
                       Dans {c.joursRestants} jour{c.joursRestants > 1 ? 's' : ''} 🗓️
                     </p>
                   </div>
@@ -357,7 +357,7 @@ export default function Dashboard() {
 
             {/* ============ ⭐ VEDETTES : L'ESSENTIEL ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-white mb-4">L&apos;essentiel</h2>
+        <h2 className="text-base md:text-lg font-bold text-ink mb-4">L&apos;essentiel</h2>
 
         {/* grid-cols-1 = 1 colonne sur mobile | md:grid-cols-2 = 2 colonnes sur tablette/ordinateur */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -370,28 +370,28 @@ export default function Dashboard() {
             {/* Dégradé de fond interactif */}
             <div className={`absolute inset-0 bg-gradient-to-br ${vedetteIA.gradient} opacity-90 group-hover:opacity-100 transition-opacity`} />
             {/* Effet de reflet de lumière au survol */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-r from-ink/0 via-ink/15 to-ink/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
 
             <div className="relative z-10 flex items-start gap-3 md:gap-4 h-full">
               {/* Conteneur d'icône avec fond translucide */}
-              <span className="flex-shrink-0 transform group-hover:scale-110 transition-transform bg-white/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
+              <span className="flex-shrink-0 transform group-hover:scale-110 transition-transform bg-ink/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
                 <IconeLuneIA size={28} />
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <h3 className="text-base md:text-lg font-bold text-white leading-tight">{vedetteIA.titre}</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  <h3 className="text-base md:text-lg font-bold text-ink leading-tight">{vedetteIA.titre}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-ink/20 text-ink px-2 py-0.5 rounded-full">
                     {vedetteIA.badge}
                   </span>
                 </div>
-                <p className="text-white/85 text-xs md:text-sm leading-relaxed">{vedetteIA.sous}</p>
+                <p className="text-muted text-xs md:text-sm leading-relaxed">{vedetteIA.sous}</p>
               </div>
-              <span className="hidden sm:block text-xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all self-center">
+              <span className="hidden sm:block text-xl text-muted group-hover:text-ink group-hover:translate-x-1 transition-all self-center">
                 →
               </span>
             </div>
 
-            <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
+            <div className="absolute inset-0 rounded-3xl border border-line group-hover:border-line transition-colors" />
           </button>
 
           {/* Bouton 2 : Idées Cadeaux */}
@@ -402,28 +402,28 @@ export default function Dashboard() {
             {/* Dégradé de fond interactif */}
             <div className={`absolute inset-0 bg-gradient-to-br ${vedetteCadeaux.gradient} opacity-90 group-hover:opacity-100 transition-opacity`} />
             {/* Effet de reflet de lumière au survol */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/15 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            <div className="absolute inset-0 bg-gradient-to-r from-ink/0 via-ink/15 to-ink/0 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
 
             <div className="relative z-10 flex items-start gap-3 md:gap-4 h-full">
               {/* Conteneur d'icône cadeau */}
-              <span className="flex-shrink-0 text-2xl transform group-hover:scale-110 transition-transform bg-white/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
+              <span className="flex-shrink-0 text-2xl transform group-hover:scale-110 transition-transform bg-ink/10 p-2 rounded-2xl w-[48px] h-[48px] flex items-center justify-center">
                 🎁
               </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
-                  <h3 className="text-base md:text-lg font-bold text-white leading-tight">{vedetteCadeaux.titre}</h3>
-                  <span className="text-[9px] font-bold uppercase tracking-wider bg-white/20 text-white px-2 py-0.5 rounded-full">
+                  <h3 className="text-base md:text-lg font-bold text-ink leading-tight">{vedetteCadeaux.titre}</h3>
+                  <span className="text-[9px] font-bold uppercase tracking-wider bg-ink/20 text-ink px-2 py-0.5 rounded-full">
                     {vedetteCadeaux.badge}
                   </span>
                 </div>
-                <p className="text-white/85 text-xs md:text-sm leading-relaxed">{vedetteCadeaux.sous}</p>
+                <p className="text-muted text-xs md:text-sm leading-relaxed">{vedetteCadeaux.sous}</p>
               </div>
-              <span className="hidden sm:block text-xl text-white/70 group-hover:text-white group-hover:translate-x-1 transition-all self-center">
+              <span className="hidden sm:block text-xl text-muted group-hover:text-ink group-hover:translate-x-1 transition-all self-center">
                 →
               </span>
             </div>
 
-            <div className="absolute inset-0 rounded-3xl border border-white/25 group-hover:border-white/50 transition-colors" />
+            <div className="absolute inset-0 rounded-3xl border border-line group-hover:border-line transition-colors" />
           </button>
 
         </div>
@@ -431,9 +431,9 @@ export default function Dashboard() {
 
         {/* ============ 📆 OUTILS ÉPHÉMÉRIDE (3 au même niveau) ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-white mb-4">Dates & éphéméride</h2>
+        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Dates & éphéméride</h2>
 
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-3">
           {outilsEphemeride.map((carte) => (
             <button
               key={carte.id}
@@ -443,9 +443,9 @@ export default function Dashboard() {
               <div className={`absolute inset-0 bg-gradient-to-br ${carte.couleur} opacity-75 group-hover:opacity-90 transition-opacity`} />
               <div className="relative z-10 flex flex-col items-center gap-2">
                 <span className="text-2xl md:text-3xl transform group-hover:scale-110 transition-transform">{carte.icon}</span>
-                <h3 className="text-xs md:text-sm font-bold text-white leading-tight">{carte.titre}</h3>
+                <h3 className="text-xs md:text-sm font-bold text-ink leading-tight">{carte.titre}</h3>
               </div>
-              <div className="absolute inset-0 rounded-2xl border border-white/20 group-hover:border-white/40 transition-colors" />
+              <div className="absolute inset-0 rounded-2xl border border-line group-hover:border-line transition-colors" />
             </button>
           ))}
         </div>
@@ -453,21 +453,21 @@ export default function Dashboard() {
 
       {/* ============ ⚙️ GESTION (2 au même niveau) ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-white mb-4">Gérer mes envois</h2>
+        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Gérer mes envois</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {outilsGestion.map((carte) => (
             <button
               key={carte.id}
               onClick={() => router.push(carte.path)}
-              className="flex items-center gap-4 bg-white/5 backdrop-blur-lg rounded-2xl p-4 border border-white/10 hover:border-indigo-400/40 hover:bg-white/10 transition-all text-left group"
+              className="flex items-center gap-4 bg-ink/5 backdrop-blur-lg rounded-2xl p-4 border border-line hover:border-indigo-400/40 hover:bg-ink/10 transition-all text-left group"
             >
               <span className="text-2xl md:text-3xl flex-shrink-0 group-hover:scale-110 transition-transform">{carte.icon}</span>
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-bold text-white">{carte.titre}</h3>
-                <p className="text-indigo-200/70 text-xs mt-0.5 truncate">{carte.sous}</p>
+                <h3 className="text-sm font-bold text-ink">{carte.titre}</h3>
+                <p className="text-info text-xs mt-0.5 truncate">{carte.sous}</p>
               </div>
-              <span className="text-white/40 group-hover:text-white group-hover:translate-x-1 transition-all">→</span>
+              <span className="text-muted group-hover:text-ink group-hover:translate-x-1 transition-all">→</span>
             </button>
           ))}
         </div>
@@ -477,7 +477,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <button
           onClick={() => setAideOuverte(!aideOuverte)}
-          className="flex items-center gap-2 text-indigo-300/70 hover:text-indigo-200 text-sm transition-colors"
+          className="flex items-center gap-2 text-info hover:text-info text-sm transition-colors"
         >
           <span>💡</span>
           <span>Besoin d&apos;aide ? Comment ça marche</span>
@@ -486,9 +486,9 @@ export default function Dashboard() {
 
         {/* Contenu repliable */}
         {aideOuverte && (
-          <div className="mt-3 bg-white/[0.03] border border-white/10 rounded-2xl p-4 flex items-start gap-3 animate-[fadeIn_0.3s_ease]">
+          <div className="mt-3 bg-ink/[0.03] border border-line rounded-2xl p-4 flex items-start gap-3 animate-[fadeIn_0.3s_ease]">
             <span className="text-2xl flex-shrink-0">✨</span>
-            <p className="text-indigo-200/80 text-sm leading-relaxed">
+            <p className="text-info text-sm leading-relaxed">
               Ajoute tes contacts et leurs dates importantes (anniversaires, fêtes…).
               Ephemer détecte automatiquement les événements à venir et te permet de générer
               puis programmer des messages personnalisés. Tu ne rateras plus jamais une date importante !
@@ -498,39 +498,39 @@ export default function Dashboard() {
       </div>
 
       {/* ============ FOOTER ============ */}
-      <div className="mt-10 pt-6 border-t border-white/10 text-center space-y-3">
-        <p className="text-indigo-300 text-sm">
+      <div className="mt-10 pt-6 border-t border-line text-center space-y-3">
+        <p className="text-info text-sm">
           Made with 💜 • Version Alpha 0.7 ou 0.8 ? who knows ?
         </p>
 
         <div className="flex justify-center gap-2 flex-wrap">
     <a
       href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-info hover:text-ink bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
     >
       💬 Support
     </a>
     <Link
       href="/guide-notifications"
-      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-info hover:text-ink bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
     >
       🔔 Tuto Notifications
     </Link>
     <Link
       href="/confidentialite"
-      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-info hover:text-ink bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
     >
       🔒 Confidentialité
     </Link>
     <Link
       href="/conditions"
-      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-info hover:text-ink bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
     >
       📄 Conditions
     </Link>
     <Link
       href="/patchnote"
-      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-indigo-300 hover:text-white bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
+      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-info hover:text-ink bg-indigo-800/30 hover:bg-indigo-800/60 rounded-lg transition border border-indigo-500/30"
     >
       📜 Quoi de neuf ?
     </Link>

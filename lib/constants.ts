@@ -30,11 +30,11 @@ export const INDICATIFS_PAYS = [
 // 👥 TYPES DE RELATIONS
 // ============================================
 export const TYPES_RELATION = [
-  { value: 'ami', emoji: '👫', label: 'Ami(e)', couleur: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
-  { value: 'famille', emoji: '👨‍👩‍👧', label: 'Famille', couleur: 'bg-pink-500/20 text-pink-300 border border-pink-500/30' },
-  { value: 'couple', emoji: '❤️', label: 'Couple / Amour', couleur: 'bg-rose-500/20 text-rose-300 border border-rose-500/30' },
-  { value: 'pro', emoji: '💼', label: 'Professionnel', couleur: 'bg-blue-500/20 text-blue-300 border border-blue-500/30' },
-  { value: 'autre', emoji: '✨', label: 'Autre', couleur: 'bg-white/10 text-indigo-200 border border-white/20' },
+  { value: 'ami', emoji: '👫', label: 'Ami(e)', couleur: 'bg-yellow-500/20 text-warning border border-yellow-500/30' },
+  { value: 'famille', emoji: '👨‍👩‍👧', label: 'Famille', couleur: 'bg-pink-500/20 text-info border border-pink-500/30' },
+  { value: 'couple', emoji: '❤️', label: 'Couple / Amour', couleur: 'bg-rose-500/20 text-danger border border-rose-500/30' },
+  { value: 'pro', emoji: '💼', label: 'Professionnel', couleur: 'bg-blue-500/20 text-info border border-blue-500/30' },
+  { value: 'autre', emoji: '✨', label: 'Autre', couleur: 'bg-ink/10 text-info border border-line' },
 ] as const
 
 // ============================================
@@ -87,7 +87,7 @@ export const TONS_MESSAGE = [
 // ============================================
 export const STATUTS_RAPPEL = [
   { value: 'programme', label: '⏳ Programmé', color: 'bg-blue-500' },
-  { value: 'envoye', label: '✅ Envoyé', color: 'bg-green-500' },
+  { value: 'envoye', label: 'Accepté par Resend', color: 'bg-green-500' },
   { value: 'annule', label: '❌ Annulé', color: 'bg-red-500' },
 ] as const
 

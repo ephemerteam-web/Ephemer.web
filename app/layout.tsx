@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PWARegistration from '@/components/PWARegistration';
+import ThemeRuntime from '@/components/ThemeRuntime';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -86,11 +87,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#0B1120" },
-    { media: "(prefers-color-scheme: dark)", color: "#0B1120" },
-  ],
-  colorScheme: "dark",
+  themeColor: "#0b1425",
+  colorScheme: "dark light",
 };
 
 export default function RootLayout({
@@ -115,7 +113,6 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Ephemer" />
 
         {/* ─── Android : couleur de la barre de statut ─── */}
-        <meta name="theme-color" content="#0B1120" />
         <meta name="msapplication-TileColor" content="#0B1120" />
 
         {/* ─── PWA : lien vers le manifeste ─── */}
@@ -128,9 +125,13 @@ export default function RootLayout({
           color="#C8A84E"
         />
       </head>
-      <body className="min-h-full flex flex-col bg-[#0B1120] text-white">
+      <body className="min-h-full flex flex-col bg-canvas text-ink">
+        <ThemeRuntime />
         <PWARegistration />
         {children}
+        <footer className="relative z-10 border-t border-line bg-canvas px-4 py-5 flex flex-wrap justify-center items-center gap-4 text-sm text-muted">
+          <span>Ephemer · Un moment pour chaque lien</span>
+        </footer>
       </body>
     </html>
   );

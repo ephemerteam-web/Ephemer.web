@@ -1,10 +1,6 @@
 // app/api/generate-gift-ideas/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
-function limiterTexte(value: unknown, maxLength = 300): string {
-  if (typeof value !== "string") return "";
-  return value.trim().slice(0, maxLength);
-}
 
 const CATEGORIES_VALIDES = [
   "loisir",
@@ -38,57 +34,19 @@ export async function POST(request: NextRequest) {
   try {
     // ... ton code existant
     const body = await request.json();
-
-    const {
-      firstName = "",
-      lastName = "",
-      dateNaissance = null,
-      age = null,
-      relation = "ami",
-      email = null,
-      estFavori = false,
-      telephoneIndicatif = null,
-      telephoneNumero = null,
-      note = null,
-      eventType = "anniversaire",
-      eventDescription = "", // 👈 NOUVEAU
-    } = body;
-
-    const safeFirstName = limiterTexte(firstName, 80);
-    const safeLastName = limiterTexte(lastName, 80);
-    const safeNote = limiterTexte(note, 500);
-    const safeEmail = limiterTexte(email, 120);
-    const safeDescription = limiterTexte(eventDescription, 200); // 👈 NOUVEAU
-
-    const fullName = [safeFirstName, safeLastName].filter(Boolean).join(" ");
-
-    // 👈 On transforme le code technique en description lisible
-    const labelEvenement = LABELS_EVENEMENT[eventType] || "une occasion spéciale";
-
-    // 👈 Si "autre" + description fournie, on la privilégie
-    const occasionTexte =
-      eventType === "autre" && safeDescription
-        ? `une occasion spéciale décrite ainsi : "${safeDescription}"`
-        : labelEvenement;
-
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
+    const occasionTexte = LABELS_EVENEMENT[body.eventType] || 'une occasion spéciale';
+    const relation = ['ami', 'famille', 'couple', 'pro', 'autre'].includes(body.relation) ? body.relation : 'autre';
     const prompt = `
 Tu es un expert cadeau français très créatif et réaliste.
 
 Objectif :
-Proposer exactement 6 idées cadeaux personnalisées pour ${fullName || "cette personne"}, à l'occasion de ${occasionTexte}, avec des catégories variées pour couvrir les 5 domaines principaux.
+Proposer exactement 6 idées cadeaux personnalisées pour une personne, à l'occasion de ${occasionTexte}, avec des catégories variées pour couvrir les 5 domaines principaux.
 
 ⚠️ IMPORTANT : Les idées doivent être COHÉRENTES avec l'occasion (${occasionTexte}). Adapte le ton et le type de cadeau à cet événement précis.
 
-Informations disponibles sur le contact :
-- Prénom : ${safeFirstName || "non précisé"}
-- Nom : ${safeLastName || "non précisé"}
-${dateNaissance ? `- Date de naissance exacte : ${dateNaissance}` : ""}
-${age ? `- Âge approximatif : ${age} ans` : ""}
-- Relation : ${relation}
-- Occasion du cadeau : ${occasionTexte}
-${safeDescription ? `- Détails de l'occasion : ${safeDescription}` : ""}
-${estFavori ? `- Ce contact est marqué comme favori` : ""}
-${safeNote ? `- Informations personnelles / notes : ${safeNote}` : ""}
+Seule information personnelle : catégorie de relation ${relation}.
+Aucun âge ni préférence fourni : ne pas les inventer. Ne pas recommander alcool, produits de santé ou objets dangereux.
 
 Les 5 catégories à utiliser (une ou deux idées par catégorie maximum) :
 1. **loisir** → Loisirs & Passions (jeux, livres, musique, sport, collections...)
@@ -105,7 +63,7 @@ Contraintes strictes :
 - "categorie" = une des 5 catégories listées ci-dessus (en minuscules avec underscore). Répartis tes 6 idées sur au moins 4 catégories différentes.
 - "recherche" = mots-clés de recherche optimisés (3-6 mots maximum, sans accent, séparés par des "+").
 - "emoji" = un seul emoji pertinent. Jamais de 🎁.
-- Idées réalistes, positives, adaptées à la relation, à l'âge, aux notes ET à l'occasion.
+- Idées réalistes, positives, adaptées à la relation, à l'occasion, sans supposer d'âge ni de goûts.
 - Évite les objets trop chers (max ~80€) ou inappropriés.
 - Ne répète jamais le prénom du destinataire dans les idées.
 - Varie les gammes de prix.
@@ -120,6 +78,7 @@ Format attendu (exemple) :
       "https://api.mammouth.ai/v1/chat/completions",
       {
         method: "POST",
+        signal: AbortSignal.timeout(30000),
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.MAMMOUTH_API_KEY}`,
@@ -133,8 +92,7 @@ Format attendu (exemple) :
     );
 
     if (!mammouthResponse.ok) {
-      const errorText = await mammouthResponse.text();
-      console.error("Erreur Mammouth (cadeaux):", errorText);
+      console.error("Erreur Mammouth cadeaux, statut:", mammouthResponse.status);
       return NextResponse.json(
         { error: "Erreur lors de la génération des idées cadeaux" },
         { status: 500 }
@@ -157,13 +115,14 @@ Format attendu (exemple) :
     try {
       ideas = JSON.parse(raw);
     } catch {
-      console.error("JSON invalide reçu de l'IA:", raw);
+      console.error("JSON invalide reçu de l’IA");
       return NextResponse.json(
         { error: "L'IA n'a pas renvoyé un JSON valide" },
         { status: 500 }
       );
     }
 
+    if (!Array.isArray(ideas)) return NextResponse.json({ error: "Format de réponse inattendu" }, { status: 502 });
     ideas = ideas
       .filter(
         (i) =>

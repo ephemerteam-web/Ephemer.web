@@ -13,30 +13,30 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
   return (
     <StarryBackground>
       {/* NAVIGATION */}
-      <nav className="w-full max-w-6xl mx-auto px-6 py-6 flex items-center justify-between z-10">
+      <nav className="w-full max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-wrap gap-3 items-center justify-between z-10">
         <Link href="/" className="flex items-center gap-3 group">
           <svg
-            className="w-8 h-8 text-[#C8A84E] transition-transform duration-300 group-hover:rotate-12"
+            className="w-8 h-8 text-accent transition-transform duration-300 group-hover:rotate-12"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
           >
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" className="text-[#1B2A4A]" />
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor" className="text-on-action" />
             <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" stroke="currentColor" strokeWidth="1" fill="none" />
             <circle cx="15" cy="9" r="1" fill="currentColor" />
           </svg>
           <span className="text-xl font-semibold tracking-tight">
-            <span className="text-white">Ephemer</span>
-            <span className="text-white/40 font-light">
-              <span className="text-[#C8A84E]">.</span>name
+            <span className="text-ink">Ephemer</span>
+            <span className="text-muted font-light">
+              <span className="text-accent">.</span>name
             </span>
           </span>
         </Link>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button
             onClick={onOpenConnexion}
-            className="text-sm bg-white/10 hover:bg-[#C8A84E]/20 text-white border border-white/10 hover:border-[#C8A84E]/30 px-4 py-2 rounded-full transition-all duration-300"
+            className="text-sm bg-ink/10 hover:bg-action/20 text-ink border border-line hover:border-accent/30 px-4 py-2 rounded-full transition-all duration-300"
           >
             Se connecter
           </button>
@@ -46,15 +46,15 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
       {/* SECTION HERO */}
       <div className="flex-1 flex flex-col items-center justify-center px-4 z-10 max-w-4xl mx-auto text-center">
 
-        <div className="mb-10 inline-flex items-center gap-2 bg-white/5 border border-white/10 rounded-full px-5 py-2 backdrop-blur-sm">
+        <div className="mb-10 inline-flex items-center gap-2 bg-ink/5 border border-line rounded-full px-5 py-2 backdrop-blur-sm">
           <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-white/70 text-sm font-medium tracking-wide">
+          <span className="text-muted text-sm font-medium tracking-wide">
             Rappels intelligents • 100% Gratuit
           </span>
         </div>
 
         <div className="mb-8 relative">
-          <div className="absolute inset-0 bg-[#C8A84E]/10 blur-3xl rounded-full scale-150" />
+          <div className="absolute inset-0 bg-action/10 blur-3xl rounded-full scale-150" />
           <svg
             className="w-24 h-24 md:w-32 md:h-32 relative z-10 drop-shadow-2xl"
             viewBox="0 0 120 120"
@@ -71,60 +71,60 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
           </svg>
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight leading-[1.1] mb-6">
+        <h1 className="text-5xl md:text-7xl font-bold text-ink tracking-tight leading-[1.1] mb-6">
           <span className="inline-block">Ephemer</span>
-          <span className="inline-block text-white/40 font-light ml-1">
-            <span className="text-[#C8A84E]">.</span>name
+          <span className="inline-block text-muted font-light ml-1">
+            <span className="text-accent">.</span>name
           </span>
         </h1>
 
-        <p className="text-lg md:text-xl text-white/50 max-w-lg mx-auto leading-relaxed mb-4">
+        <p className="text-lg md:text-xl text-muted max-w-lg mx-auto leading-relaxed mb-4">
           Votre assistant céleste pour ne plus jamais oublier
-          <span className="text-[#C8A84E]/80 font-medium"> un moment important</span>.
+          <span className="text-accent/80 font-medium"> un moment important</span>.
         </p>
-        <p className="text-sm text-white/30 mb-12">
+        <p className="text-sm text-muted mb-12">
           Anniversaires • Fêtes • Événements — Tout organisé, tout automatisé.
         </p>
 
         <div className="flex flex-col items-center gap-4">
           <button
             onClick={onOpenInscription}
-            className="group relative bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] px-8 py-4 rounded-2xl text-[#0B1120] font-bold text-lg hover:shadow-[0_0_30px_rgba(200,168,78,0.4)] transition-all duration-300 hover:scale-105"
+            className="group relative bg-gradient-to-r from-action to-action px-8 py-4 rounded-2xl text-on-action font-bold text-lg hover:shadow-[0_0_30px_rgba(200,168,78,0.4)] transition-all duration-300 hover:scale-105"
           >
             ✨ Commencer gratuitement
           </button>
 
           <button
             onClick={onOpenConnexion}
-            className="text-white/40 hover:text-white text-sm transition-colors duration-200"
+            className="text-muted hover:text-ink text-sm transition-colors duration-200"
           >
             Déjà un compte ? Se connecter →
           </button>
         </div>
 
         <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl w-full">
-          <div className="group bg-white/[0.03] border border-white/[0.08] hover:border-[#C8A84E]/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-white/[0.06] hover:-translate-y-1">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#C8A84E]/10 flex items-center justify-center group-hover:bg-[#C8A84E]/20 transition-colors duration-300">
+          <div className="group bg-ink/[0.03] border border-line hover:border-accent/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-ink/[0.06] hover:-translate-y-1">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-action/10 flex items-center justify-center group-hover:bg-action/20 transition-colors duration-300">
               <span className="text-2xl">🎂</span>
             </div>
-            <p className="text-white font-semibold text-sm mb-1">Anniversaires</p>
-            <p className="text-white/30 text-xs leading-relaxed">Rappels automatiques J-7, J-1 et jour J</p>
+            <p className="text-ink font-semibold text-sm mb-1">Anniversaires</p>
+            <p className="text-muted text-xs leading-relaxed">Rappels automatiques J-7, J-1 et jour J</p>
           </div>
 
-          <div className="group bg-white/[0.03] border border-white/[0.08] hover:border-[#C8A84E]/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-white/[0.06] hover:-translate-y-1">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#C8A84E]/10 flex items-center justify-center group-hover:bg-[#C8A84E]/20 transition-colors duration-300">
+          <div className="group bg-ink/[0.03] border border-line hover:border-accent/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-ink/[0.06] hover:-translate-y-1">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-action/10 flex items-center justify-center group-hover:bg-action/20 transition-colors duration-300">
               <span className="text-2xl">✉️</span>
             </div>
-            <p className="text-white font-semibold text-sm mb-1">Messages personnalisés</p>
-            <p className="text-white/30 text-xs leading-relaxed">Générés par IA selon votre relation</p>
+            <p className="text-ink font-semibold text-sm mb-1">Messages personnalisés</p>
+            <p className="text-muted text-xs leading-relaxed">Générés par IA selon votre relation</p>
           </div>
 
-          <div className="group bg-white/[0.03] border border-white/[0.08] hover:border-[#C8A84E]/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-white/[0.06] hover:-translate-y-1">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-[#C8A84E]/10 flex items-center justify-center group-hover:bg-[#C8A84E]/20 transition-colors duration-300">
+          <div className="group bg-ink/[0.03] border border-line hover:border-accent/20 rounded-2xl p-6 backdrop-blur-sm text-center transition-all duration-300 hover:bg-ink/[0.06] hover:-translate-y-1">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-xl bg-action/10 flex items-center justify-center group-hover:bg-action/20 transition-colors duration-300">
               <span className="text-2xl">👥</span>
             </div>
-            <p className="text-white font-semibold text-sm mb-1">Tous vos contacts</p>
-            <p className="text-white/30 text-xs leading-relaxed">Famille, amis, collègues organisés</p>
+            <p className="text-ink font-semibold text-sm mb-1">Tous vos contacts</p>
+            <p className="text-muted text-xs leading-relaxed">Famille, amis, collègues organisés</p>
           </div>
         </div>
 
@@ -135,7 +135,7 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
 
           {/* ============ FOOTER (AMÉLIORÉ) ============ */}
           <div className="space-y-4">
-            <p className="text-white/15 text-xs tracking-wider uppercase">
+            <p className="text-muted text-xs tracking-wider uppercase">
               © 2026 Ephemer.name — Votre compagnon nocturne
             </p>
 
@@ -143,31 +143,31 @@ export default function HeroSection({ onOpenInscription, onOpenConnexion }: Hero
             <div className="flex justify-center gap-2 flex-wrap max-w-2xl mx-auto">
               <a
                 href="mailto:ephemer.team@gmail.com?subject=Ephemer - Support&body=Bonjour,%0D%0A%0D%0A[Décris ton bug ou ta suggestion ici]%0D%0A%0D%0AMerci !"
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent/80 hover:text-accent bg-ink/5 hover:bg-action/10 rounded-lg transition border border-line hover:border-accent/30"
               >
                 💬 Support
               </a>
               <Link
                 href="/guide-notifications"
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent/80 hover:text-accent bg-ink/5 hover:bg-action/10 rounded-lg transition border border-line hover:border-accent/30"
               >
                 🔔 Tuto Notifications
               </Link>
               <Link
                 href="/confidentialite"
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent/80 hover:text-accent bg-ink/5 hover:bg-action/10 rounded-lg transition border border-line hover:border-accent/30"
               >
                 🔒 Confidentialité
               </Link>
               <Link
                 href="/conditions"
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent/80 hover:text-accent bg-ink/5 hover:bg-action/10 rounded-lg transition border border-line hover:border-accent/30"
               >
                 📄 Conditions
               </Link>
               <Link
                 href="/patchnote"
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-[#C8A84E]/80 hover:text-[#C8A84E] bg-white/5 hover:bg-[#C8A84E]/10 rounded-lg transition border border-white/10 hover:border-[#C8A84E]/30"
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium text-accent/80 hover:text-accent bg-ink/5 hover:bg-action/10 rounded-lg transition border border-line hover:border-accent/30"
               >
                 📜 Quoi de neuf ?
               </Link>

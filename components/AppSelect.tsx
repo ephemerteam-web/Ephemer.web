@@ -14,9 +14,9 @@ export default function AppSelect({ options, value, onChange }: AppSelectProps) 
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full border border-white/10 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 bg-[#0B1120] text-white"
+      className="w-full min-h-11 border border-line rounded-xl px-4 py-3 text-sm bg-canvas text-ink"
     >
-      <option value="" disabled className="bg-[#0B1120] text-white">
+      <option value="" disabled className="bg-canvas text-ink">
         -- Sélectionner --
       </option>
 
@@ -24,7 +24,7 @@ export default function AppSelect({ options, value, onChange }: AppSelectProps) 
         <option
           key={option.value}
           value={option.value}
-          className="bg-[#0B1120] text-white"
+          className="bg-canvas text-ink"
         >
           {option.label}
         </option>

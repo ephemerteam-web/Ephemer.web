@@ -2,6 +2,33 @@
 
 ## État actuel après reprise
 
+**Dernière intervention : lot produit traité dans les limites du schéma ; phases 6 (socle UI) et 7 (thèmes) compilées. 35 tests simulés réussis, lint sans erreur (37 avertissements). Revue mobile statique effectuée, recette visuelle sur appareils non réalisée. Plusieurs demandes serveur restent partielles : voir le tableau ci-dessous, ne pas les considérer comme livrées intégralement.**
+
+### Nouveau lot demandé — dix améliorations, puis phases 6 et 7
+
+État Git propre au début de cette intervention : le travail précédent est désormais dans la base locale. Aucun commit créé par l'agent. La référence graphique fournie par l'utilisateur est ivoire/bleu nuit/or céleste ; phase 6 = harmonisation UI, phase 7 = mode clair. Adresse confirmée : 23 route du Mont Agel, 06320 La Turbie ; adresse de support non confirmée.
+
+Premier contrôle du lot produit : 32 tests simulés réussis ; lint final 0 erreur/37 avertissements après correction d'un paragraphe JSX mal placé dans le générateur cadeaux. Build compilé mais contrôle TypeScript en échec sur l'inférence Supabase de la sélection variable de l'export (`lib/user-data.ts`). Correction ciblée : résultat explicitement typé `Record<string, unknown>`, aucune colonne inventée. Phases 6 et 7 non commencées à ce stade ; relance du build obligatoire avant poursuite.
+
+**Résultat après correction : build réussi, TypeScript et 35 pages. Lot produit local validé avant phase 6.**
+
+| Demande | Réalisation et limites |
+|---|---|
+| Journal de livraison | `delivery-status.ts` et messages programmés distinguent programmé, accepté par Resend (non livré), annulé et état inconnu. Les autres états ne sont pas inventés. Journal d'événements durable, identifiant Resend, verrou de traitement et webhook vérifié nécessaires pour le suivi complet ; aucun nouveau statut SQL écrit. |
+| Naissance partielle | Modèle métier jour/mois/année nullable et validation ; retrait de la sentinelle 1900 de l'invitation ; âge inconnu pour les données historiques ambiguës. Sans schéma/RPC adaptés, la saisie partielle explique le blocage et demande une date complète connue ou trois champs vides. Le jour/mois seul n'est PAS encore persisté. Aucune donnée historique convertie. |
+| Fête prénomale | Choix explicite parmi toutes les correspondances normalisées dans le générateur, pour le message courant. Réinitialisation du formulaire de programmation si le choix change. Préférence persistante et unification des autres calendriers restent dépendantes du modèle de données. |
+| Récurrence | UI explicite : prochaine occurrence proposée pour un anniversaire ; date manuelle ponctuelle ; chaque message programmé est un envoi unique. Aucune reconduction annuelle d'un mariage/rendez-vous. Série récurrente persistante non implémentée sans schéma dédié. |
+| Confidentialité IA | Liste fermée côté serveur et minimisation navigateur : occasion, relation, ton seulement ; suppression noms/notes/coordonnées/âges/dates et détails libres du prompt. Prénom ajouté localement après réponse. Texte UI et confidentialité alignés sur Mammouth AI ; timeout et erreurs sans réponse brute du fournisseur. Personnalisation par notes/âge volontairement retirée. |
+| Diagnostic | Route de simulation déjà sans effets depuis phase 3 ; renvoie désormais événements et destinataire du récapitulatif, affichés dans `/dashboard/donnees`. Refus en cas d'erreur de préférences. Aucun envoi ni insertion. La lecture contacts de ce diagnostic reste soumise à la limite de réponse Supabase : ce n'est pas un audit exhaustif des gros comptes. |
+| Doublons | Prévisualisation d'import existante conservée, rapprochement sur email/téléphone/nom complet avant import ou création, confirmation explicite des correspondances (peuvent être homonymes ou coordonnées partagées). Comparaison interne au lot et avec les contacts existants. Pas de fusion ni suppression automatique ; concurrence et fusion atomique restent à traiter côté serveur. |
+| Alertes automatismes | Contrôle manuel du stock de rappels en retard dans la nouvelle page, sans faux diagnostic de cron absent. Surveillance automatique des passages, échecs répétés et volumes bloquée sans journal serveur et canal d'alerte validé. |
+| Promesses publiques | Avertissement explicite dans les guides et paramètres : push non opérationnels. Adresse postale fictive remplacée dans les templates par l'adresse postale validée : 23 route du Mont Agel, 06320 La Turbie. Support existant non harmonisé faute de validation (deux adresses différentes). Revue juridique complète et autres promesses marketing restent à valider humainement. |
+| Export | Export JSON depuis profil/menu : compte (ID/email), profil, contacts, rappels, notifications, préférences et métadonnées d'invitations ; lectures RLS filtrées au propriétaire et paginées, aucun téléchargement partiel sur erreur, vérification de session avant téléchargement. Tokens d'invitation, sessions, clés push, sauvegardes et journaux tiers exclus. Pas d'instantané transactionnel, limite navigateur explicite 100 000 lignes/table. |
+
+Fichiers du lot produit : routes `api/generate-message`, `api/generate-gift-ideas`, `api/cron/test-notifications` ; pages `confidentialite`, `guide-notifications`, invitation, dashboard `generate`, `gift-ideas`, `anniversaires`, `messages-programmes`, `notifications`, `contacts/nouveau`, `profil`, nouvelle `donnees` ; composants `MenuNavigation`, `PushNotificationsGuide` ; `lib/api-messages.ts`, `lib/constants.ts`, `lib/date-utils.ts`, `lib/email-templates.ts`, nouveaux `ai-privacy.ts`, `contact-quality.ts`, `delivery-status.ts`, `name-days.ts`, `user-data.ts` ; `tests/product-improvements.test.mjs` et ce journal.
+
+Commandes du lot : état Git, lectures ciblées, `npm run lint`, `npm run build` (premier échec TypeScript documenté, seconde exécution réussie), `node --test` sur les six fichiers de tests (32/32). Aucun email ni appel IA réel. Reprise : conserver la séparation état constaté/état non mesuré ; ne pas créer de colonnes, RPC ou webhook fictifs pour lever les limites ci-dessus.
+
 Les lots locaux des phases 2 à 5 ont été réalisés et compilent. Le blocage lint initial est levé. Les tests de services restent simulés : aucune validation distante ni déploiement. Les alertes d'invitation (phase 1) restent suspendues ; l'envoi push de bout en bout reste bloqué faute de service émetteur identifié. Les premières sections conservent l'historique des contrôles et échecs précédents.
 
 ## Cadre et état initial
@@ -177,3 +204,180 @@ git diff -- app components lib public/sw.js public/offline.html public/site.webm
 ```
 
 Relire aussi les nouveaux fichiers non suivis, notamment `proxy.ts`, les helpers et tests : `git diff` seul ne les montre pas. Ne pas utiliser `git add .` sans revue, car `AGENTS.md`, `README.md`, `AUDIT-QUICKSTART.md` et `codexignore.md` contiennent les changements préexistants de l'utilisateur. Aucun commit créé. Aucun fichier `.env`, secret, migration SQL ou configuration distante modifié. Le serveur de développement n'a pas été lancé : les parcours intégrés auraient utilisé les services de production ; ils restent à valider dans un environnement isolé.
+
+## Phase 6 — Harmonisation UI (socle local validé)
+
+Statut Git relu ; lot produit préservé. Composants partagés Button/Input/Card/Notice/PageHeading, palette sémantique sombre préparant le clair, focus clavier visible, réduction des animations, décor céleste vectoriel commun inspiré du fond fourni. Suppression de la duplication visuelle AppLayout/StarryBackground, décor mutualisé du dashboard. Adoption dans données/diagnostic, reset et programmation ; sélecteurs cohérents. La migration de chaque ancien formulaire vers les primitives reste progressive.
+
+Fichiers : `components/ui.tsx`, `components/CelestialBackdrop.tsx`, `components/AppLayout.tsx`, `components/StarryBackground.tsx`, `components/AppSelect.tsx`, `components/ProgrammerRappel.tsx`, `app/globals.css`, `app/dashboard/layout.tsx`, `app/dashboard/donnees/page.tsx`, `app/reset-password/page.tsx`, ce journal.
+
+Contrôles : `npm run lint` 0 erreur/37 avertissements ; `npm run build` réussi, TypeScript et 35 pages. Aucun appel fonctionnel distant. Reprise : les rôles canvas/surface/ink/muted/action doivent rester cohérents ; ne pas réintroduire des couleurs de fond fixes dans les composants communs.
+
+## Phase 7 — Mode clair (périmètre annoncé avant édition)
+
+Nouveaux `lib/theme.ts`, `components/ThemeControl.tsx`, tests de thème ; `app/globals.css` et `app/layout.tsx`. Conversion des couleurs de présentation dans les fichiers suivants (sans changement de requêtes métier) :
+
+- `app/completer-profil/page.tsx`
+- `app/conditions/page.tsx`
+- `app/confidentialite/page.tsx`
+- `app/connexion/page.tsx`
+- `app/dashboard/anniversaires/page.tsx`
+- `app/dashboard/calendrier/page.tsx`
+- `app/dashboard/calendrier_saints/page.tsx`
+- `app/dashboard/ce-mois-ci/page.tsx`
+- `app/dashboard/contacts/[id]/edit/page.tsx`
+- `app/dashboard/contacts/nouveau/page.tsx`
+- `app/dashboard/contacts/page.tsx`
+- `app/dashboard/donnees/page.tsx`
+- `app/dashboard/generate/page.tsx`
+- `app/dashboard/gift-ideas/page.tsx`
+- `app/dashboard/inviter/CarteInvitation.tsx`
+- `app/dashboard/inviter/page.tsx`
+- `app/dashboard/layout.tsx`
+- `app/dashboard/messages-programmes/page.tsx`
+- `app/dashboard/notifications/page.tsx`
+- `app/dashboard/page.tsx`
+- `app/dashboard/profil/page.tsx`
+- `app/guide-notifications/page.tsx`
+- `app/inscription/page.tsx`
+- `app/invitation/[token]/FormulaireInvitation.tsx`
+- `app/invitation/[token]/LienInvalide.tsx`
+- `app/invitation/[token]/page.tsx`
+- `app/layout.tsx`
+- `app/page.tsx`
+- `app/patchnote/page.tsx`
+- `app/reset-password/page.tsx`
+- `components/AccordionGroup.tsx`
+- `components/AppLayout.tsx`
+- `components/AppSelect.tsx`
+- `components/AuthDrawer.tsx`
+- `components/ContactSearchFilters.tsx`
+- `components/DrawerContext.tsx`
+- `components/DrawerGlobal.tsx`
+- `components/EvenementsMois.tsx`
+- `components/FavorisRow.tsx`
+- `components/HeroSection.tsx`
+- `components/IconeLuneIA.tsx`
+- `components/InstallPWAButton.tsx`
+- `components/MenuLateral.tsx`
+- `components/MenuNavigation.tsx`
+- `components/NotificationBell.tsx`
+- `components/OfflineBanner.tsx`
+- `components/PWARegistration.tsx`
+- `components/ProgrammerRappel.tsx`
+- `components/ProgressBar.tsx`
+- `components/ProgressRing.tsx`
+- `components/PushNotificationsGuide.tsx`
+- `components/PushPermissionButton.tsx`
+- `components/StarryBackground.tsx`
+
+Également `lib/constants.ts` pour les badges partagés. Les SVG exclus et images restent intacts.
+
+### Phase 7 — Résultat et contrôles
+
+- Palette inspirée du fond utilisateur : ivoire chaud / bleu nuit / or, variantes sémantiques `canvas`, `surface`, `ink`, `muted`, `accent`, `action`, états. Sombre par défaut ; sélecteur clair/sombre/système dans les navigations et le pied de page global. Choix enregistré localement, synchronisé entre contrôles/onglets ; stockage refusé géré sans bloquer l'UI. Initialisation statique avant peinture pour respecter le choix dès le chargement. Pas de dépendance ajoutée.
+- Conversion des couleurs de présentation dans les pages et composants annoncés : textes secondaires opaques plutôt que blanc à faible opacité, surfaces/formulaires/menus lisibles dans les deux modes, accents centralisés. Couleurs officielles OAuth et certaines illustrations/catégories restent intentionnellement fixes. Les emails gardent leur propre rendu, indépendant du thème web.
+- Page offline autonome adaptée aux deux thèmes ; worker passé à `ephemer-static-v5` pour renouveler cette ressource publique. Politique de cache privé inchangée. Test du worker actualisé et réussi.
+- Contrôles finaux : `npm run lint` **0 erreur / 37 avertissements** ; `npm run build` **succès, TypeScript et 35 pages** ; `node --test` des sept fichiers **35/35**. Tests de thème : choix système/explicite, stockage refusé et contraste ≥ 4,5:1 pour neuf couples de tokens dans les deux thèmes. Cela ne constitue pas une certification de contraste de toutes les compositions avec transparence.
+- L'outil d'aperçu a d'abord déclenché des erreurs ESLint (imports CommonJS, puis composant anonyme) ; conversion ESM et nom du composant corrigés, sans désactivation de règle. Une exécution de tests a rencontré EPERM dans le bac à sable, puis a réussi avec l'autorisation d'exécution adaptée. Aucun téléchargement de dépendance.
+- `tests/ui-preview.mjs` : rendu SSR de vrais composants avec Supabase neutralisé, aucune hydratation, aucune action de formulaire, CSP interdisant les connexions. Six contrôles HTTP locaux réussis (connexion, reset, données × clair/sombre). Serveur local arrêté après contrôles. `npm run dev` non lancé : l'aperçu isolé évite les services réels. Pas de capture visuelle : navigateur intégré indisponible et inventaire des navigateurs vide dans cette session.
+- `git diff --check` a signalé deux espaces finaux dans le menu, supprimés. Aucun fichier d'environnement, migration, clé ou donnée distante modifié ; aucun commit ni déploiement.
+- Références : [Tailwind — tokens et variables](https://tailwindcss.com/docs/theme), [Next — NextResponse](https://nextjs.org/docs/app/api-reference/functions/next-response).
+
+### Complément mobile demandé
+
+Revue statique transversale des pages App Router et composants visuels (grilles, largeurs, hauteur des panneaux, champs, actions, texte long). Fichiers supplémentaires : `public/offline.html`, `public/sw.js`, `tests/phase5-pwa.test.mjs`, outil d'aperçu et tests de thème.
+
+Corrections :
+- navigation publique autorisant le retour à la ligne ; menu dashboard compact ; champs nom/prénom des formulaires concernés empilés sur petit écran ; cartes de raccourcis empilées sous 380 px ; calendrier conservé sur sept colonnes ;
+- panneau auth limité à 90dvh et défilant, menus latéraux en hauteur dynamique, modal d'import en 90dvh ; marges basses adaptées à la zone système ; panneau cloche positionné entre les marges gauche/droite sans calcul de largeur fragile ;
+- champs rétractables dans les grilles/flex, textes longs sécables, police des champs à 16 px jusqu'à 640 px pour limiter le zoom automatique iOS ; boutons/champs de 44 px de hauteur minimale sur pointeur tactile ; zoom utilisateur toujours autorisé ;
+- animations réduites si l'appareil le demande ; retrait de l'opacité du texte des anneaux de progression qui rendait les événements éloignés illisibles.
+
+**Limite explicite : on ne peut pas affirmer « tout est responsive » sur la seule base du code.** La recette visuelle tactile reste à faire à 320, 360, 390, 768 et 1280 px, en clair et sombre, puis paysage/clavier ouvert/zoom 200 %, Safari iOS installé et Chrome Android. Vérifier connexion/reset, invitation, édition/import contacts, générateurs/cartes cadeaux, calendrier et panneau détail, cloche/menus, messages longs et export. L'aperçu sans réseau couvre uniquement la structure SSR des trois écrans mentionnés ; aucun parcours authentifié ni interaction mobile réelle validé.
+
+### Reprise et priorités restantes
+
+1. Valider un modèle Supabase avant toute persistance : naissance jour/mois/année nullable, préférence prénomale, série d'événements/récurrence, journal de traitement/livraison. Demandes 1–4 et 8 donc **partielles**, pas artificiellement complétées par de nouveaux champs supposés.
+2. Définir ensuite le webhook Resend vérifié, la conservation des identifiants et des états, les reprises et alertes automatiques. Aucun expéditeur push ajouté ; invitations toujours bloquées comme précédemment.
+3. Fusion de doublons : prévoir le déplacement transactionnel des relations (rappels/notifications/invitations), arbitrage champ par champ et vérification RLS avant de proposer une suppression. Le présent lot n'effectue que le rapprochement/confirmation de création, sans fusion.
+4. Confirmer l'adresse de support (emails : `ephemer.team@gmail.com`, page confidentialité : `contact@ephemer.name`) et les mentions de l'exploitant. L'adresse postale fournie est intégrée sans inventer de raison sociale/SIRET.
+5. Recette mobile et accessibilité complète avant déploiement ; conserver les contrôles de contraste et les tests simulés. En cas de problème de thème, corriger le token ou composant concerné, sans masquer les débordements globalement ni réintroduire un fond sombre fixe.
+
+Commandes finales de revue (les fichiers non suivis doivent être ouverts séparément) :
+
+```powershell
+npm run lint
+npm run build
+node --test tests/phase1-security.test.mjs tests/phase2-auth.test.mjs tests/phase3-delivery.test.mjs tests/phase4-dates.test.mjs tests/phase5-pwa.test.mjs tests/product-improvements.test.mjs tests/theme.test.mjs
+git status --short
+git diff --check
+git diff
+# Aperçu statique isolé facultatif, arrêter avec Ctrl+C :
+node tests/ui-preview.mjs
+```
+
+## Suivi du 19 septembre 2026 — régression visuelle signalée sur localhost
+
+- Signalement : fond blanc dans les deux choix, textes pâles, lune démesurée et perte de charme. Capture fournie par l’utilisateur, sur localhost:3000 ; aucun commit requis pour voir les modifications locales.
+- État Git : toutes les modifications du lot précédent étaient présentes ; conservées intégralement. Aucun reset, suppression, commit ou déploiement.
+- Diagnostic confirmé : les deux cartes principales avaient reçu le même dégradé neutre ; le SVG de décor était étiré par `preserveAspectRatio="xMidYMin slice"` sur toute la surface. Ces choix appauvrissaient le rendu et agrandissaient excessivement la lune.
+- Diagnostic NON confirmé : la cause exacte du fond blanc dans le navigateur de l’utilisateur. La feuille CSS actuellement servie par localhost:3000/connexion contient bien les palettes, le fond du body et les règles clair/sombre. Plusieurs couleurs de la capture correspondent à des styles antérieurs aux fichiers actuels. Un état ancien après actualisation à chaud/cache reste une hypothèse, pas une preuve. Ne pas considérer ce symptôme résolu tant que le parcours connecté n’est pas revérifié.
+- Limite de la validation précédente : tests de valeurs et compilation sans validation du rendu réel ; ils ne pouvaient pas détecter le problème observé.
+- Fichiers corrigés : app/globals.css (sélecteur sombre explicite et palettes des cartes), components/CelestialBackdrop.tsx (lune dimensionnée, décor inférieur indépendant), app/dashboard/page.tsx (deux cartes distinctes), tests/theme.test.mjs (contraste des cartes et émission réelle des classes Tailwind), ce journal.
+- Vérifications : `node --test tests/theme.test.mjs` : 4/4 ; `npm run lint` : 0 erreur, 37 avertissements ; `npm run build` : réussi, TypeScript et 35 pages ; `git diff --check` : réussi.
+- Contrôle visuel : outil navigateur intégré indisponible ; Chrome headless installé a permis des captures de l’aperçu SSR isolé de connexion (clair et sombre à 1280 × 900), sans données utilisateur ni appels Supabase. Les thèmes sont distincts et les textes lisibles. Une première capture a révélé une limite rectangulaire du décor, corrigée ensuite en séparant les motifs hauts/bas. Ce n’est pas un test du changement interactif de thème, ni du dashboard authentifié, ni une certification responsive. Aucun paquet installé.
+- Reprise : recharger localhost avec Ctrl+Maj+R, tester successivement Clair puis Sombre. Si le blanc persiste, inspecter dans le navigateur concerné l’attribut data-theme de html, les styles calculés --canvas/background-color, la feuille CSS chargée et l’erreur du badge Next ; ne pas attribuer arbitrairement la cause au cache. Préserver les modifications locales et ne pas vider de données utilisateur.
+
+## Suivi du 19 septembre 2026 — vérification des layouts après nouveau signalement
+
+- Nouvelle capture utilisateur : sur /dashboard, Sombre et Clair produisent toujours le même fond blanc. Incident toujours ouvert ; le contrôle isolé précédent ne prouve pas la correction du dashboard.
+- Lecture : app/layout.tsx importe globals.css ; app/dashboard/layout.tsx emploie bg-canvas et les couleurs sémantiques. AppLayout et DrawerGlobal ne définissent pas de thème concurrent. Recherche ciblée des CSS, styles globaux et mutations data-theme : aucun fond blanc fixe couvrant le dashboard identifié dans les sources inspectées.
+- Vérification HTTP : le serveur localhost:3000 sert les variables --canvas et les nouvelles palettes des cartes. Le JS de connexion contient le décor dimensionné actuel, sans l'ancien preserveAspectRatio slice. Cela ne permet pas de déterminer les styles effectivement chargés dans l'onglet utilisateur.
+- Test interactif réel : Chrome headless, profil temporaire distinct, page Next.js http://localhost:3000/connexion, toutes les requêtes externes bloquées via interception réseau. Sélection du contrôle réel Clair → Sombre → Clair, après hydratation. Valeurs calculées body/main : rgb(250, 246, 239) → rgb(11, 20, 37) → rgb(250, 246, 239). Texte main : rgb(23, 52, 86) → rgb(247, 242, 233) → rgb(23, 52, 86). Le layout racine et le changement interactif fonctionnent dans ce contexte. Aucun compte, cookie utilisateur, envoi ou accès de production utilisé.
+- Limite : pas d'accès à l'onglet Chrome connecté de l'utilisateur ; aucun contournement de l'authentification du dashboard. Un relevé limité à data-theme, --canvas, couleurs calculées du body et URLs CSS a été demandé à l'utilisateur. Cause exacte toujours non confirmée ; ne pas conclure arbitrairement à un cache ou à un layout défectueux.
+- Modifications de ce suivi : journal uniquement, toutes les modifications existantes préservées. Pas de relance lint/build pour cette seule documentation ; dernière compilation et dernier lint réussis au suivi précédent.
+- Prochaine étape : comparer le relevé navigateur utilisateur aux valeurs ci-dessus, puis corriger uniquement la cause démontrée. Aucun nouveau correctif visuel spéculatif.
+
+
+## Interrupteur de thème dans le menu latéral — 19 septembre 2026
+
+- L’utilisateur confirme que les thèmes fonctionnent désormais. Aucun diagnostic définitif supplémentaire sur l’ancien affichage blanc n’est établi.
+- Demande : remplacer le sélecteur par un interrupteur soleil/lune inspiré du markup Uiverse/JkHuger fourni, bleu nuit et or, uniquement dans MenuLateral.
+- Fichiers : components/ThemeControl.tsx, components/MenuLateral.tsx, components/HeroSection.tsx, app/layout.tsx, app/dashboard/layout.tsx, lib/theme.ts, public/offline.html, public/sw.js, tests/theme.test.mjs, tests/phase5-pwa.test.mjs, ce journal.
+- Interrupteur natif checkbox/role switch, libellé « Mode sombre », focus visible, zone 80 × 44 px, icône soleil/lune décorative et transitions respectant la réduction des animations globale. Menu fermé rendu inert pour éviter les contrôles hors écran accessibles au clavier.
+- Aucun sélecteur dans les headers ou le footer. ThemeSync reste monté au niveau racine sans interface, pour suivre les changements du système sur toutes les pages. Sans préférence explicite : système automatique. Après clic : choix clair/sombre mémorisé ; les anciens choix explicites restent conservés, y compris après rechargement. L’ancienne valeur system reste compatible sans option visible. Synchronisation entre onglets et repli mémoire si stockage indisponible.
+- Page hors ligne alignée sur ce défaut automatique ; cache public incrémenté de v5 à v6 pour livrer son nouveau contenu, sans élargir les ressources cachées.
+- Commandes : node --test tests/theme.test.mjs tests/phase5-pwa.test.mjs (premier essai EPERM du sandbox, relance autorisée réussie : 11/11) ; npm run lint (0 erreur, 37 avertissements) ; npm run build (TypeScript et 35 pages réussis) ; recherche des usages ThemeControl (menu latéral uniquement), git diff --check (espace résiduel retiré).
+- Limite : rendu et interaction du nouvel interrupteur dans le menu connecté non vérifiés visuellement dans cette passe. À contrôler : ouverture du menu, clic/espace, mobile, rechargement et préférence système sans choix mémorisé. Aucun nouveau paquet, aucune modification SQL/secrets/production, aucun commit ; modifications antérieures préservées.
+- Avant commit : git status --short puis git diff ; examiner aussi les fichiers non suivis.
+
+## Correctif d’exécution du thème — 19 septembre 2026
+
+- Incident signalé : Next.js signalait un script rencontré pendant le rendu React dans `app/layout.tsx`, puis `ThemeSync` était interprété comme un élément différé invalide.
+- Cause : l’initialisation avait été ajoutée avec une balise HTML `<script>` dans le layout React et un composant client de synchronisation était monté dans le layout racine.
+- Correction : remplacement par `next/script`, avec identifiant et stratégie `beforeInteractive`, conformément au mécanisme Next.js prévu pour un script critique du layout racine. `ThemeSync` est supprimé. Le script reste autonome, applique le thème avant le premier rendu et suit les changements du système tant qu’aucun choix clair/sombre n’est mémorisé.
+- Fichiers modifiés : `app/layout.tsx`, `components/ThemeControl.tsx`, `lib/theme.ts`, `tests/theme.test.mjs`, ce journal.
+- Vérifications : `node --test tests/theme.test.mjs` : 4/4 ; `npm run build` : réussi, TypeScript et 35 pages ; `npm run lint` : 0 erreur, 37 avertissements existants.
+- Reprise : arrêter puis relancer `npm run dev` afin de vider l’état HMR déjà chargé, puis recharger `/dashboard`. Aucun commit, secret, migration, appel distant ou donnée utilisateur modifiée.
+
+## Correctif sans script React — 19 septembre 2026 (validation dev complétée ci-dessous)
+
+- Second incident signalé : `next/script` avec `beforeInteractive` déclenchait encore l’avertissement React pendant un rendu côté client. L’état Turbopack référençait aussi un ancien import de `ThemeControl` dans `HeroSection`, alors que cet import n’existait plus dans le fichier source.
+- Correction : suppression complète de `next/script`, de `THEME_INIT` et de toute balise script liée au thème dans le layout. Le premier rendu suit maintenant le système uniquement en CSS avec `prefers-color-scheme`. Un composant client autonome, `components/ThemeRuntime.tsx`, applique ensuite la préférence enregistrée et écoute les changements du système, du stockage et du bouton.
+- Fichiers concernés : `app/layout.tsx`, `app/globals.css`, `components/ThemeRuntime.tsx`, `lib/theme.ts`, `tests/theme.test.mjs`, ce journal. Aucun retour de `ThemeControl` dans `HeroSection` ou les headers/footer.
+- Vérifications : 11/11 tests thème et PWA réussis ; `npm run lint` : 0 erreur, 37 avertissements existants ; `npm run build` : TypeScript et 35 pages réussis ; serveur de production local neuf sur le port 3100 puis Chrome headless avec réseau externe bloqué : contenu rendu, thème clair système appliqué, aucune erreur console et aucun overlay Next.js. Serveur arrêté après contrôle.
+- Point important pour le développement : l’erreur de module mentionnant `HeroSection` provient d’un graphe de modules Turbopack ancien. Après cette correction, arrêter complètement le processus `npm run dev`, le relancer, puis ouvrir la page. Un simple rechargement peut conserver le graphe cassé.
+- Aucun commit, suppression de cache utilisateur, migration, secret, appel distant ou donnée utilisateur modifiée.
+
+## Cache HTTP des modules en développement — 19 septembre 2026
+
+- Incident persistant : module ThemeControl demandé par HeroSection malgré la suppression de cet import. Les précédentes validations en production ne couvraient pas le mode développement ; leur conclusion était trop large.
+- État Git vérifié, toutes les modifications préexistantes conservées. Sources relues : next.config.ts, package.json, HeroSection, PWARegistration et la stratégie de cache du service worker. Le worker actuel ne cache pas les chunks Next.js.
+- Anomalie mesurée AVANT correction, avec `npm run dev -- --port 3000` : trois chunks `/_next/static/chunks/*.js` répondent 200 avec `Cache-Control: public, max-age=3600, must-revalidate`. La règle générique sur les extensions JS/CSS de next.config.ts s'appliquait aussi aux fichiers internes Next.js. Le navigateur pouvait ainsi conserver pendant une heure des modules devenus incompatibles. Ce mécanisme explique une incohérence de versions ; le contenu exact du cache de l'onglet utilisateur n'a pas été inspecté.
+- Correction limitée à next.config.ts : exclusion de `/_next/` de la règle des assets publics et règle `no-store, must-revalidate` en développement. Aucun changement de bundler ni de dépendance.
+- Mesure APRÈS redémarrage automatique de Next : les trois mêmes URLs de chunks répondent 200 avec `Cache-Control: no-store, must-revalidate`.
+- Vérification réelle en DEV/Turbopack : Chrome headless neuf, profil temporaire, tous les appels externes bloqués, navigation `/` → `/connexion` → `/`. Trois pages avec contenu, thème appliqué, aucune exception JavaScript, aucune erreur console et aucun overlay d'erreur. Ce contrôle ne couvre pas le dashboard authentifié.
+- `npm run lint` : 0 erreur, 37 avertissements existants ; `npm run build` : réussi, TypeScript et 35 pages. Serveur de développement laissé disponible sur http://localhost:3000 pour la reprise utilisateur.
+- Les réponses déjà présentes dans un ancien cache ne peuvent pas recevoir rétroactivement le nouvel en-tête. Pour l'ancien onglet : ouvrir F12, cocher Network/Réseau → Disable cache/Désactiver le cache puis recharger. Ne pas effacer les cookies ou données du compte. Si nécessaire, comparer avec une fenêtre privée avant toute autre modification.
+- Aucun commit, aucune suppression de fichier/cache, aucune modification de secrets ou de ressources distantes. Avant commit : `git status --short` puis `git diff -- next.config.ts AUDIT-CORRECTIONS.md`.

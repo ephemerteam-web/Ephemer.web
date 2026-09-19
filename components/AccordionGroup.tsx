@@ -8,7 +8,7 @@ export default function AccordionGroup({
   open,
   onToggle,
   children,
-  badgeClassName = "text-xs px-2 py-0.5 rounded-full bg-[#C8A84E]/15 text-[#C8A84E]",
+  badgeClassName = "text-xs px-2 py-0.5 rounded-full bg-action/15 text-accent",
 }: {
   title: string;
   count: number;
@@ -18,14 +18,14 @@ export default function AccordionGroup({
   badgeClassName?: string;
 }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+    <div className="bg-ink/5 border border-line rounded-2xl overflow-hidden">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/5 transition active:scale-[0.99]"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-ink/5 transition active:scale-[0.99]"
         aria-expanded={open}
       >
         <div className="flex items-center gap-3">
-          <span className="text-sm font-semibold text-white/90">{title}</span>
+          <span className="text-sm font-semibold text-muted">{title}</span>
           <span className={badgeClassName}>{count}</span>
         </div>
 

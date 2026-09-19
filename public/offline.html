@@ -5,7 +5,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="theme-color" content="#0B1120" />
   <title>Ephemer — Hors ligne</title>
+  <script>
+    let choice = null;
+    try { choice = localStorage.getItem('ephemer-theme'); } catch {}
+    const media = matchMedia('(prefers-color-scheme: dark)');
+    const applyTheme = () => { document.documentElement.dataset.theme = choice === 'dark' || choice === 'light' ? choice : media.matches ? 'dark' : 'light'; };
+    applyTheme();
+    media.addEventListener('change', applyTheme);
+  </script>
   <style>
+    :root { color-scheme: dark; --canvas:#0b1425; --ink:#f7f2e9; --muted:#b8c3d4; --accent:#d8b568; --action:#d8b568; --on-action:#132b4d; }
+    [data-theme="light"] { color-scheme:light; --canvas:#faf6ef; --ink:#173456; --muted:#526277; --accent:#805d1d; --action:#173456; --on-action:#fffaf0; }
+    :focus-visible { outline:2px solid var(--accent); outline-offset:4px; }
+    @media (prefers-reduced-motion:reduce) { * { animation:none !important; transition:none !important; } }
     * {
       margin: 0;
       padding: 0;
@@ -14,13 +26,13 @@
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: linear-gradient(135deg, #0B1120 0%, #1B2A4A 100%);
-      color: #fff;
-      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--ink);
+      min-height: 100dvh;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 24px; padding-bottom: max(24px, env(safe-area-inset-bottom));
       text-align: center;
     }
 
@@ -57,7 +69,7 @@
       font-size: 28px;
       font-weight: 700;
       margin-bottom: 12px;
-      background: linear-gradient(135deg, #C8A84E 0%, #E6D07A 100%);
+      background: var(--accent);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
@@ -66,7 +78,7 @@
     p {
       font-size: 16px;
       line-height: 1.6;
-      color: rgba(255, 255, 255, 0.7);
+      color: var(--muted);
       margin-bottom: 24px;
     }
 
@@ -80,8 +92,8 @@
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: linear-gradient(135deg, #C8A84E 0%, #D4B85C 100%);
-      color: #0B1120;
+      background: var(--action);
+      color: var(--on-action);
       font-weight: 600;
       font-size: 15px;
       padding: 14px 28px;
@@ -105,7 +117,7 @@
     .hint {
       margin-top: 24px;
       font-size: 13px;
-      color: rgba(255, 255, 255, 0.4);
+      color: var(--muted);
     }
 
     .stars {

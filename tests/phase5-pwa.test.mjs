@@ -22,7 +22,7 @@ function worker({ offline = false, cached = true } = {}) {
     self, URL, Response,
     Request: class extends Request { constructor(path, options) { super(new URL(path, self.location.origin), options) } },
     fetch: async () => { if (offline) throw new Error('Simulation offline'); return new Response('Page privée') },
-    caches: { open: async () => cache, keys: async () => ['ephemer-static-v3', 'ephemer-static-v4', 'autre-app'], delete: async name => deleted.push(name) },
+    caches: { open: async () => cache, keys: async () => ['ephemer-static-v3', 'ephemer-static-v6', 'autre-app'], delete: async name => deleted.push(name) },
   })
   return { handlers, writes, deleted, shown, opened }
 }

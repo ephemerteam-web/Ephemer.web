@@ -1,5 +1,6 @@
 "use client";
 
+import { Button, Notice } from '@/components/ui';
 import { useState } from "react";
 import { programmerMessage } from "@/lib/rappels";
 import { DESTINATAIRES_RAPPEL } from "@/lib/constants";
@@ -129,19 +130,19 @@ export default function ProgrammerRappel({
   const today = formatDateLocale(new Date());
 
   return (
-    <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-4">
-      <h3 className="font-semibold text-[#C8A84E]">📅 Programmer un rappel</h3>
+    <div className="bg-ink/5 rounded-xl p-4 border border-line space-y-4">
+      <h3 className="font-semibold text-accent">📅 Programmer un rappel</h3>
 
       {/* Choix du destinataire */}
       <div>
-        <label className="block text-sm text-white/80 mb-2">Envoyer à :</label>
+        <label className="block text-sm text-muted mb-2">Envoyer à :</label>
         <select
           value={destinataire}
           onChange={(e) => setDestinataire(e.target.value as Destinataire)}
-          className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+          className="w-full bg-ink/10 border border-line rounded-lg px-3 py-2 text-ink"
         >
           {DESTINATAIRES_RAPPEL.map((d) => (
-            <option key={d.value} value={d.value} className="bg-gray-800">
+            <option key={d.value} value={d.value} className="bg-surface">
               {d.label}
             </option>
           ))}
@@ -150,7 +151,7 @@ export default function ProgrammerRappel({
 
       {/* Choix de la date d'envoi */}
       <div>
-        <label className="block text-sm text-white/80 mb-2">Date d&apos;envoi :</label>
+        <label className="block text-sm text-muted mb-2">Date d&apos;envoi :</label>
         <div className="space-y-2">
           {/* Boutons rapides J-7 / J-1 / Jour J (seulement si datesPossibles dispo) */}
           {datesPossibles &&
@@ -168,8 +169,8 @@ export default function ProgrammerRappel({
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition ${
                   !modePerso && dateEnvoi?.getTime() === date?.getTime()
-                    ? "bg-[#C8A84E]/20 border-[#C8A84E] text-white"
-                    : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                    ? "bg-action/20 border-accent text-ink"
+                    : "bg-ink/5 border-line text-muted hover:bg-ink/10"
                 }`}
               >
                 <span className="font-medium">{label}</span>
@@ -187,8 +188,8 @@ export default function ProgrammerRappel({
             }}
             className={`w-full text-left px-3 py-2 rounded-lg border transition ${
               modePerso
-                ? "bg-[#C8A84E]/20 border-[#C8A84E] text-white"
-                : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10"
+                ? "bg-action/20 border-accent text-ink"
+                : "bg-ink/5 border-line text-muted hover:bg-ink/10"
             }`}
           >
             <span className="font-medium">📆 Date personnalisée</span>
@@ -201,32 +202,28 @@ export default function ProgrammerRappel({
               value={datePerso}
               min={today}
               onChange={(e) => appliquerDatePerso(e.target.value)}
-              className="w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-white"
+              className="w-full bg-ink/10 border border-line rounded-lg px-3 py-2 text-ink"
             />
           )}
         </div>
       </div>
 
-      <p className="text-xs text-white/60">Envoi lors du passage quotidien du service. Si le passage du jour est terminé, le rappel partira au prochain passage.</p>
+      <p className="text-xs text-muted">Envoi lors du passage quotidien du service. Si le passage du jour est terminé, le rappel sera éligible au prochain passage ; la livraison dépend du traitement et du prestataire.</p>
       {/* Bouton programmer */}
-      <button
+      <Button
         onClick={handleProgrammer}
         disabled={programmation.loading || programmation.success || !message || !dateEnvoi}
-        className="w-full bg-[#C8A84E] hover:bg-[#B89742] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold px-4 py-3 rounded-lg transition"
+        className="w-full"
       >
         {programmation.loading ? "⏳ Programmation..." : "✅ Programmer le rappel"}
-      </button>
+      </Button>
 
       {/* Messages de retour */}
       {programmation.success && (
-        <div className="bg-green-500/20 border border-green-500/40 rounded-lg p-3 text-green-200 text-sm">
-          ✅ Rappel programmé avec succès !
-        </div>
+        <Notice>Rappel programmé avec succès.</Notice>
       )}
       {programmation.error && (
-        <div className="bg-red-500/20 border border-red-500/40 rounded-lg p-3 text-red-200 text-sm">
-          ❌ {programmation.error}
-        </div>
+        <Notice error>{programmation.error}</Notice>
       )}
     </div>
   );

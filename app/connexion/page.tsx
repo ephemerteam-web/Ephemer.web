@@ -101,17 +101,17 @@ export default function ConnexionPage() {
 
   return (
     <AppLayout>
-      {callbackFailed && <p role="alert" className="p-4 text-rose-300">Le lien de connexion a expiré ou est invalide. Reconnecte-toi ou demande un nouveau lien.</p>}
+      {callbackFailed && <p role="alert" className="p-4 text-danger">Le lien de connexion a expiré ou est invalide. Reconnecte-toi ou demande un nouveau lien.</p>}
       <div className="min-h-screen flex flex-col justify-center px-4 pb-10">
 
         <div className="w-full max-w-md mx-auto">
 
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-sm relative">
+          <div className="bg-ink/5 border border-line rounded-3xl p-6 sm:p-8 backdrop-blur-sm relative">
 
             {/* RETOUR */}
             <Link
               href="/"
-              className="absolute top-4 left-4 text-white/40 text-lg"
+              className="absolute top-4 left-4 text-muted text-lg"
             >
               ←
             </Link>
@@ -119,10 +119,10 @@ export default function ConnexionPage() {
             {/* HEADER */}
             <div className="text-center mb-8 mt-2">
               <div className="text-4xl mb-2">🌙</div>
-              <h1 className="text-2xl sm:text-3xl font-black text-white">
+              <h1 className="text-2xl sm:text-3xl font-black text-ink">
                 Bon retour
               </h1>
-              <p className="text-white/50 text-sm mt-2">
+              <p className="text-muted text-sm mt-2">
                 Connecte-toi à ton espace
               </p>
             </div>
@@ -131,7 +131,7 @@ export default function ConnexionPage() {
 
               {/* EMAIL */}
               <div>
-                <label className="text-sm text-white/70">
+                <label className="text-sm text-muted">
                   Email
                 </label>
                 <input
@@ -142,13 +142,13 @@ export default function ConnexionPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="mt-2 w-full bg-white text-black rounded-2xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                  className="mt-2 w-full bg-canvas text-ink rounded-2xl px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-accent"
                 />
               </div>
 
               {/* PASSWORD */}
               <div>
-                <label className="text-sm text-white/70">
+                <label className="text-sm text-muted">
                   Mot de passe
                 </label>
                 <div className="relative mt-2">
@@ -159,14 +159,14 @@ export default function ConnexionPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="w-full bg-white text-black rounded-2xl px-4 py-4 pr-12 text-base focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+                    className="w-full bg-canvas text-ink rounded-2xl px-4 py-4 pr-12 text-base focus:outline-none focus:ring-2 focus:ring-accent"
                   />
 
                   {/* TOGGLE VISIBILITÉ */}
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-gray-600"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-muted"
                   >
                     {showPassword ? '🙈' : '👁'}
                   </button>
@@ -177,7 +177,7 @@ export default function ConnexionPage() {
               <button
                 type="button"
                 onClick={handleMotDePasseOublie}
-                className="text-sm text-[#C8A84E] text-right"
+                className="text-sm text-accent text-right"
               >
                 Mot de passe oublié ?
               </button>
@@ -186,7 +186,7 @@ export default function ConnexionPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full mt-2 bg-gradient-to-r from-[#C8A84E] to-[#D4B85C] text-black py-4 rounded-2xl text-lg font-bold active:scale-[0.98] transition disabled:opacity-50"
+                className="w-full mt-2 bg-gradient-to-r from-action to-action text-on-action py-4 rounded-2xl text-lg font-bold active:scale-[0.98] transition disabled:opacity-50"
               >
                 {loading ? 'Connexion...' : 'Se connecter'}
               </button>
@@ -198,8 +198,8 @@ export default function ConnexionPage() {
               <div
                 className={`mt-5 p-4 rounded-2xl text-sm ${
                   isError
-                    ? 'bg-red-500/10 text-red-300 border border-red-500/20'
-                    : 'bg-green-500/10 text-green-300 border border-green-500/20'
+                    ? 'bg-red-500/10 text-danger border border-red-500/20'
+                    : 'bg-green-500/10 text-success border border-green-500/20'
                 }`}
               >
                 {message}
@@ -207,16 +207,16 @@ export default function ConnexionPage() {
             )}
 
             {/* SIGNUP */}
-            <p className="text-center text-sm text-white/40 mt-6">
+            <p className="text-center text-sm text-muted mt-6">
               Pas encore de compte ?{' '}
-              <Link href="/inscription" className="text-[#C8A84E]">
+              <Link href="/inscription" className="text-accent">
                 S&apos;inscrire
               </Link>
             </p>
 
           </div>
 
-          <p className="text-center text-white/20 text-xs mt-6">
+          <p className="text-center text-muted text-xs mt-6">
             © 2026 Ephemer
           </p>
 

@@ -159,7 +159,7 @@ export default function InviterPage() {
           <div className="animate-pulse mb-4">
             <span className="text-6xl">✨</span>
           </div>
-          <p className="text-indigo-200">Chargement...</p>
+          <p className="text-info">Chargement...</p>
         </div>
       </div>
     )
@@ -175,23 +175,23 @@ export default function InviterPage() {
         {/* ─────── EN-TÊTE ─────── */}
         <div className="text-center mb-8">
           <span className="text-5xl mb-3 block">✨</span>
-          <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">
+          <h1 className="text-2xl md:text-3xl font-bold text-ink mb-3">
             Invite tes proches
           </h1>
-          <p className="text-indigo-200/80 text-sm max-w-md mx-auto leading-relaxed">
+          <p className="text-info text-sm max-w-md mx-auto leading-relaxed">
             Fini la saisie manuelle. Envoie un lien, ils remplissent leur fiche en
             30&nbsp;secondes, et leurs dates arrivent directement dans ton calendrier.
           </p>
         </div>
 
         {/* ─────── CRÉER UN LIEN ─────── */}
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-xl p-5 mb-8">
+        <div className="bg-ink/5 backdrop-blur-lg border border-line rounded-xl p-5 mb-8">
           <label
             htmlFor="label-lien"
-            className="block text-sm font-medium text-indigo-200 mb-2"
+            className="block text-sm font-medium text-info mb-2"
           >
             🏷️ Nom du lien{' '}
-            <span className="text-indigo-300/50 font-normal">(optionnel)</span>
+            <span className="text-info font-normal">(optionnel)</span>
           </label>
 
           <input
@@ -201,34 +201,34 @@ export default function InviterPage() {
             onChange={(e) => setLabel(e.target.value)}
             placeholder="Ex : Groupe famille, Collègues, Club de sport…"
             maxLength={60}
-            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-indigo-300/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-[#C8A84E]/40 transition mb-4"
+            className="w-full bg-ink/5 border border-line rounded-xl px-4 py-3 text-sm text-ink placeholder-indigo-300/40 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40 transition mb-4"
           />
 
           <button
             onClick={creerLien}
             disabled={creating}
-            className="w-full bg-[#C8A84E] hover:bg-[#D4B85C] text-[#0B1120] font-bold text-sm py-3.5 rounded-xl transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-action hover:bg-action text-on-action font-bold text-sm py-3.5 rounded-xl transition active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {creating ? '⏳ Création…' : '✨ Créer un nouveau lien'}
           </button>
 
-          <p className="text-indigo-300/50 text-xs mt-3 text-center">
+          <p className="text-info text-xs mt-3 text-center">
             Valable 60 jours · 25 réponses maximum par lien
           </p>
         </div>
 
         {/* ─────── MESSAGE FLASH ─────── */}
         {message && (
-          <div className="mb-6 bg-white/5 border border-[#C8A84E]/30 rounded-xl px-4 py-3 text-sm text-center text-indigo-100">
+          <div className="mb-6 bg-ink/5 border border-accent/30 rounded-xl px-4 py-3 text-sm text-center text-info">
             {message}
           </div>
         )}
 
         {/* ─────── LISTE DES LIENS ─────── */}
-        <h2 className="text-lg font-bold text-white mb-4">
+        <h2 className="text-lg font-bold text-ink mb-4">
           📎 Mes liens
           {invitations.length > 0 && (
-            <span className="ml-2 text-sm font-normal text-indigo-300">
+            <span className="ml-2 text-sm font-normal text-info">
               ({invitations.length})
             </span>
           )}
@@ -237,7 +237,7 @@ export default function InviterPage() {
         {invitations.length === 0 ? (
           <div className="text-center mt-12">
             <span className="text-6xl mb-4 block">🔗</span>
-            <p className="text-indigo-300 leading-relaxed">
+            <p className="text-info leading-relaxed">
               Aucun lien pour le moment.
               <br />
               Crée ton premier lien juste au-dessus ! 👆

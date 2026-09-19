@@ -1,5 +1,6 @@
 'use client'
 
+import { Button, Input } from '@/components/ui'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
@@ -78,29 +79,30 @@ export default function ResetPasswordPage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen flex items-center justify-center px-4 bg-[#0f172a]">
+      <div className="min-h-screen flex items-center justify-center px-4 bg-canvas">
 
-        <div className="w-full max-w-md bg-white/5 border border-white/10 rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl">
+        <div className="w-full max-w-md bg-ink/5 border border-line rounded-3xl p-6 sm:p-8 backdrop-blur-md shadow-xl">
 
-          <h1 className="text-2xl font-semibold mb-6 text-center text-white">
+          <h1 className="text-2xl font-semibold mb-6 text-center text-ink">
             🔐 Nouveau mot de passe
           </h1>
 
           {/* PASSWORD */}
           <div className="relative mb-4">
-            <input
+            <Input
               type={showPassword ? 'text' : 'password'}
-              placeholder="Nouveau mot de passe"
+              aria-label="Nouveau mot de passe" autoComplete="new-password" placeholder="Nouveau mot de passe"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-3 pr-12 rounded-xl bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+              className="w-full p-3 pr-12 rounded-xl bg-ink/10 text-ink placeholder-muted border border-line focus:outline-none focus:ring-2 focus:ring-accent"
             />
 
             {/* 👁 toggle */}
             <button
               type="button"
+              aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 text-gray-400"
+              className="absolute right-3 top-3 text-muted"
             >
               👁
             </button>
@@ -108,15 +110,15 @@ export default function ResetPasswordPage() {
 
           {/* STRENGTH */}
           {password && (
-            <p className="text-sm mb-3 text-gray-300">
+            <p className="text-sm mb-3 text-muted">
               Sécurité :{' '}
               <span
                 className={
                   getStrength() === 'faible'
-                    ? 'text-red-400'
+                    ? 'text-danger'
                     : getStrength() === 'moyen'
-                    ? 'text-yellow-400'
-                    : 'text-green-400'
+                    ? 'text-warning'
+                    : 'text-success'
                 }
               >
                 {getStrength()}
@@ -125,28 +127,28 @@ export default function ResetPasswordPage() {
           )}
 
           {/* CONFIRM */}
-          <input
+          <Input
             type={showPassword ? 'text' : 'password'}
-            placeholder="Confirmer le mot de passe"
+            aria-label="Confirmer le mot de passe" autoComplete="new-password" placeholder="Confirmer le mot de passe"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="w-full mb-4 p-3 rounded-xl bg-white/10 text-white placeholder-gray-400 border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]"
+            className="w-full mb-4 p-3 rounded-xl bg-ink/10 text-ink placeholder-muted border border-line focus:outline-none focus:ring-2 focus:ring-accent"
           />
 
           {/* BUTTON */}
-          <button
+          <Button
             onClick={handleResetPassword}
             disabled={loading || !sessionReady}
-            className="w-full bg-[#C8A84E] text-black py-3 rounded-xl font-semibold hover:opacity-90 transition"
+            className="w-full"
           >
             {loading ? 'Chargement...' : 'Valider'}
-          </button>
+          </Button>
 
           {/* MESSAGE */}
           {message && (
             <p
               className={`mt-4 text-sm text-center ${
-                isError ? 'text-red-400' : 'text-green-400'
+                isError ? 'text-danger' : 'text-success'
               }`}
             >
               {message}

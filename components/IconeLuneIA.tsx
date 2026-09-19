@@ -25,38 +25,38 @@ export default function IconeLuneIA({ size = 48, className = '' }: Props) {
       {/* ===== RÉSEAU DE NEURONES ACCENTUÉ ===== */}
       <g filter="url(#glow)">
         {/* Lignes de connexion — maillage plus dense */}
-        <line x1="38" y1="18" x2="48" y2="14" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.8" />
-        <line x1="48" y1="14" x2="54" y2="24" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.8" />
-        <line x1="38" y1="18" x2="44" y2="30" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.6" />
-        <line x1="54" y1="24" x2="50" y2="36" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.6" />
-        <line x1="44" y1="30" x2="50" y2="36" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.6" />
-        <line x1="48" y1="14" x2="44" y2="30" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.5" />
-        <line x1="38" y1="18" x2="50" y2="36" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.4" />
-        <line x1="50" y1="36" x2="42" y2="42" stroke="#C7D2FE" strokeWidth="1.5" strokeOpacity="0.5" />
+        <line x1="38" y1="18" x2="48" y2="14" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.8" />
+        <line x1="48" y1="14" x2="54" y2="24" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.8" />
+        <line x1="38" y1="18" x2="44" y2="30" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.6" />
+        <line x1="54" y1="24" x2="50" y2="36" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.6" />
+        <line x1="44" y1="30" x2="50" y2="36" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.6" />
+        <line x1="48" y1="14" x2="44" y2="30" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.5" />
+        <line x1="38" y1="18" x2="50" y2="36" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.4" />
+        <line x1="50" y1="36" x2="42" y2="42" stroke="var(--info)" strokeWidth="1.5" strokeOpacity="0.5" />
 
         {/* Nœuds principaux (gros) */}
-        <circle cx="38" cy="18" r="3.5" fill="#FFFFFF" />
-        <circle cx="54" cy="24" r="3.5" fill="#FFFFFF" />
-        <circle cx="50" cy="36" r="3" fill="#FFFFFF" />
+        <circle cx="38" cy="18" r="3.5" fill="var(--info)" />
+        <circle cx="54" cy="24" r="3.5" fill="var(--info)" />
+        <circle cx="50" cy="36" r="3" fill="var(--info)" />
 
         {/* Nœuds secondaires (petits) */}
-        <circle cx="48" cy="14" r="2.5" fill="#E0E7FF" />
-        <circle cx="44" cy="30" r="2.5" fill="#E0E7FF" />
-        <circle cx="42" cy="42" r="2" fill="#C7D2FE" />
+        <circle cx="48" cy="14" r="2.5" fill="var(--info)" />
+        <circle cx="44" cy="30" r="2.5" fill="var(--info)" />
+        <circle cx="42" cy="42" r="2" fill="var(--info)" />
       </g>
 
       {/* Petite étoile décorative */}
       <path
         d="M19 24l1 3 3 1-3 1-1 3-1-3-3-1 3-1z"
-        fill="white"
+        fill="var(--accent)"
         fillOpacity="0.9"
       />
 
       {/* ===== DÉFINITIONS (dégradé + lueur) ===== */}
       <defs>
         <linearGradient id="moonGradient" x1="16" y1="12" x2="44" y2="52" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E0E7FF" />
-          <stop offset="1" stopColor="#A5B4FC" />
+          <stop stopColor="var(--info)" />
+          <stop offset="1" stopColor="var(--info)" />
         </linearGradient>
 
         {/* Effet de lueur autour des neurones */}

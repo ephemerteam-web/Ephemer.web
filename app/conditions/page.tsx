@@ -8,22 +8,22 @@ export default function ConditionsPage() {
   return (
     <AppLayout>
       {/* Conteneur centré + largeur max pour la lisibilité */}
-      <div className="relative z-10 w-full max-w-3xl px-5 py-10 sm:py-14 text-gray-300 leading-relaxed">
+      <div className="relative z-10 w-full max-w-3xl px-5 py-10 sm:py-14 text-muted leading-relaxed">
 
         {/* Lien retour */}
         <Link
           href="/"
-          className="text-sm text-[#C8A84E] hover:text-[#e0c46a] transition-colors"
+          className="text-sm text-accent hover:text-accent transition-colors"
         >
           ← Retour à l&apos;accueil
         </Link>
 
         {/* En-tête */}
         <header className="mt-8 mb-10">
-          <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-3">
+          <h1 className="text-3xl sm:text-4xl font-bold text-ink leading-tight mb-3">
             Conditions Générales d&apos;Utilisation (CGU)
           </h1>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Dernière mise à jour : 18 mai 2026
           </p>
         </header>
@@ -68,7 +68,7 @@ export default function ConditionsPage() {
         <Section titre="7. Données personnelles">
           <p>
             Les données personnelles sont traitées conformément au RGPD. Pour plus d&apos;informations, consultez la{' '}
-            <Link href="/confidentialite" className="text-[#C8A84E] hover:text-[#e0c46a] font-medium">
+            <Link href="/confidentialite" className="text-accent hover:text-accent font-medium">
               politique de confidentialité
             </Link>
             .
@@ -96,18 +96,18 @@ export default function ConditionsPage() {
         </Section>
 
         {/* Encart contact */}
-        <div className="mt-10 p-5 rounded-xl bg-white/5 border border-white/10">
-          <h2 className="text-lg font-semibold text-white mb-2">12. Contact</h2>
+        <div className="mt-10 p-5 rounded-xl bg-ink/5 border border-line">
+          <h2 className="text-lg font-semibold text-ink mb-2">12. Contact</h2>
           <p className="mb-2">Pour toute question concernant ces conditions, écrivez-nous à :</p>
           <p>
-            <a href="mailto:ephemer.team@gmail.com" className="text-[#C8A84E] hover:text-[#e0c46a] font-medium">
+            <a href="mailto:ephemer.team@gmail.com" className="text-accent hover:text-accent font-medium">
               ephemer.team@gmail.com
             </a>
           </p>
         </div>
 
         {/* Footer */}
-        <footer className="mt-12 pt-5 border-t border-white/10 text-xs text-gray-500">
+        <footer className="mt-12 pt-5 border-t border-line text-xs text-muted">
           <p>Ephemer.name © {currentYear} • Tous droits réservés.</p>
         </footer>
       </div>
@@ -123,12 +123,12 @@ export default function ConditionsPage() {
 function Section({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <section className="mb-8">
-      <h2 className="text-xl sm:text-2xl font-semibold text-white mb-3">{titre}</h2>
+      <h2 className="text-xl sm:text-2xl font-semibold text-ink mb-3">{titre}</h2>
       <div className="space-y-3">{children}</div>
     </section>
   )
 }
 
 function Liste({ children }: { children: React.ReactNode }) {
-  return <ul className="list-disc pl-6 space-y-1.5 marker:text-[#C8A84E]">{children}</ul>
+  return <ul className="list-disc pl-6 space-y-1.5 marker:text-accent">{children}</ul>
 }

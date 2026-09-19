@@ -1,5 +1,5 @@
-﻿// Ephemer v4 : aucun HTML applicatif, RSC, API ou fichier privé en cache.
-const CACHE_NAME = 'ephemer-static-v4';
+// Ephemer v6 : aucun HTML applicatif, RSC, API ou fichier privé en cache.
+const CACHE_NAME = 'ephemer-static-v6';
 const OFFLINE_URL = '/offline.html';
 const PUBLIC_FILES = [OFFLINE_URL, '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 

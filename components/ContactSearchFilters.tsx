@@ -41,7 +41,7 @@ export default function ContactSearchFilters({
         placeholder="Rechercher un contact..."
         value={recherche}
         onChange={(e) => setRecherche(e.target.value)}
-        className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+        className="w-full rounded-xl bg-ink/5 border border-line px-4 py-3 text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
       />
 
       <div className="flex gap-2 flex-wrap">

@@ -189,9 +189,9 @@ export default function CalendrierPage() {
 
   // ── Couleurs par relation ──────────────────────────────────────────────────
   const couleurRelation: Record<string, string> = {
-    famille: 'text-pink-400',
-    amis: 'text-blue-400',
-    pro: 'text-amber-400',
+    famille: 'text-info',
+    amis: 'text-info',
+    pro: 'text-warning',
   }
 
   // ── Calcul des événements par jour (pour la grille) ────────────────────────
@@ -213,26 +213,26 @@ export default function CalendrierPage() {
 
         {/* ========== CALENDRIER ========== */}
         <div className="lg:col-span-2">
-          <div className="bg-white/5 border border-white/10 rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
+          <div className="bg-ink/5 border border-line rounded-3xl p-4 sm:p-6 backdrop-blur-sm">
 
             {/* En-tête navigation */}
             <div className="flex items-center justify-between mb-6 sm:mb-8">
               <button
                 onClick={allerMoisPrecedent}
-                className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center justify-center transition text-xl sm:text-lg touch-manipulation"
+                className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-ink/10 hover:bg-ink/20 active:bg-ink/30 text-ink flex items-center justify-center transition text-xl sm:text-lg touch-manipulation"
                 aria-label="Mois précédent"
               >
                 ‹
               </button>
               <div className="text-center flex-1">
-                <h2 className="text-xl sm:text-2xl font-bold text-white">
+                <h2 className="text-xl sm:text-2xl font-bold text-ink">
                   {nomsMois[moisActuel.getMonth()]}
                 </h2>
-                <p className="text-white/40 text-xs sm:text-sm">{moisActuel.getFullYear()}</p>
+                <p className="text-muted text-xs sm:text-sm">{moisActuel.getFullYear()}</p>
               </div>
               <button
                 onClick={allerMoisSuivant}
-                className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white flex items-center justify-center transition text-xl sm:text-lg touch-manipulation"
+                className="w-12 h-12 sm:w-10 sm:h-10 rounded-full bg-ink/10 hover:bg-ink/20 active:bg-ink/30 text-ink flex items-center justify-center transition text-xl sm:text-lg touch-manipulation"
                 aria-label="Mois suivant"
               >
                 ›
@@ -243,7 +243,7 @@ export default function CalendrierPage() {
             <div className="flex justify-center mb-4">
               <button
                 onClick={allerAujourdhui}
-                className="px-4 py-2 rounded-full bg-[#C8A84E]/20 hover:bg-[#C8A84E]/30 active:bg-[#C8A84E]/40 text-[#C8A84E] text-xs sm:text-sm font-medium transition touch-manipulation"
+                className="px-4 py-2 rounded-full bg-action/20 hover:bg-action/30 active:bg-action/40 text-accent text-xs sm:text-sm font-medium transition touch-manipulation"
               >
                 📅 Aujourd&apos;hui
               </button>
@@ -254,7 +254,7 @@ export default function CalendrierPage() {
               {nomsJours.map((j) => (
                 <div
                   key={j}
-                  className="text-center text-[10px] sm:text-xs font-semibold text-white/30 py-2 uppercase tracking-widest"
+                  className="text-center text-[10px] sm:text-xs font-semibold text-muted py-2 uppercase tracking-widest"
                 >
                   {j}
                 </div>
@@ -284,12 +284,12 @@ export default function CalendrierPage() {
                       aspect-square rounded-xl sm:rounded-2xl p-1 sm:p-1.5 flex flex-col items-center justify-start
                       transition-all duration-200 relative touch-manipulation
                       ${isSelected
-                        ? 'bg-[#C8A84E]/30 border-2 border-[#C8A84E]/60 shadow-lg shadow-[#C8A84E]/20'
+                        ? 'bg-action/30 border-2 border-accent/60 shadow-lg shadow-[#C8A84E]/20'
                         : isTodayDay
-                        ? 'bg-white/10 border-2 border-white/30'
+                        ? 'bg-ink/10 border-2 border-line'
                         : hasEvent
-                        ? 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 active:bg-white/15'
-                        : 'border border-transparent hover:bg-white/5 active:bg-white/10'
+                        ? 'bg-ink/5 border border-line hover:bg-ink/10 hover:border-line active:bg-ink/15'
+                        : 'border border-transparent hover:bg-ink/5 active:bg-ink/10'
                       }
                     `}
                     aria-label={`${jour} ${nomsMois[moisActuel.getMonth()]}${hasEvent ? ', événements' : ''}`}
@@ -297,9 +297,9 @@ export default function CalendrierPage() {
                     {/* Numéro du jour */}
                     <span className={`
                       text-sm sm:text-base font-bold leading-none
-                      ${isSelected ? 'text-[#C8A84E]'
-                        : isTodayDay ? 'text-white'
-                        : 'text-white/60'}
+                      ${isSelected ? 'text-accent'
+                        : isTodayDay ? 'text-ink'
+                        : 'text-muted'}
                     `}>
                       {jour}
                     </span>
@@ -307,7 +307,7 @@ export default function CalendrierPage() {
                     {/* Indicateurs visuels */}
                     <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
                       {saintsAvecContact.length > 0 && (
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#C8A84E]" />
+                        <span className="w-1.5 h-1.5 rounded-full bg-action" />
                       )}
                       {anniversaires.length > 0 && (
                         <span className="w-1.5 h-1.5 rounded-full bg-pink-400" />
@@ -319,18 +319,18 @@ export default function CalendrierPage() {
             </div>
 
             {/* Légende */}
-            <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-6 pt-4 border-t border-white/10">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6 mt-6 pt-4 border-t border-line">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-pink-400" />
-                <span className="text-xs text-white/40">Anniversaire</span>
+                <span className="text-xs text-muted">Anniversaire</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#C8A84E]" />
-                <span className="text-xs text-white/40">Fête prénomale</span>
+                <span className="w-2 h-2 rounded-full bg-action" />
+                <span className="text-xs text-muted">Fête prénomale</span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-white/30" />
-                <span className="text-xs text-white/40">Aujourd&apos;hui</span>
+                <span className="w-2 h-2 rounded-full bg-ink/30" />
+                <span className="text-xs text-muted">Aujourd&apos;hui</span>
               </div>
             </div>
 
@@ -378,7 +378,7 @@ export default function CalendrierPage() {
               />
 
               {/* Contenu du bottom sheet */}
-              <div className="relative w-full bg-gray-900 rounded-t-3xl max-h-[80vh] overflow-y-auto animate-slide-up">
+              <div className="relative w-full bg-surface rounded-t-3xl max-h-[80vh] overflow-y-auto animate-slide-up">
                 <PanelDetailsJour
                   jourSelectionne={jourSelectionne}
                   saintsJourSelectionne={saintsJourSelectionne}
@@ -457,14 +457,14 @@ function PanelDetailsJour({
   onClose: () => void
 }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
+    <div className="bg-ink/5 border border-line rounded-3xl p-5 backdrop-blur-sm">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-white font-bold text-base">
+        <h3 className="text-ink font-bold text-base">
           {jourSelectionne.jour} {nomsMois[jourSelectionne.mois - 1]}
         </h3>
         <button
           onClick={onClose}
-          className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 active:bg-white/30 text-white/50 hover:text-white flex items-center justify-center transition touch-manipulation"
+          className="w-8 h-8 rounded-full bg-ink/10 hover:bg-ink/20 active:bg-ink/30 text-muted hover:text-ink flex items-center justify-center transition touch-manipulation"
           aria-label="Fermer"
         >
           ✕
@@ -473,7 +473,7 @@ function PanelDetailsJour({
 
       {saintsJourSelectionne.length > 0 && (
         <div className="mb-4">
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
             ✨ Fêtes du jour
           </p>
           <div className="space-y-2">
@@ -487,18 +487,18 @@ function PanelDetailsJour({
                   key={idx}
                   className={`rounded-2xl p-3 border ${
                     aUnContact
-                      ? 'bg-[#C8A84E]/10 border-[#C8A84E]/20'
-                      : 'bg-white/5 border-white/5'
+                      ? 'bg-action/10 border-accent/20'
+                      : 'bg-ink/5 border-line'
                   }`}
                 >
-                  <p className={`text-sm font-medium ${aUnContact ? 'text-white/80' : 'text-white/40'}`}>
+                  <p className={`text-sm font-medium ${aUnContact ? 'text-muted' : 'text-muted'}`}>
                     {saint.nomSaint}
                   </p>
-                  <p className={`text-xs mt-0.5 ${aUnContact ? 'text-[#C8A84E]' : 'text-white/25'}`}>
+                  <p className={`text-xs mt-0.5 ${aUnContact ? 'text-accent' : 'text-muted'}`}>
                     {saint.prenoms.join(', ')}
                   </p>
                   {aUnContact && (
-                    <p className="text-xs text-[#C8A84E] mt-1 font-semibold">
+                    <p className="text-xs text-accent mt-1 font-semibold">
                       👤 {prenomsContacts.join(', ')} dans vos contacts
                     </p>
                   )}
@@ -511,16 +511,16 @@ function PanelDetailsJour({
 
       {anniversairesJourSelectionne.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-2">
+          <p className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
             🎂 Anniversaires
           </p>
           <div className="space-y-2">
             {anniversairesJourSelectionne.map((contact, idx) => (
               <div key={idx} className="bg-pink-500/10 border border-pink-500/20 rounded-2xl p-3">
-                <p className="text-white/80 text-sm font-medium">
+                <p className="text-muted text-sm font-medium">
                   {contact.prenom} {contact.nom}
                 </p>
-                <p className={`text-xs mt-0.5 capitalize ${couleurRelation[contact.relation] || 'text-white/40'}`}>
+                <p className={`text-xs mt-0.5 capitalize ${couleurRelation[contact.relation] || 'text-muted'}`}>
                   {contact.relation}
                 </p>
               </div>
@@ -531,7 +531,7 @@ function PanelDetailsJour({
 
       {saintsJourSelectionne.filter(saintConcerneUnContact).length === 0 &&
        anniversairesJourSelectionne.length === 0 && (
-        <p className="text-white/30 text-sm text-center py-4">Aucun événement ce jour</p>
+        <p className="text-muted text-sm text-center py-4">Aucun événement ce jour</p>
       )}
     </div>
   )
@@ -558,23 +558,23 @@ function PanelRecherche({
   moisActuel: Date
 }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-3xl p-5 backdrop-blur-sm">
-      <h3 className="text-white font-bold text-base mb-4">🔍 Chercher une fête</h3>
+    <div className="bg-ink/5 border border-line rounded-3xl p-5 backdrop-blur-sm">
+      <h3 className="text-ink font-bold text-base mb-4">🔍 Chercher une fête</h3>
 
       <input
         type="text"
         placeholder="Tape un prénom..."
         value={recherche}
         onChange={handleRecherche}
-        className="w-full bg-white/10 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white
-          placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50 focus:border-transparent
+        className="w-full bg-ink/10 border border-line rounded-2xl px-4 py-3 text-sm text-ink
+          placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-transparent
           transition"
         aria-label="Rechercher une fête par prénom"
       />
 
       {resultatsRecherche.length > 0 && (
         <div className="mt-4">
-          <p className="text-xs text-white/30 mb-3">
+          <p className="text-xs text-muted mb-3">
             {resultatsRecherche.length} résultat{resultatsRecherche.length > 1 ? 's' : ''}
           </p>
           <div className="flex flex-col gap-2 max-h-64 overflow-y-auto pr-1">
@@ -592,12 +592,12 @@ function PanelRecherche({
                   setRecherche('')
                   setResultatsRecherche([])
                 }}
-                className="w-full text-left bg-white/5 border border-white/10 hover:border-[#C8A84E]/40 hover:bg-[#C8A84E]/10
-                  active:bg-[#C8A84E]/20 rounded-2xl p-3 transition-all touch-manipulation"
+                className="w-full text-left bg-ink/5 border border-line hover:border-accent/40 hover:bg-action/10
+                  active:bg-action/20 rounded-2xl p-3 transition-all touch-manipulation"
               >
-                <p className="text-white/80 text-sm font-medium">{saint.nomSaint}</p>
-                <p className="text-purple-300 text-xs mt-0.5">{saint.prenoms.join(', ')}</p>
-                <p className="text-white/30 text-xs mt-1">
+                <p className="text-muted text-sm font-medium">{saint.nomSaint}</p>
+                <p className="text-info text-xs mt-0.5">{saint.prenoms.join(', ')}</p>
+                <p className="text-muted text-xs mt-1">
                   📅 {saint.date.split('-').reverse().join('/')}
                 </p>
               </button>
@@ -607,13 +607,13 @@ function PanelRecherche({
       )}
 
       {recherche.trim().length > 0 && resultatsRecherche.length === 0 && (
-        <p className="text-white/30 text-sm text-center py-4">
+        <p className="text-muted text-sm text-center py-4">
           Aucun résultat pour &quot;{recherche}&quot;
         </p>
       )}
 
       {recherche.trim().length === 0 && (
-        <p className="text-white/20 text-xs text-center py-4">
+        <p className="text-muted text-xs text-center py-4">
           Commence à taper un prénom…
         </p>
       )}

@@ -25,17 +25,17 @@ export default function LienInvalide({ raison }: { raison: string }) {
   const m = MESSAGES[raison] ?? MESSAGES.introuvable
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-[#0F1017] via-[#15161F] to-[#0F1017] flex items-center justify-center px-5 py-12">
+    <main className="min-h-screen bg-gradient-to-b from-canvas via-surface to-canvas flex items-center justify-center px-5 py-12">
       <div className="w-full max-w-md text-center">
         <div className="text-6xl mb-6">{m.emoji}</div>
 
-        <h1 className="text-2xl font-semibold text-white mb-3">{m.titre}</h1>
-        <p className="text-white/50 leading-relaxed mb-10">{m.texte}</p>
+        <h1 className="text-2xl font-semibold text-ink mb-3">{m.titre}</h1>
+        <p className="text-muted leading-relaxed mb-10">{m.texte}</p>
 
-        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent mb-8" />
+        <div className="h-px bg-gradient-to-r from-transparent via-ink/10 to-transparent mb-8" />
 
-        <p className="text-xs tracking-[0.2em] uppercase text-white/25">Ephemer</p>
-        <p className="text-white/30 text-sm mt-2">
+        <p className="text-xs tracking-[0.2em] uppercase text-muted">Ephemer</p>
+        <p className="text-muted text-sm mt-2">
           N&apos;oublie plus jamais les dates qui comptent.
         </p>
       </div>

@@ -41,6 +41,7 @@ const GROUPES: Groupe[] = [
   {
     titre: 'Mes données',
     pages: [
+      { label: 'Données et diagnostic', chemin: '/dashboard/donnees', icone: '📋' },
       { label: 'Contacts', chemin: '/dashboard/contacts', icone: '👥' },
       { label: 'Inviter des contacts', chemin: '/dashboard/inviter', icone: '📩' }
     ],
@@ -126,26 +127,26 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
           // Quand on relâche, on active la transition pour l'effet de rebond
           transition: translateX !== 0 ? 'none' : 'transform 0.3s ease-out',
         }}
-        className={`fixed top-0 left-0 z-50 h-full w-full sm:w-72 bg-[#0B1120] border-r border-[#C8A84E]/20 shadow-2xl flex flex-col ${
+        className={`fixed top-0 left-0 z-50 h-dvh w-full sm:w-72 bg-canvas border-r border-accent/20 shadow-2xl flex flex-col ${
           // Si on ne swype pas, on utilise les classes Tailwind normales
           translateX === 0 && (ouvert ? 'translate-x-0' : '-translate-x-full')
         }`}
       >
         {/* Décor : étoiles discrètes en fond du menu */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute top-[12%] left-[15%] w-1 h-1 bg-[#C8A84E]/40 rounded-full" />
-          <div className="absolute top-[40%] right-[20%] w-0.5 h-0.5 bg-[#C8A84E]/30 rounded-full" />
-          <div className="absolute top-[70%] left-[25%] w-1 h-1 bg-[#C8A84E]/20 rounded-full" />
+          <div className="absolute top-[12%] left-[15%] w-1 h-1 bg-action/40 rounded-full" />
+          <div className="absolute top-[40%] right-[20%] w-0.5 h-0.5 bg-action/30 rounded-full" />
+          <div className="absolute top-[70%] left-[25%] w-1 h-1 bg-action/20 rounded-full" />
           {/* Halo doré en haut à droite */}
-          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-[#C8A84E]/5 blur-3xl" />
+          <div className="absolute -top-16 -right-16 w-48 h-48 rounded-full bg-action/5 blur-3xl" />
         </div>
 
         {/* ─────────── EN-TÊTE ─────────── */}
-        <div className="relative flex items-center justify-between px-6 py-5 border-b border-[#C8A84E]/10">
+        <div className="relative flex items-center justify-between px-6 py-5 border-b border-accent/10">
           <div className="flex items-center gap-2.5">
             {/* Lune avec léger effet de pulsation */}
             <svg
-              className="w-7 h-7 text-[#C8A84E] animate-pulse"
+              className="w-7 h-7 text-accent animate-pulse"
               style={{ animationDuration: '3s' }}
               viewBox="0 0 24 24"
               fill="none"
@@ -159,13 +160,13 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
               />
               <circle cx="15" cy="9" r="1" fill="currentColor" />
             </svg>
-            <span className="text-white font-black text-lg tracking-wide">Ephemer</span>
+            <span className="text-ink font-black text-lg tracking-wide">Ephemer</span>
           </div>
 
           <button
             onClick={onFermer}
             aria-label="Fermer la navigation"
-            className="p-2 text-white/60 hover:text-[#C8A84E] hover:bg-white/5 rounded-lg transition hover:rotate-90 duration-300"
+            className="p-2 text-muted hover:text-accent hover:bg-ink/5 rounded-lg transition hover:rotate-90 duration-300"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -178,7 +179,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
           {GROUPES.map((groupe) => (
             <div key={groupe.titre} className="mb-2">
               {/* Titre de catégorie */}
-              <p className="px-6 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-[#C8A84E]/50">
+              <p className="px-6 pt-3 pb-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-accent/50">
                 {groupe.titre}
               </p>
 
@@ -200,8 +201,8 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
                       ouvert ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4'
                     } ${
                       estActive
-                        ? 'text-[#C8A84E] bg-[#C8A84E]/10 border-r-2 border-[#C8A84E] font-semibold'
-                        : 'text-white/70 hover:text-[#C8A84E] hover:bg-[#C8A84E]/5'
+                        ? 'text-accent bg-action/10 border-r-2 border-accent font-semibold'
+                        : 'text-muted hover:text-accent hover:bg-action/5'
                     }`}
                   >
                     {/* Icône : glisse un peu à droite au survol */}
@@ -215,8 +216,8 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
                     {/* Point lumineux qui pulse sur la page active */}
                     {estActive && (
                       <span className="ml-auto flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-[#C8A84E]/60" />
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#C8A84E]" />
+                        <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-action/60" />
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-action" />
                       </span>
                     )}
                   </button>
@@ -227,8 +228,8 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
         </nav>
 
         {/* ─────────── PIED ─────────── */}
-        <div className="relative px-6 py-4 border-t border-white/5">
-          <p className="text-white/20 text-xs text-center tracking-wide">Ephemer • v1.0</p>
+        <div className="relative px-6 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-line">
+          <p className="text-muted text-xs text-center tracking-wide">Ephemer • v1.0</p>
         </div>
       </aside>
     </>

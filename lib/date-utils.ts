@@ -1,3 +1,4 @@
+import { ageKnown } from './contact-quality'
 import { parseLocalDay, nextBirthdayDay, daysBetween } from './calendar-day'
 // lib/date-utils.ts
 // ============================================
@@ -241,7 +242,6 @@ export function prochainEvenementContact(
 }
 // Calcule la prochaine date d'anniversaire, les jours restants et l'âge à venir
 export function calculerProchainAnniversaire(dateNaissance: string) {
-  const naissance = parseLocalDay(dateNaissance)
   const aujourdhui = new Date()
   aujourdhui.setHours(0, 0, 0, 0)
 
@@ -249,7 +249,7 @@ export function calculerProchainAnniversaire(dateNaissance: string) {
   const joursRestants = daysBetween(formatDateLocale(aujourdhui), formatDateLocale(prochainAnniv))
 
   // Âge qu'aura la personne à ce prochain anniversaire
-  const ageAVenir = prochainAnniv.getFullYear() - naissance.getFullYear()
+  const ageAVenir = ageKnown(dateNaissance, prochainAnniv)
 
   return {
     date: prochainAnniv,

@@ -64,27 +64,27 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
   // ---- Configuration des thèmes par mode ----
   const themeConfig = mode === "inscription" ? {
     // 🌟 INSCRIPTION : Thème Doré/Chaleureux
-    bgGradient: "linear-gradient(135deg, #1a1410 0%, #0B1120 100%)",
-    accentColor: "#C8A84E",
+    bgGradient: "linear-gradient(135deg, var(--surface), var(--canvas))",
+    accentColor: "var(--accent)",
     accentGlow: "rgba(200, 168, 78, 0.2)",
-    borderColor: "border-[#C8A84E]/30",
-    hoverBg: "hover:bg-[#C8A84E]/10",
-    tabBg: "bg-[#C8A84E]/20",
-    tabActiveBg: "bg-[#C8A84E]",
-    tabText: "text-[#0B1120]",
+    borderColor: "border-accent/30",
+    hoverBg: "hover:bg-action/10",
+    tabBg: "bg-action/20",
+    tabActiveBg: "bg-action",
+    tabText: "text-on-action",
     decorEmoji: "✨",
     decorGlow: "0 0 40px rgba(200, 168, 78, 0.3)",
     subtitle: "Rejoins Ephemer.name gratuitement",
   } : {
     // 🌙 CONNEXION : Thème Lune/IA
-    bgGradient: "linear-gradient(135deg, #0a0a2e 0%, #0B1120 100%)",
-    accentColor: "#A5B4FC",
+    bgGradient: "linear-gradient(135deg, var(--surface), var(--canvas))",
+    accentColor: "var(--accent)",
     accentGlow: "rgba(165, 180, 252, 0.2)",
     borderColor: "border-indigo-400/30",
     hoverBg: "hover:bg-indigo-400/10",
     tabBg: "bg-indigo-400/20",
     tabActiveBg: "bg-indigo-400",
-    tabText: "text-white",
+    tabText: "text-ink",
     decorGlow: "0 0 50px rgba(165, 180, 252, 0.4)",
     subtitle: "Bon retour parmi nous 🌙",
   }
@@ -94,7 +94,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
       id: "google" as const,
       label: "Continuer avec Google",
       icon: <GoogleIcon />,
-      className: "bg-white text-[#1a1a1a] hover:bg-gray-100 border border-gray-200"
+      className: "bg-surface text-ink hover:bg-canvas border border-line"
     },
     {
       id: "facebook" as const,
@@ -113,7 +113,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
     >
       {/* ---- Panneau du drawer avec gradient thématique ---- */}
       <div
-        className="w-full max-w-md rounded-t-3xl p-6 pb-10 animate-slideUp border-t border-white/10 relative overflow-hidden"
+        className="w-full max-w-md max-h-[90dvh] overflow-y-auto rounded-t-3xl p-5 sm:p-6 pb-[max(2rem,env(safe-area-inset-bottom))] animate-slideUp border-t border-line relative"
         style={{
           background: themeConfig.bgGradient,
           boxShadow: themeConfig.decorGlow
@@ -131,21 +131,21 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
         {/* ── Étoiles/particules décoratives (inscription seulement) ── */}
         {mode === "inscription" && (
           <>
-            <div className="absolute top-12 right-16 w-1 h-1 bg-[#C8A84E]/60 rounded-full animate-pulse" />
-            <div className="absolute top-32 right-8 w-1.5 h-1.5 bg-[#C8A84E]/40 rounded-full animate-pulse" style={{animationDelay: "0.5s"}} />
-            <div className="absolute bottom-32 right-24 w-0.5 h-0.5 bg-[#C8A84E]/50 rounded-full animate-pulse" style={{animationDelay: "1s"}} />
+            <div className="absolute top-12 right-16 w-1 h-1 bg-action/60 rounded-full animate-pulse" />
+            <div className="absolute top-32 right-8 w-1.5 h-1.5 bg-action/40 rounded-full animate-pulse" style={{animationDelay: "0.5s"}} />
+            <div className="absolute bottom-32 right-24 w-0.5 h-0.5 bg-action/50 rounded-full animate-pulse" style={{animationDelay: "1s"}} />
           </>
         )}
 
         {/* ── Icône Lune + IA (connexion seulement) ── */}
         {mode === "connexion" && (
           <div className="absolute -top-8 -right-8 opacity-20 pointer-events-none animate-pulse">
-            <IconeLuneIA size={200} className="text-indigo-300" />
+            <IconeLuneIA size={200} className="text-info" />
           </div>
         )}
 
         {/* ── Barre de fermeture ── */}
-        <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{background: `${themeConfig.accentColor}/30`}} />
+        <div className="w-10 h-1 rounded-full mx-auto mb-6" style={{background: "var(--line)"}} />
 
         {/* ── Section titre ── */}
         <div className="text-center mb-6 relative z-10">
@@ -154,7 +154,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
             {mode === "inscription" ? (
               <span className="text-4xl">✨</span>
             ) : (
-              <IconeLuneIA size={64} className="text-indigo-300 drop-shadow-lg" />
+              <IconeLuneIA size={64} className="text-info drop-shadow-lg" />
             )}
           </div>
 
@@ -165,7 +165,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
                 mode === "inscription"
                   ? `${themeConfig.tabActiveBg} ${themeConfig.tabText} shadow-lg`
-                  : "text-white/40 hover:text-white/70"
+                  : "text-muted hover:text-muted"
               }`}
             >
               S&apos;inscrire
@@ -175,7 +175,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
               className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all duration-300 ${
                 mode === "connexion"
                   ? `${themeConfig.tabActiveBg} ${themeConfig.tabText} shadow-lg`
-                  : "text-white/40 hover:text-white/70"
+                  : "text-muted hover:text-muted"
               }`}
             >
               Se connecter
@@ -183,7 +183,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
           </div>
 
           {/* Sous-titre thématique */}
-          <p className="text-white/50 text-sm">
+          <p className="text-muted text-sm">
             {themeConfig.subtitle}
           </p>
         </div>
@@ -204,9 +204,9 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
 
         {/* ── Séparateur ── */}
         <div className="flex items-center gap-3 my-5 relative z-10">
-          <div className="flex-1 h-px bg-white/10" />
-          <span className="text-white/30 text-xs">ou</span>
-          <div className="flex-1 h-px bg-white/10" />
+          <div className="flex-1 h-px bg-ink/10" />
+          <span className="text-muted text-xs">ou</span>
+          <div className="flex-1 h-px bg-ink/10" />
         </div>
 
         {/* ── Bouton Email avec couleur thématique ── */}

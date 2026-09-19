@@ -182,7 +182,7 @@ export default function NotificationBell() {
       {/* ── Bouton cloche ── */}
       <button
         onClick={() => setOuvert(!ouvert)}
-        className="relative p-3 rounded-full hover:bg-white/10 transition focus:outline-none focus:ring-2 focus:ring-[#C8A84E]/50"
+        className="relative p-3 rounded-full hover:bg-ink/10 transition focus:outline-none focus:ring-2 focus:ring-accent/50"
         title="Notifications"
         aria-label={`${nbNonLues} notification${nbNonLues > 1 ? 's' : ''} non lue${nbNonLues > 1 ? 's' : ''}`}
       >
@@ -202,18 +202,18 @@ export default function NotificationBell() {
 
           <div
             ref={panelRef}
-            className="fixed sm:absolute right-4 sm:right-0 top-16 sm:top-12 w-[calc(100%-2rem)] sm:w-80 max-h-[75vh] bg-gray-900 text-white rounded-2xl shadow-2xl z-40 overflow-hidden border border-gray-700 flex flex-col"
+            className="fixed sm:absolute left-4 right-4 sm:left-auto sm:right-0 top-16 sm:top-12 w-auto sm:w-80 max-h-[75dvh] bg-surface text-ink rounded-2xl shadow-2xl z-40 overflow-hidden border border-gray-700 flex flex-col"
             role="dialog"
             aria-labelledby="notifications-title"
           >
             {/* En-tête */}
-            <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
+            <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-surface rounded-t-2xl">
               <button
                 onClick={() => {
                   setOuvert(false)
                   router.push('/dashboard/notifications')
                 }}
-                className="font-semibold hover:text-[#C8A84E] transition active:scale-95 flex items-center gap-2"
+                className="font-semibold hover:text-accent transition active:scale-95 flex items-center gap-2"
               >
                 Notifications → 📬
               </button>
@@ -221,7 +221,7 @@ export default function NotificationBell() {
                 {nbNonLues > 0 && (
                   <button
                     onClick={marquerToutCommeLu}
-                    className="text-xs text-[#C8A84E] hover:text-[#e0c46a] px-2 py-1 rounded transition active:scale-95 touch-manipulation"
+                    className="text-xs text-accent hover:text-accent px-2 py-1 rounded transition active:scale-95 touch-manipulation"
                     aria-label="Tout marquer comme lu"
                   >
                     ✓ Tout lu
@@ -229,7 +229,7 @@ export default function NotificationBell() {
                 )}
                 <button
                   onClick={() => setOuvert(false)}
-                  className="text-gray-400 hover:text-white"
+                  className="text-muted hover:text-ink"
                   aria-label="Fermer"
                 >
                   ✕
@@ -239,7 +239,7 @@ export default function NotificationBell() {
 
             {/* Bannière d'erreur */}
             {error && (
-              <div className="p-3 bg-red-500/20 border-b border-red-500/40 text-red-200 text-sm">
+              <div className="p-3 bg-red-500/20 border-b border-red-500/40 text-danger text-sm">
                 ⚠️ {error}
               </div>
             )}
@@ -247,13 +247,13 @@ export default function NotificationBell() {
             {/* Contenu */}
             {loading ? (
               <div className="p-8 flex flex-col items-center gap-3">
-                <div className="w-8 h-8 border-4 border-[#C8A84E]/30 border-t-[#C8A84E] rounded-full animate-spin" />
-                <p className="text-gray-400 text-sm">Chargement...</p>
+                <div className="w-8 h-8 border-4 border-accent/30 border-t-[#C8A84E] rounded-full animate-spin" />
+                <p className="text-muted text-sm">Chargement...</p>
               </div>
             ) : notifications.length === 0 ? (
               <div className="p-8 flex flex-col items-center gap-2">
                 <span className="text-4xl">📭</span>
-                <p className="text-gray-400">Aucune notification</p>
+                <p className="text-muted">Aucune notification</p>
               </div>
             ) : (
               <div className="overflow-y-auto flex-1 divide-y divide-gray-800">
@@ -262,7 +262,7 @@ export default function NotificationBell() {
                     key={notif.id}
                     onClick={() => handleNotificationClick(notif)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif) }}
-                    className={`p-4 cursor-pointer hover:bg-gray-800/70 transition-all ${
+                    className={`p-4 cursor-pointer hover:bg-surface/70 transition-all ${
                       notif.lue
                         ? 'opacity-70'
                         : `${notif.type === 'invitation_remplie' ? 'bg-emerald-900/15' : 'bg-purple-900/10'} border-l-4 ${getCouleurUrgence(notif)}`
@@ -271,7 +271,7 @@ export default function NotificationBell() {
                     tabIndex={0}
                   >
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
-                    <p className="text-xs text-gray-500 mt-2">
+                    <p className="text-xs text-muted mt-2">
                       {new Date(notif.created_at).toLocaleString('fr-FR', {
                         day: 'numeric',
                         month: 'long',
