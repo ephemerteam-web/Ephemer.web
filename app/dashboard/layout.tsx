@@ -25,10 +25,21 @@ export default function DashboardLayout({
 
   // On remonte le user ici pour le partager avec MenuLateral ET le bouton
   const [user, setUser] = useState<{ email: string; prenom?: string } | null>(null)
+  const [authError, setAuthError] = useState(false)
 
   useEffect(() => {
+    let active = true
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        active = false
+        setUser(null)
+        router.replace('/connexion')
+      }
+    })
     const chargerUser = async () => {
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser()
+      if (!active) return
+      if (error || !supabaseUser) { setAuthError(true); return }
       if (supabaseUser) {
         const { data: profil } = await supabase
           .from('profiles') // ⚠️ adapte si besoin
@@ -36,19 +47,23 @@ export default function DashboardLayout({
           .eq('id', supabaseUser.id)
           .single()
 
+        if (!active) return
         setUser({
           email: supabaseUser.email || '',
           prenom: profil?.prenom,
         })
       }
     }
-    chargerUser()
-  }, [])
+    void chargerUser().catch(() => { if (active) setAuthError(true) })
+    return () => { active = false; subscription.unsubscribe() }
+  }, [router])
 
   // Calcule l'initiale à afficher dans le bouton
   const initiale = user?.prenom
     ? user.prenom.charAt(0).toUpperCase()
     : null
+
+  if (!user) return <main className="p-8 text-white" role="status">{authError ? 'Session indisponible. Recharge la page ou reconnecte-toi.' : 'Vérification de la session…'}<Link href="/connexion"> Connexion</Link></main>
 
   return (
     <DrawerProvider>

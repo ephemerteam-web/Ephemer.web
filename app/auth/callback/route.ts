@@ -5,6 +5,7 @@ import { NextResponse } from "next/server"
 export async function GET(request: Request) {
   const url = new URL(request.url)
   const code = url.searchParams.get("code")
+  const next = url.searchParams.get("next") === "/reset-password" ? "/reset-password" : "/dashboard"
 
   if (code) {
     const cookieStore = await cookies()
@@ -24,8 +25,15 @@ export async function GET(request: Request) {
       }
     )
 
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (!error) {
+      return NextResponse.redirect(new URL(next, request.url), {
+        headers: { 'Cache-Control': 'private, no-store' },
+      })
+    }
   }
 
-  return NextResponse.redirect(new URL("/dashboard", request.url))
+  return NextResponse.redirect(new URL("/connexion?auth_error=1", request.url), {
+    headers: { 'Cache-Control': 'private, no-store' },
+  })
 }

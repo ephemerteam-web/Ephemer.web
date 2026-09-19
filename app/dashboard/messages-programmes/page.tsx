@@ -1,5 +1,6 @@
 "use client";
 
+import { parseLocalDay } from '@/lib/calendar-day';
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
@@ -45,7 +46,7 @@ function extractContactName(contacts: MessageProgramme["contacts"]): string {
 }
 
 function getRelativeDate(dateISO: string): string {
-  const target = new Date(dateISO);
+  const target = parseLocalDay(dateISO);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   target.setHours(0, 0, 0, 0);
@@ -69,7 +70,7 @@ function groupByEventType(messages: MessageProgramme[]) {
 }
 
 function formatDateFR(dateISO: string) {
-  return new Date(dateISO).toLocaleDateString("fr-FR", {
+  return parseLocalDay(dateISO).toLocaleDateString("fr-FR", {
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -133,9 +134,8 @@ export default function MessagesProgrammesPage() {
     const list = (data as MessageProgramme[]) || [];
     setMessages(list);
 
-    const now = new Date();
     const aVenir = list.filter(
-      (m) => m.statut === "programme" && new Date(m.date_envoi) >= now
+      (m) => m.statut === "programme"
     );
     const groupedAVenir = groupByEventType(aVenir);
 
@@ -241,15 +241,14 @@ export default function MessagesProgrammesPage() {
     return true;
   }
 
-  const now = new Date();
 
   const aVenir = useMemo(() => {
-    return messages.filter((m) => m.statut === "programme" && new Date(m.date_envoi) >= now);
-  }, [messages, now]);
+    return messages.filter((m) => m.statut === "programme");
+  }, [messages]);
 
   const historique = useMemo(() => {
-    return messages.filter((m) => m.statut !== "programme" || new Date(m.date_envoi) < now);
-  }, [messages, now]);
+    return messages.filter((m) => m.statut !== "programme");
+  }, [messages]);
 
   const groupedAVenir = useMemo(() => groupByEventType(aVenir), [aVenir]);
   const groupedHistorique = useMemo(() => groupByEventType(historique), [historique]);
@@ -434,7 +433,7 @@ function MessageCard({
   const contactNom = extractContactName(m.contacts);
   const joursRestants = getRelativeDate(m.date_envoi);
 
-  const estAnnulable = m.statut === "programme" && new Date(m.date_envoi) > new Date();
+  const estAnnulable = m.statut === "programme";
   const estAnnule = m.statut === "annule";
   const estModifiable = m.statut === "programme";
   const dateFR = formatDateFR(m.date_envoi);

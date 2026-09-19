@@ -1,173 +1,80 @@
-// public/sw.js
-// Service Worker Ephemer.name — v3
-// Rôle : notifications push + page de secours hors ligne + mise à jour auto.
-// PRINCIPE DE SÉCURITÉ : on ne met JAMAIS en cache une page
-// ou une réponse contenant des données utilisateur.
-
-const CACHE_NAME = 'ephemer-static-v3';
+﻿// Ephemer v4 : aucun HTML applicatif, RSC, API ou fichier privé en cache.
+const CACHE_NAME = 'ephemer-static-v4';
 const OFFLINE_URL = '/offline.html';
+const PUBLIC_FILES = [OFFLINE_URL, '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png'];
 
-// Uniquement des fichiers PUBLICS et identiques pour tout le monde.
-// Aucune page /dashboard ici : elles contiennent des données privées.
-const URLS_TO_CACHE = [
-  OFFLINE_URL,
-  '/site.webmanifest',
-  '/icon-192.png',
-  '/icon-512.png',
-  '/apple-touch-icon.png',
-];
-
-// ── INSTALLATION : on pré-cache les fichiers statiques ───
-self.addEventListener('install', (event) => {
-  console.log('[SW] Installation en cours...');
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[SW] Pré-cache des fichiers statiques');
-      return cache.addAll(URLS_TO_CACHE);
-    }).catch((err) => {
-      console.warn('[SW] Erreur de pré-cache (non bloquant) :', err);
-    })
-  );
-  // Force l'activation immédiate (sans attendre que l'onglet se ferme)
-  self.skipWaiting();
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    // La page de secours est indispensable ; une icône absente ne bloque pas le worker.
+    await cache.add(new Request(OFFLINE_URL, { cache: 'reload' }));
+    await Promise.allSettled(PUBLIC_FILES.slice(1).map(url => cache.add(new Request(url, { cache: 'reload' }))));
+    await self.skipWaiting();
+  })());
 });
 
-// ─── ACTIVATION : on supprime les vieux caches ──
-self.addEventListener('activate', (event) => {
-  console.log('[SW] Activation en cours...');
-  event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => {
-            console.log('[SW] Suppression du vieux cache :', name);
-            return caches.delete(name);
-          })
-      );
-    })
-  );
-  // Prend le contrôle immédiatement de tous les onglets ouverts
-  self.clients.claim();
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const names = await caches.keys();
+    await Promise.all(names.filter(name => name.startsWith('ephemer-') && name !== CACHE_NAME).map(name => caches.delete(name)));
+    await self.clients.claim();
+  })());
 });
 
-// ─── FETCH : stratégie "Network First" pour les pages, "Cache First" pour les assets ──
-self.addEventListener('fetch', (event) => {
+self.addEventListener('fetch', event => {
   const { request } = event;
-
-  // Ignore les requêtes non-GET (POST, PUT, etc.)
-  if (request.method !== 'GET') return;
-
-  // Ignore les requêtes vers des API externes (Supabase, Resend...)
-  if (request.url.includes('supabase.co') || request.url.includes('resend.com')) {
-    return;
-  }
-
-  // ── Stratégie 1 : Cache First pour les fichiers statiques ──
-  // (icônes, CSS, JS, manifeste → ne changent jamais entre deux déploiements)
-  if (
-    request.destination === 'image' ||
-    request.destination === 'style' ||
-    request.destination === 'script' ||
-    request.url.endsWith('.webmanifest')
-  ) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        return cached || fetch(request);
-      })
-    );
-    return;
-  }
-
-  // ── Stratégie 2 : Network First pour les pages HTML ──
-  // (on essaie le réseau, et si ça échoue → page hors ligne)
+  const url = new URL(request.url);
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
   if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          // Si la réponse est valide, on la met en cache pour la prochaine fois
-          if (response && response.status === 200) {
-            const responseClone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(request, responseClone);
-            });
-          }
-          return response;
-        })
-        .catch(() => {
-          // Réseau indisponible → on sert la page hors ligne
-          return caches.match(OFFLINE_URL);
-        })
-    );
+    event.respondWith(fetch(request).catch(async () => {
+      const cache = await caches.open(CACHE_NAME);
+      return await cache.match(OFFLINE_URL) || new Response('Hors ligne. Reconnectez-vous pour consulter Ephemer.', { status: 503, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+    }));
     return;
   }
-
-  // ── Stratégie par défaut : Network First avec fallback cache ──
-  event.respondWith(
-    fetch(request)
-      .catch(() => caches.match(request))
-  );
+  // Liste fermée, sans paramètres : aucune image privée ou réponse API admise.
+  if (!url.search && PUBLIC_FILES.includes(url.pathname)) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      return await cache.match(url.pathname) || fetch(request);
+    })());
+  }
 });
 
-// ─── NOTIFICATION PUSH : quand on reçoit un push de Supabase/Vercel ───
-self.addEventListener('push', (event) => {
-  if (!event.data) return;
-
-  let data;
+function safeNotificationURL(value) {
   try {
-    data = event.data.json();
-  } catch (e) {
-    data = { title: 'Ephemer', body: event.data.text() };
-  }
+    const url = new URL(typeof value === 'string' ? value : '/dashboard/notifications', self.location.origin);
+    if (url.origin === self.location.origin && (url.pathname === '/dashboard' || url.pathname.startsWith('/dashboard/'))) return url.href;
+  } catch { /* Destination invalide : centre de notifications. */ }
+  return new URL('/dashboard/notifications', self.location.origin).href;
+}
 
-  const title = data.title || 'Ephemer';
+self.addEventListener('push', event => {
+  let data = {};
+  try { data = event.data?.json() || {}; } catch { /* Pas de contenu privé dans le fallback. */ }
+  if (!data || typeof data !== 'object') data = {};
+  // Le détail reste dans l'application authentifiée, pas sur un écran verrouillé.
   const options = {
-    body: data.body || 'Vous avez une nouvelle notification',
-    icon: data.icon || '/icon-192.png',
-    badge: '/icon-192.png',
-    vibrate: [200, 100, 200], // Vibration : vibre-pause-vibre
-    data: {
-      url: data.url || '/dashboard',
-    },
-    actions: [
-      { action: 'open', title: '📖 Ouvrir' },
-      { action: 'close', title: '✕ Fermer' },
-    ],
-    tag: data.tag || 'ephemer-notification', // Évite les doublons
-    renotify: true,
-    requireInteraction: false,
+    body: 'Une activité est disponible dans votre application.',
+    icon: '/icon-192.png', badge: '/icon-192.png',
+    data: { url: safeNotificationURL(data.url) },
+    ...(typeof data.tag === 'string' && data.tag ? { tag: data.tag } : {}),
   };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(self.registration.showNotification('Ephemer', options));
 });
 
-// ─── CLIC SUR NOTIFICATION : ouvre la bonne page ───
-self.addEventListener('notificationclick', (event) => {
+self.addEventListener('notificationclick', event => {
   event.notification.close();
-
-  const urlToOpen = event.notification.data?.url || '/dashboard';
-
   if (event.action === 'close') return;
-
-  // Si Ephemer est déjà ouvert dans un onglet, on le réutilise
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: 'window', includeUncontrolled: true })
-      .then((liste) => {
-        for (const client of liste) {
-          if (client.url.includes(self.location.origin) && 'focus' in client) {
-            client.navigate(urlToOpen);
-            return client.focus();
-          }
-        }
-        return self.clients.openWindow(urlToOpen);
-      })
-  );
-});
-
-// ─── MISE À JOUR AUTO : informe les onglets ouverts qu'une nouvelle version est dispo ───
-self.addEventListener('message', (event) => {
-  if (event.data === 'skipWaiting') {
-    self.skipWaiting();
-  }
+  const url = safeNotificationURL(event.notification.data?.url);
+  event.waitUntil((async () => {
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of windows) {
+      if (new URL(client.url).origin === self.location.origin && 'focus' in client) {
+        const navigated = await client.navigate(url);
+        if (navigated) return navigated.focus();
+      }
+    }
+    return self.clients.openWindow(url);
+  })());
 });

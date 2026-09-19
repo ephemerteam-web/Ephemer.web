@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import type { Session } from '@supabase/supabase-js';
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
@@ -157,7 +158,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
 
           <div className="flex-1 overflow-y-auto pr-1 custom-scrollbar">
             <p className="text-emerald-200/90 text-sm leading-relaxed italic mb-4">
-              "{idea.raison}"
+              &quot;{idea.raison}&quot;
             </p>
             
             {/* Liste des marchands */}
@@ -195,7 +196,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
               setIsFlipped(false);
             }}
           >
-            ← Revenir à l'idée
+            ← Revenir à l&apos;idée
           </button>
         </div>
       </div>
@@ -216,7 +217,7 @@ function GiftIdeasForm() {
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [session, setSession] = useState<any | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [contactListOpen, setContactListOpen] = useState(false);
   const [searchContact, setSearchContact] = useState("");
 
@@ -499,7 +500,7 @@ const res = await fetch("/api/generate-gift-ideas", {
                       </div>
                       {selectedContact.note && (
                         <div className="text-[10px] text-white/40 mt-1 italic truncate max-w-[180px]">
-                          "{selectedContact.note}"
+                          &quot;{selectedContact.note}&quot;
                         </div>
                       )}
                     </div>
@@ -530,7 +531,7 @@ const res = await fetch("/api/generate-gift-ideas", {
               <div>
                 <h2 className="text-xs font-bold text-white/60 uppercase tracking-wider mb-4 flex items-center gap-2">
                   <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-[10px] text-emerald-400">2</span>
-                  Type d'événement
+                  Type d&apos;événement
                 </h2>
                 
                 <AppSelect
@@ -671,7 +672,7 @@ export default function GiftIdeasPage() {
         <div className="flex items-center justify-center min-h-[60vh] bg-[#0B1120]">
           <div className="flex flex-col items-center gap-4">
             <span className="text-4xl animate-bounce">🎁</span>
-            <p className="text-white/50 text-sm">Chargement de l'application...</p>
+            <p className="text-white/50 text-sm">Chargement de l&apos;application...</p>
           </div>
         </div>
       }

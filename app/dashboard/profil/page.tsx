@@ -106,7 +106,7 @@ export default function DashboardProfil() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })
 
     if (error) {
@@ -150,9 +150,9 @@ export default function DashboardProfil() {
       await supabase.auth.signOut()
       router.push('/?deleted=true')
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       setMessage({
-        text: `Erreur : ${error.message}`,
+        text: `Erreur : ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
         type: 'error'
       })
       setDeleting(false)

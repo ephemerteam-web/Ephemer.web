@@ -103,10 +103,10 @@ export async function GET(request: NextRequest) {
       annee,
       evenements,
     });
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('❌ Erreur API evenements-mois:', err);
     return NextResponse.json(
-      { error: 'Erreur interne', details: err.message },
+      { error: 'Erreur interne', details: (err instanceof Error ? err.message : 'Erreur inconnue') },
       { status: 500 }
     );
   }

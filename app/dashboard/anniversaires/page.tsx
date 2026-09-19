@@ -69,7 +69,7 @@ export default function AnniversairesPage() {
     async function loadContacts() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        router.push('/login')
+        router.push('/connexion')
         return
       }
 
@@ -314,7 +314,7 @@ function CardAnniv({
 
         <div className="flex-1 min-w-0">
           <button
-            onClick={() => ouvrirDrawer(anniv.contact as any)}
+            onClick={() => ouvrirDrawer({ est_favori: null, telephone_indicatif: null, telephone_numero: null, note: null, ...anniv.contact })}
             className="font-semibold text-white truncate hover:text-[#C8A84E] transition text-left block w-full"
           >
             {anniv.contact.prenom} {anniv.contact.nom}
@@ -361,7 +361,7 @@ function RowAnniv({
         </span>
 
         <button
-          onClick={() => ouvrirDrawer(anniv.contact as any)}
+          onClick={() => ouvrirDrawer({ est_favori: null, telephone_indicatif: null, telephone_numero: null, note: null, ...anniv.contact })}
           className="text-white text-sm truncate hover:text-[#C8A84E] transition text-left"
         >
           {anniv.contact.prenom} {anniv.contact.nom}

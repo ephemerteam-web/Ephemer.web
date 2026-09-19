@@ -168,7 +168,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
                   : "text-white/40 hover:text-white/70"
               }`}
             >
-              S'inscrire
+              S&apos;inscrire
             </button>
             <button
               onClick={() => mode !== "connexion" && onSwitchMode()}

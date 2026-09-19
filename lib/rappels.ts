@@ -1,5 +1,6 @@
+import { parseLocalDay } from './calendar-day'
 import { supabase } from './supabase-browser'
-import { calculerDateEvenement, TypeEvenement } from './date-utils'
+import { calculerDateEvenement, formatDateLocale, TypeEvenement } from './date-utils'
 
 // ============================================================
 // 🔔 RAPPELS AUTOMATIQUES
@@ -29,7 +30,7 @@ export async function programmerRappels(
   eventDescription?: string
 ) {
   const typeEvenement = eventDate ? 'jour_special' : 'anniversaire'
-  const dateBase = eventDate ? new Date(eventDate) : dateAnniversaireProchaine
+  const dateBase = eventDate ? parseLocalDay(eventDate) : dateAnniversaireProchaine
 
   const rappels = [
     {
@@ -37,7 +38,7 @@ export async function programmerRappels(
       contact_id: contactId,
       type_evenement: typeEvenement,
       type_rappel: 'j30' as TypeRappel,
-      date_envoi: calculerDateEnvoi(dateBase, 'j30').toISOString(),
+      date_envoi: formatDateLocale(calculerDateEnvoi(dateBase, 'j30')),
       message: eventDate
         ? `📅 Dans 30 jours, c'est ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `📅 Dans 30 jours, c'est l'anniversaire de ${contactNom}!`,
@@ -51,7 +52,7 @@ export async function programmerRappels(
       contact_id: contactId,
       type_evenement: typeEvenement,
       type_rappel: 'j7' as TypeRappel,
-      date_envoi: calculerDateEnvoi(dateBase, 'j7').toISOString(),
+      date_envoi: formatDateLocale(calculerDateEnvoi(dateBase, 'j7')),
       message: eventDate
         ? `⏰ Plus que 7 jours avant ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `⏰ Plus que 7 jours avant l'anniversaire de ${contactNom}!`,
@@ -64,7 +65,7 @@ export async function programmerRappels(
       contact_id: contactId,
       type_evenement: typeEvenement,
       type_rappel: 'jourj' as TypeRappel,
-      date_envoi: dateBase.toISOString(),
+      date_envoi: formatDateLocale(dateBase),
       message: eventDate
         ? `🎉 C'est aujourd'hui ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `🎉 C'est aujourd'hui l'anniversaire de ${contactNom}!`,
@@ -76,7 +77,7 @@ export async function programmerRappels(
 
   const { data, error } = await supabase
     .from('rappels')
-    .insert(rappels)
+    .insert(rappels.filter(r => r.date_envoi >= formatDateLocale(new Date())))
     .select()
 
   if (error) {
@@ -166,7 +167,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
     dateEvenement = dateOverride
   } else if (eventDate) {
     // 👇 NOUVEAU : Cas pour les dates spéciales
-    dateEvenement = new Date(eventDate)
+    dateEvenement = parseLocalDay(eventDate)
   } else {
     const dateCalculee = calculerDateEvenement(typeEvenement, contact)
     if (!dateCalculee) {
@@ -182,7 +183,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
     throw new Error("Date invalide.")
   }
 
-  if (dateEvenement < new Date()) {
+  if (formatDateLocale(dateEvenement) < formatDateLocale(new Date())) {
     throw new Error("La date doit être dans le futur.")
   }
 
@@ -190,6 +191,8 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
   const nomComplet = `${contact.prenom}${contact.nom ? ' ' + contact.nom : ''}`
   const sujet = `✨ Message pour ${nomComplet}`
 
+  if (!['moi', 'contact', 'les_deux'].includes(destinataire)) throw new Error('Destinataire invalide')
+  if (destinataire !== 'contact' && !emailUtilisateur.trim()) throw new Error('Email utilisateur manquant')
   const entrees = []
 
   // Pour MOI
@@ -200,7 +203,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
       type_evenement: typeEvenement,
       type_rappel: 'jourj',
       source: 'message_programme',
-      date_envoi: dateEvenement.toISOString(),
+      date_envoi: formatDateLocale(dateEvenement),
       message,
       sujet_email: sujet,
       destinataire: 'moi',
@@ -227,7 +230,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
       type_evenement: typeEvenement,
       type_rappel: 'jourj',
       source: 'message_programme',
-      date_envoi: dateEvenement.toISOString(),
+      date_envoi: formatDateLocale(dateEvenement),
       message,
       sujet_email: sujet,
       destinataire: 'contact',

@@ -55,9 +55,9 @@ export default function EvenementsMois() {
   // 🔄 Charger les événements
   const chargerEvenements = useCallback(async () => {
     try {
+      const { data: { session } } = await supabase.auth.getSession()
       setLoading(true)
       setError(null)
-      const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user?.id) throw new Error('Non connecté')
 
       const response = await fetch(`/api/evenements-mois?mois=${mois}&annee=${annee}`, {
@@ -67,14 +67,18 @@ export default function EvenementsMois() {
       if (!response.ok) throw new Error(`Erreur API: ${response.status}`)
       const data = await response.json()
       setEvenements(data.evenements || [])
-    } catch (err: any) {
-      setError(err.message || 'Impossible de charger les événements')
+    } catch (err: unknown) {
+      setError((err instanceof Error ? err.message : 'Erreur inconnue') || 'Impossible de charger les événements')
     } finally {
       setLoading(false)
     }
   }, [mois, annee])
 
-  useEffect(() => { chargerEvenements() }, [chargerEvenements])
+  useEffect(() => {
+    // Chargement réseau initial et lors d'un changement de mois.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    chargerEvenements()
+  }, [chargerEvenements])
 
   // 🎨 Couleurs selon le type
   const getGradient = (type: string) =>

@@ -1,26 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-
+import { useSyncExternalStore } from 'react';
+function subscribe(callback: () => void) {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => { window.removeEventListener('online', callback); window.removeEventListener('offline', callback); };
+}
 export default function OfflineBanner() {
-  const [isOnline, setIsOnline] = useState(true);
-
-  useEffect(() => {
-    // Vérifie l'état au chargement
-    setIsOnline(navigator.onLine);
-
-    // Écoute les changements de connexion
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const isOnline = useSyncExternalStore(subscribe, () => navigator.onLine, () => true);
 
   if (isOnline) return null; // N'affiche rien si on est en ligne
 

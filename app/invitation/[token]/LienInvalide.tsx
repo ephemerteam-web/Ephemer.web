@@ -36,7 +36,7 @@ export default function LienInvalide({ raison }: { raison: string }) {
 
         <p className="text-xs tracking-[0.2em] uppercase text-white/25">Ephemer</p>
         <p className="text-white/30 text-sm mt-2">
-          N'oublie plus jamais les dates qui comptent.
+          N&apos;oublie plus jamais les dates qui comptent.
         </p>
       </div>
     </main>

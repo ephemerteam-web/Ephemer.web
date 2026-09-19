@@ -17,7 +17,7 @@ export default function ConfidentialitePage() {
           href="/"
           className="text-sm text-[#C8A84E] hover:text-[#e0c46a] transition-colors"
         >
-          ← Retour à l'accueil
+          ← Retour à l&apos;accueil
         </Link>
 
         {/* En-tête */}
@@ -43,7 +43,7 @@ export default function ConfidentialitePage() {
             <li><strong className="text-gray-200">Contact :</strong> <Mail /></li>
             <li><strong className="text-gray-200">Site web :</strong> Ephemer.name</li>
           </Liste>
-          <p>Si une société est créée ou si le service est exploité par une structure juridique, cette section devra être complétée avec la dénomination sociale, l'adresse du siège, le numéro SIRET et les coordonnées du représentant légal.</p>
+          <p>Si une société est créée ou si le service est exploité par une structure juridique, cette section devra être complétée avec la dénomination sociale, l&apos;adresse du siège, le numéro SIRET et les coordonnées du représentant légal.</p>
         </Section>
 
         {/* 2 */}
@@ -52,7 +52,7 @@ export default function ConfidentialitePage() {
           <SousTitre>2.1 Données liées à votre compte</SousTitre>
           <Liste>
             <li>Adresse email ;</li>
-            <li>Mot de passe chiffré via notre prestataire d'authentification ;</li>
+            <li>Mot de passe chiffré via notre prestataire d&apos;authentification ;</li>
             <li>Nom et prénom, si vous choisissez de les renseigner ;</li>
             <li>Date de création du compte ;</li>
             <li>Paramètres de notification.</li>
@@ -80,7 +80,7 @@ export default function ConfidentialitePage() {
           <p>Les données collectées sont utilisées pour les finalités suivantes :</p>
           <Liste>
             <li>Créer et sécuriser votre compte utilisateur ;</li>
-            <li>Vous permettre d'ajouter, gérer et importer vos contacts ;</li>
+            <li>Vous permettre d&apos;ajouter, gérer et importer vos contacts ;</li>
             <li>Calculer automatiquement les événements importants ;</li>
             <li>Générer des messages personnalisés selon le ton choisi ;</li>
             <li>Programmer et envoyer des rappels par email ;</li>
@@ -95,24 +95,24 @@ export default function ConfidentialitePage() {
           <p>Conformément au RGPD, chaque traitement de données repose sur une base légale.</p>
           <Liste>
             <li><strong className="text-gray-200">Exécution du contrat :</strong> pour créer votre compte, gérer vos contacts, afficher vos événements et fournir les fonctionnalités principales.</li>
-            <li><strong className="text-gray-200">Consentement :</strong> pour l'envoi de certaines notifications, l'import de contacts, ou l'utilisation éventuelle de cookies non essentiels.</li>
-            <li><strong className="text-gray-200">Intérêt légitime :</strong> pour sécuriser le service, prévenir les abus, corriger les erreurs et améliorer l'expérience utilisateur.</li>
+            <li><strong className="text-gray-200">Consentement :</strong> pour l&apos;envoi de certaines notifications, l&apos;import de contacts, ou l&apos;utilisation éventuelle de cookies non essentiels.</li>
+            <li><strong className="text-gray-200">Intérêt légitime :</strong> pour sécuriser le service, prévenir les abus, corriger les erreurs et améliorer l&apos;expérience utilisateur.</li>
             <li><strong className="text-gray-200">Obligation légale :</strong> si certaines données doivent être conservées pour répondre à une obligation réglementaire.</li>
           </Liste>
         </Section>
 
         {/* 5 */}
         <Section titre="5. Données des contacts ajoutés par l'utilisateur">
-          <p>Lorsque vous ajoutez un contact dans Ephemer.name, vous êtes responsable de vous assurer que vous disposez d'une raison légitime pour enregistrer ses informations.</p>
+          <p>Lorsque vous ajoutez un contact dans Ephemer.name, vous êtes responsable de vous assurer que vous disposez d&apos;une raison légitime pour enregistrer ses informations.</p>
           <p>Ces données sont utilisées uniquement pour vous fournir les fonctionnalités du service : rappels, calendrier, génération de messages et suggestions associées.</p>
           <p>Nous ne contactons pas directement vos contacts sans action explicite de votre part.</p>
         </Section>
 
         {/* 6 */}
         <Section titre="6. Import de contacts">
-          <p>Ephemer.name pourra proposer des fonctionnalités d'import de contacts via fichiers CSV, vCard ou d'autres services compatibles.</p>
-          <p>Lors d'un import, seules les données nécessaires seront conservées. Vous pourrez modifier ou supprimer les contacts importés à tout moment.</p>
-          <p>Si une intégration avec un service tiers est proposée à l'avenir, une information spécifique vous sera présentée avant toute connexion.</p>
+          <p>Ephemer.name pourra proposer des fonctionnalités d&apos;import de contacts via fichiers CSV, vCard ou d&apos;autres services compatibles.</p>
+          <p>Lors d&apos;un import, seules les données nécessaires seront conservées. Vous pourrez modifier ou supprimer les contacts importés à tout moment.</p>
+          <p>Si une intégration avec un service tiers est proposée à l&apos;avenir, une information spécifique vous sera présentée avant toute connexion.</p>
         </Section>
 
         {/* 7 */}
@@ -121,16 +121,16 @@ export default function ConfidentialitePage() {
           <p>Elles peuvent être traitées par des prestataires techniques strictement nécessaires :</p>
           <Liste>
             <li><strong className="text-gray-200">Supabase :</strong> hébergement de la base de données et authentification ;</li>
-            <li><strong className="text-gray-200">Vercel :</strong> hébergement de l'application web ;</li>
-            <li><strong className="text-gray-200">Resend :</strong> gestion de l'envoi des emails ;</li>
-            <li><strong className="text-gray-200">Prestataires d'analyse ou de sécurité :</strong> uniquement si nécessaires et conformes au RGPD.</li>
+            <li><strong className="text-gray-200">Vercel :</strong> hébergement de l&apos;application web ;</li>
+            <li><strong className="text-gray-200">Resend :</strong> gestion de l&apos;envoi des emails ;</li>
+            <li><strong className="text-gray-200">Prestataires d&apos;analyse ou de sécurité :</strong> uniquement si nécessaires et conformes au RGPD.</li>
           </Liste>
           <p>Ces prestataires agissent comme sous-traitants et traitent les données uniquement pour fournir le service demandé.</p>
         </Section>
 
         {/* 8 */}
         <Section titre="8. Transferts de données hors Union européenne">
-          <p>Certains prestataires peuvent traiter des données en dehors de l'Union européenne ou de l'Espace économique européen.</p>
+          <p>Certains prestataires peuvent traiter des données en dehors de l&apos;Union européenne ou de l&apos;Espace économique européen.</p>
           <p>Dans ce cas, nous veillons à ce que ces transferts soient encadrés par des garanties appropriées, comme des clauses contractuelles types approuvées par la Commission européenne.</p>
         </Section>
 
@@ -140,7 +140,7 @@ export default function ConfidentialitePage() {
           <Liste>
             <li><strong className="text-gray-200">Données de compte :</strong> tant que votre compte est actif.</li>
             <li><strong className="text-gray-200">Données de contacts :</strong> tant que vous les gardez.</li>
-            <li><strong className="text-gray-200">Données de notification :</strong> tant qu'elles sont nécessaires aux rappels.</li>
+            <li><strong className="text-gray-200">Données de notification :</strong> tant qu&apos;elles sont nécessaires aux rappels.</li>
             <li><strong className="text-gray-200">Logs techniques :</strong> durée limitée nécessaire à la sécurité.</li>
             <li><strong className="text-gray-200">Données supprimées :</strong> conservées temporairement dans les sauvegardes avant suppression définitive.</li>
           </Liste>
@@ -153,18 +153,18 @@ export default function ConfidentialitePage() {
           <Liste>
             <li>Authentification sécurisée ;</li>
             <li>Gestion des accès par utilisateur ;</li>
-            <li>Utilisation de variables d'environnement pour protéger les clés techniques ;</li>
+            <li>Utilisation de variables d&apos;environnement pour protéger les clés techniques ;</li>
             <li>Accès limité aux données strictement nécessaires ;</li>
             <li>Surveillance des erreurs et incidents techniques.</li>
           </Liste>
-          <p>Malgré ces mesures, aucun service en ligne ne peut garantir une sécurité absolue. Nous vous recommandons d'utiliser un mot de passe unique et robuste.</p>
+          <p>Malgré ces mesures, aucun service en ligne ne peut garantir une sécurité absolue. Nous vous recommandons d&apos;utiliser un mot de passe unique et robuste.</p>
         </Section>
 
         {/* 11 */}
         <Section titre="11. Cookies et traceurs">
           <p>Ephemer.name peut utiliser des cookies ou technologies similaires pour assurer le bon fonctionnement du site et maintenir votre session connectée.</p>
           <p>Les cookies strictement nécessaires ne nécessitent pas votre consentement préalable.</p>
-          <p>Si nous utilisons à l'avenir des cookies non essentiels, un bandeau de consentement vous permettra de les accepter ou de les refuser.</p>
+          <p>Si nous utilisons à l&apos;avenir des cookies non essentiels, un bandeau de consentement vous permettra de les accepter ou de les refuser.</p>
         </Section>
 
         {/* 12 */}
@@ -177,24 +177,24 @@ export default function ConfidentialitePage() {
         {/* 13 */}
         <Section titre="13. Génération de messages personnalisés">
           <p>Ephemer.name peut vous aider à générer des messages personnalisés pour vos contacts.</p>
-          <p>Les informations utilisées sont limitées au strict nécessaire : prénom du contact, type d'événement, relation et ton choisi.</p>
-          <p>Si une technologie d'intelligence artificielle externe est utilisée, vous en serez informé et les données transmises seront limitées au strict nécessaire.</p>
+          <p>Les informations utilisées sont limitées au strict nécessaire : prénom du contact, type d&apos;événement, relation et ton choisi.</p>
+          <p>Si une technologie d&apos;intelligence artificielle externe est utilisée, vous en serez informé et les données transmises seront limitées au strict nécessaire.</p>
         </Section>
 
         {/* 14 */}
         <Section titre="14. Vos droits">
           <p>Conformément au RGPD et à la loi Informatique et Libertés, vous disposez des droits suivants :</p>
           <Liste>
-            <li><strong className="text-gray-200">Droit d'accès :</strong> obtenir une copie des données vous concernant ;</li>
+            <li><strong className="text-gray-200">Droit d&apos;accès :</strong> obtenir une copie des données vous concernant ;</li>
             <li><strong className="text-gray-200">Droit de rectification :</strong> corriger des données inexactes ;</li>
-            <li><strong className="text-gray-200">Droit à l'effacement :</strong> demander la suppression de vos données ;</li>
+            <li><strong className="text-gray-200">Droit à l&apos;effacement :</strong> demander la suppression de vos données ;</li>
             <li><strong className="text-gray-200">Droit à la limitation :</strong> suspendre temporairement un traitement ;</li>
-            <li><strong className="text-gray-200">Droit d'opposition :</strong> vous opposer à certains traitements ;</li>
+            <li><strong className="text-gray-200">Droit d&apos;opposition :</strong> vous opposer à certains traitements ;</li>
             <li><strong className="text-gray-200">Droit à la portabilité :</strong> récupérer vos données dans un format structuré ;</li>
             <li><strong className="text-gray-200">Droit de retirer votre consentement</strong> lorsque le traitement repose dessus.</li>
           </Liste>
           <p>Pour exercer vos droits, contactez-nous à : <Mail />.</p>
-          <p>Nous pourrons vous demander une preuve d'identité si nécessaire pour vous protéger contre une demande frauduleuse.</p>
+          <p>Nous pourrons vous demander une preuve d&apos;identité si nécessaire pour vous protéger contre une demande frauduleuse.</p>
         </Section>
 
         {/* 15 */}
@@ -210,8 +210,8 @@ export default function ConfidentialitePage() {
 
         {/* 16 */}
         <Section titre="16. Mineurs">
-          <p>Ephemer.name n'est pas destiné spécifiquement aux enfants. Si vous êtes mineur, utilisez le service avec l'accord d'un parent ou représentant légal.</p>
-          <p>Si nous apprenons que des données ont été collectées auprès d'un mineur sans autorisation, nous prendrons les mesures nécessaires pour les supprimer.</p>
+          <p>Ephemer.name n&apos;est pas destiné spécifiquement aux enfants. Si vous êtes mineur, utilisez le service avec l&apos;accord d&apos;un parent ou représentant légal.</p>
+          <p>Si nous apprenons que des données ont été collectées auprès d&apos;un mineur sans autorisation, nous prendrons les mesures nécessaires pour les supprimer.</p>
         </Section>
 
         {/* 17 */}
@@ -223,7 +223,7 @@ export default function ConfidentialitePage() {
         {/* Encart contact */}
         <div className="mt-10 p-5 rounded-xl bg-white/5 border border-white/10">
           <h2 className="text-lg font-semibold text-white mb-2">Contact</h2>
-          <p className="mb-2">Pour toute question concernant cette politique ou l'utilisation de vos données, écrivez-nous à :</p>
+          <p className="mb-2">Pour toute question concernant cette politique ou l&apos;utilisation de vos données, écrivez-nous à :</p>
           <p><Mail /></p>
         </div>
 

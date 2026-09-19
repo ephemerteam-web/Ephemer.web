@@ -48,8 +48,8 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-            // Mis en cache 1 AN côté navigateur (ces fichiers ne changent jamais)
+            value: "public, max-age=3600, must-revalidate",
+            // Les assets public/ non versionnés peuvent changer à chaque déploiement.
           },
         ],
       },

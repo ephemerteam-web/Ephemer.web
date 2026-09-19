@@ -142,8 +142,8 @@ function AndroidGuide() {
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
         <p className="text-blue-300 text-xs">
           💡 <strong>Astuce :</strong> Pour une meilleure expérience, tu peux aussi
-          ajouter Ephemer à ton écran d'accueil :
-          menu du navigateur (⋮) → « Ajouter à l'écran d'accueil ».
+          ajouter Ephemer à ton écran d&apos;accueil :
+          menu du navigateur (⋮) → « Ajouter à l&apos;écran d&apos;accueil ».
         </p>
       </div>
     </div>
@@ -159,13 +159,13 @@ function IPhoneGuide() {
       <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3">
         <p className="text-amber-300 text-sm font-medium">
           ⚠️ Important : Sur iPhone, les notifications ne fonctionnent que via
-          <strong> Safari</strong> et après avoir ajouté le site à l'écran d'accueil.
+          <strong> Safari</strong> et après avoir ajouté le site à l&apos;écran d&apos;accueil.
         </p>
       </div>
 
       <div className="bg-gray-700/50 rounded-lg p-3">
         <p className="text-gray-300 text-xs">
-          🍎 C'est une restriction d'Apple. Chrome et Firefox sur iPhone ne
+          🍎 C&apos;est une restriction d&apos;Apple. Chrome et Firefox sur iPhone ne
           permettent pas les notifications web. Utilise <strong>Safari</strong> pour cette manipulation.
         </p>
       </div>
@@ -205,9 +205,9 @@ function IPhoneGuide() {
 
       <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 mt-4">
         <p className="text-blue-300 text-xs">
-          💡 <strong>Bon à savoir :</strong> Une fois ajouté à l'écran d'accueil,
-          Ephemer fonctionne comme une vraie application. Tu n'as à faire
-          cette manipulation qu'une seule fois !
+          💡 <strong>Bon à savoir :</strong> Une fois ajouté à l&apos;écran d&apos;accueil,
+          Ephemer fonctionne comme une vraie application. Tu n&apos;as à faire
+          cette manipulation qu&apos;une seule fois !
         </p>
       </div>
     </div>
@@ -458,7 +458,7 @@ function MockupScreen({ type }: { type: string }) {
             <div className="text-2xl mb-1">🔔</div>
             <p className="text-white text-[10px] font-medium">ephemer.name</p>
             <p className="text-gray-400 text-[9px] mt-0.5">
-              souhaite t'envoyer des notifications
+              souhaite t&apos;envoyer des notifications
             </p>
           </div>
           <div className="flex gap-2 mt-3">
@@ -492,7 +492,7 @@ function MockupScreen({ type }: { type: string }) {
               <div className="bg-blue-500/20 border border-blue-500/40 rounded-lg p-2 mb-1">
                 <span className="text-sm">📱</span>
               </div>
-              <span className="text-blue-300 text-[8px] font-medium">Écran d'accueil</span>
+              <span className="text-blue-300 text-[8px] font-medium">Écran d&apos;accueil</span>
             </div>
             <div className="text-center">
               <div className="bg-gray-700 rounded-lg p-2 mb-1">
@@ -508,7 +508,7 @@ function MockupScreen({ type }: { type: string }) {
         <div className="bg-gray-800 rounded-lg p-3">
           <div className="text-center mb-2">
             <div className="text-2xl mb-1">📱</div>
-            <p className="text-white text-[10px] font-medium">Ajouter à l'écran d'accueil</p>
+            <p className="text-white text-[10px] font-medium">Ajouter à l&apos;écran d&apos;accueil</p>
           </div>
           <div className="flex items-center gap-2 bg-gray-700/50 rounded-lg p-2 mb-3">
             <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">

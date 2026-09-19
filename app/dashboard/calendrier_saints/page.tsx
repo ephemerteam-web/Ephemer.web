@@ -101,7 +101,7 @@ export default function CalendrierSaintsPage() {
     async function loadContacts() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
-        router.push('/login')
+        router.push('/connexion')
         return
       }
 
@@ -365,7 +365,7 @@ function CardSaint({
 
         <div className="flex-1 min-w-0">
           <button
-            onClick={() => ouvrirDrawer(fete.contact as any)}
+            onClick={() => ouvrirDrawer({ est_favori: null, telephone_indicatif: null, telephone_numero: null, note: null, ...fete.contact })}
             className="font-semibold text-white truncate hover:text-[#C8A84E] transition text-left block w-full"
           >
             {fete.contact.prenom} {fete.contact.nom}
@@ -418,7 +418,7 @@ function RowSaint({
         </span>
 
         <button
-          onClick={() => ouvrirDrawer(fete.contact as any)}
+          onClick={() => ouvrirDrawer({ est_favori: null, telephone_indicatif: null, telephone_numero: null, note: null, ...fete.contact })}
           className="text-white text-sm truncate hover:text-[#C8A84E] transition text-left"
         >
           {fete.contact.prenom} {fete.contact.nom}

@@ -80,6 +80,7 @@ export default function InscriptionPage() {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
+      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
     })
 
     if (error) {
@@ -98,6 +99,10 @@ export default function InscriptionPage() {
     }
 
     setIsError(false)
+    if (data.session) {
+      router.replace('/completer-profil')
+      return
+    }
     setMessage('✅ Compte créé ! Vérifie ton email 📧 puis connecte-toi.')
 
     setEmail('')

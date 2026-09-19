@@ -1,6 +1,5 @@
 'use client'
-
-import { useState } from 'react'
+import { useClock } from '@/lib/hooks/useClock'
 
 type Invitation = {
   id: string
@@ -28,8 +27,7 @@ export default function CarteInvitation({
   onDesactiver,
   copie,
 }: Props) {
-  const [showQR, setShowQR] = useState(false)
-
+  const now = useClock()
   // ── Calculs d'affichage ──
   const origine =
     typeof window !== 'undefined' ? window.location.origin : 'https://ephemer.name'
@@ -40,15 +38,10 @@ export default function CarteInvitation({
   const complet = invitation.nb_utilisations >= invitation.max_utilisations
 
   const joursRestants = Math.ceil(
-    (new Date(invitation.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    (new Date(invitation.expires_at).getTime() - now) / (1000 * 60 * 60 * 24)
   )
-  const expire = joursRestants <= 0
+  const expire = now > 0 && new Date(invitation.expires_at).getTime() <= now
   const inactif = !invitation.actif || complet || expire
-
-  // QR code via API gratuite (aucune librairie à installer)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(
-    url
-  )}&bgcolor=0B1120&color=C8A84E&margin=10`
 
   return (
     <div
@@ -121,14 +114,6 @@ export default function CarteInvitation({
           💬 Partager
         </button>
 
-        <button
-          onClick={() => setShowQR(!showQR)}
-          disabled={inactif}
-          className="flex-1 min-w-[80px] text-xs font-medium text-indigo-200 hover:text-white border border-indigo-400/30 hover:bg-indigo-500/10 px-3 py-2.5 rounded-lg transition active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {showQR ? '✕' : '🔲 QR'}
-        </button>
-
         {invitation.actif && !complet && !expire && (
           <button
             onClick={() => {
@@ -143,20 +128,6 @@ export default function CarteInvitation({
         )}
       </div>
 
-      {/* ─────── QR CODE dépliable (taille adaptée pour mobile) ─────── */}
-      {showQR && (
-        <div className="mt-4 pt-4 border-t border-white/10 flex flex-col items-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrUrl}
-            alt="QR code du lien d'invitation"
-            className="rounded-xl border border-[#C8A84E]/30 w-48 h-48 max-w-full"
-          />
-          <p className="text-indigo-300/70 text-xs mt-3 text-center">
-            Scanne ce code 📱
-          </p>
-        </div>
-      )}
     </div>
   )
 }

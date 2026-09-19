@@ -5,9 +5,11 @@ import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
 import Link from 'next/link'
+import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
 
 export default function ConnexionPage() {
   const router = useRouter()
+  const callbackFailed = useBrowserValue(() => new URLSearchParams(window.location.search).has('auth_error'), false)
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -44,11 +46,18 @@ export default function ConnexionPage() {
 
     const userId = data.user.id
 
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
       .select('prenom, nom, date_naissance')
       .eq('id', userId)
       .maybeSingle()
+
+    if (profileError) {
+      setIsError(true)
+      setMessage('Connexion établie, mais le profil est indisponible. Réessaie.')
+      setLoading(false)
+      return
+    }
 
     const profilIncomplet =
       !profile ||
@@ -79,7 +88,7 @@ export default function ConnexionPage() {
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/reinitialiser-mot-de-passe`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
     })
 
     if (error) {
@@ -92,6 +101,7 @@ export default function ConnexionPage() {
 
   return (
     <AppLayout>
+      {callbackFailed && <p role="alert" className="p-4 text-rose-300">Le lien de connexion a expiré ou est invalide. Reconnecte-toi ou demande un nouveau lien.</p>}
       <div className="min-h-screen flex flex-col justify-center px-4 pb-10">
 
         <div className="w-full max-w-md mx-auto">
@@ -200,7 +210,7 @@ export default function ConnexionPage() {
             <p className="text-center text-sm text-white/40 mt-6">
               Pas encore de compte ?{' '}
               <Link href="/inscription" className="text-[#C8A84E]">
-                S'inscrire
+                S&apos;inscrire
               </Link>
             </p>
 

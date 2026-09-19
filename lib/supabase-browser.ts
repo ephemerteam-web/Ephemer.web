@@ -3,7 +3,7 @@
 // À utiliser dans les composants React ('use client')
 // ============================================
 
-import { createClient } from '@supabase/supabase-js'
+import { createBrowserClient } from '@supabase/ssr'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 // Configuration pour éviter les warnings EventEmitter
 // Augmente la limite de listeners pour Supabase
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createBrowserClient(supabaseUrl, supabaseAnonKey, {
   realtime: {
     params: {
       eventsPerSecond: 10,

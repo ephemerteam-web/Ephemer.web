@@ -1,3 +1,4 @@
+import { parisDay, parseLocalDay } from '@/lib/calendar-day';
 // app/api/envoyer-newsletter/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { resend } from '@/lib/resend';
@@ -28,21 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // ⬇️⬇️⬇️ TOUT LE RESTE DE TON FICHIER RESTE IDENTIQUE ⬇️⬇️⬇️
-    // ─────────────────────────────────────────────
-    // 1️⃣ SÉCURITÉ : on vérifie le mot de passe
-    // (un "secret" = un mot de passe caché dans Vercel,
-    //  personne d'autre ne peut déclencher la newsletter)
-    // ─────────────────────────────────────────────
-    const secret = request.nextUrl.searchParams.get('secret');
-    if (secret !== CRON_SECRET) {
-      return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
-    }
-
-    // ─────────────────────────────────────────────
-    // 2️⃣ On calcule le mois en cours
-    // ─────────────────────────────────────────────
-    const maintenant = new Date();
+    const maintenant = parseLocalDay(parisDay());
     const annee = maintenant.getFullYear();
     const mois = maintenant.getMonth(); // 0 = janvier, 11 = décembre
 
@@ -108,7 +95,7 @@ export async function GET(request: NextRequest) {
       for (const contact of mesContacts) {
         // 🅰️ ANNIVERSAIRE : si le contact a une date de naissance CE mois-ci
         if (contact.date_naissance) {
-          const dateNaiss = new Date(contact.date_naissance);
+          const dateNaiss = parseLocalDay(contact.date_naissance);
           if (dateNaiss.getMonth() === mois) {
             evenements.push({
               prenomContact: contact.prenom || 'Contact',
@@ -159,7 +146,7 @@ export async function GET(request: NextRequest) {
           to: profil.email,
           subject: `📅 Votre agenda de ${moisLibelle}`,
           html,
-        });
+        }, { idempotencyKey: `newsletter/${profil.id}/${annee}-${mois + 1}` });
 
         if (error) throw error;
 
@@ -171,12 +158,12 @@ export async function GET(request: NextRequest) {
         });
 
         console.log(`📰 Newsletter envoyée -> ${profil.email} (${evenements.length} événements)`);
-      } catch (err: any) {
-        console.error(`❌ Échec newsletter ${profil.email}:`, err.message);
+      } catch (err: unknown) {
+        console.error(`❌ Échec newsletter ${profil.email}:`, (err instanceof Error ? err.message : 'Erreur inconnue'));
         resultats.push({
           user: profil.email,
           statut: 'erreur',
-          erreur: err.message,
+          erreur: (err instanceof Error ? err.message : 'Erreur inconnue'),
         });
       }
     }
@@ -187,15 +174,15 @@ export async function GET(request: NextRequest) {
     //  pour qu'on sache si ça a marché)
     // ─────────────────────────────────────────────
     return NextResponse.json({
-      success: true,
+      success: !resultats.some(r => r.statut === 'erreur'),
       mois: moisLibelle,
       total_traites: resultats.length,
       resultats,
-    });
-  } catch (err: any) {
+    }, { status: resultats.some(r => r.statut === 'erreur') ? 500 : 200 });
+  } catch (err: unknown) {
     console.error('❌ Erreur générale newsletter:', err);
     return NextResponse.json(
-      { error: 'Erreur interne', details: err.message },
+      { error: 'Erreur interne', details: (err instanceof Error ? err.message : 'Erreur inconnue') },
       { status: 500 }
     );
   }

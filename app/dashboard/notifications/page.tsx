@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
+import { useClock } from '@/lib/hooks/useClock'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
@@ -30,6 +31,7 @@ function Toggle({ actif, onChange, titre, description, emoji, desactive = false 
 
 export default function CentreNotifications() {
   const router = useRouter()
+  const now = useClock()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [prefs, setPrefs] = useState<Preferences>(PREFS_DEFAUT)
   const [chargement, setChargement] = useState(true)
@@ -61,7 +63,7 @@ export default function CentreNotifications() {
     })
     const data = await res.json()
     setTestResult(data.success
-      ? { success: true, message: `✅ Test terminé ! ${data.notifs} notification(s) créée(s), ${data.emails} email(s) envoyé(s).` }
+      ? { success: true, message: `✅ Simulation terminée ! ${data.notifs} notification(s) créée(s), ${data.emails} email(s) envoyé(s).` }
       : { success: false, message: `❌ Erreur : ${data.error || 'Erreur inconnue'}` })
   } catch { setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
   finally { setTestLoading(false) }
@@ -72,9 +74,9 @@ export default function CentreNotifications() {
   }
 
   const chargerTout = useCallback(async () => {
-    setChargement(true); setErreur(null)
     const { data: { user }, error: errUser } = await supabase.auth.getUser()
     if (errUser || !user) { router.push('/connexion'); return }
+    setChargement(true); setErreur(null)
     setUserId(user.id)
     const { data: notifs, error: errNotifs } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).order('event_date', { ascending: true })
     if (errNotifs) { console.error('❌ Erreur chargement notifications :', errNotifs.message); flash('erreur', `Impossible de charger tes notifications : ${errNotifs.message}`) }
@@ -84,7 +86,11 @@ export default function CentreNotifications() {
     else if (pref) setPrefs({ canal_email: pref.canal_email, canal_push: pref.canal_push, rappel_j7: pref.rappel_j7, rappel_j3: pref.rappel_j3, rappel_j1: pref.rappel_j1, rappel_jourj: pref.rappel_jourj, newsletter_mensuelle: pref.newsletter_mensuelle })
     setChargement(false)
   }, [router])
-  useEffect(() => { chargerTout() }, [chargerTout])
+  useEffect(() => {
+    // Chargement réseau initial : aucun état dérivé des props ici.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    chargerTout()
+  }, [chargerTout])
 
   async function marquerLue(id: string) {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: true } : n))
@@ -120,7 +126,8 @@ export default function CentreNotifications() {
   }
   function formaterDate(dateStr: string) { return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }
   function depuisQuand(dateStr: string) {
-    const minutes = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000)
+    if (!now) return formaterDate(dateStr)
+    const minutes = Math.floor((now - new Date(dateStr).getTime()) / 60000)
     if (minutes < 1) return "à l'instant"; if (minutes < 60) return `il y a ${minutes} min`
     const heures = Math.floor(minutes / 60); if (heures < 24) return `il y a ${heures} h`
     const jours = Math.floor(heures / 24); if (jours === 1) return 'hier'; if (jours < 30) return `il y a ${jours} jours`
@@ -146,7 +153,7 @@ export default function CentreNotifications() {
         <div><h2 className="text-white font-bold text-lg mb-3">📡 Comment être prévenu ?</h2><div className="space-y-3"><Toggle emoji="📧" titre="Par email" description="Recevoir les alertes dans ta boîte mail." actif={prefs.canal_email} onChange={v => changerPref('canal_email', v)} desactive={sauvegardePrefs} /><Toggle emoji="🔔" titre="Notifications push" description="Recevoir une alerte sur ton appareil." actif={prefs.canal_push} onChange={v => changerPref('canal_push', v)} desactive={sauvegardePrefs} /></div></div>
         <div><h2 className="text-white font-bold text-lg mb-3">⏰ Quand être prévenu ?</h2><div className="space-y-3"><Toggle emoji="7️⃣" titre="7 jours avant" description="Un rappel une semaine à l'avance." actif={prefs.rappel_j7} onChange={v => changerPref('rappel_j7', v)} desactive={sauvegardePrefs} /><Toggle emoji="1️⃣" titre="1 jour avant" description="Un rappel la veille de l'événement." actif={prefs.rappel_j1} onChange={v => changerPref('rappel_j1', v)} desactive={sauvegardePrefs} /><Toggle emoji="🎯" titre="Le jour J" description="Un rappel le jour même." actif={prefs.rappel_jourj} onChange={v => changerPref('rappel_jourj', v)} desactive={sauvegardePrefs} /></div></div>
         <div><h2 className="text-white font-bold text-lg mb-3">📰 Résumé mensuel</h2><Toggle emoji="🗓" titre="Newsletter du mois" description="Recevoir la liste des événements du mois à venir." actif={prefs.newsletter_mensuelle} onChange={v => changerPref('newsletter_mensuelle', v)} desactive={sauvegardePrefs} /></div>
-        <div className="mt-8 p-6 bg-white/[0.03] rounded-xl border border-white/10"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-white/60 mb-4">Force la génération des notifications et l'envoi d'un email de test pour votre compte uniquement.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-white/[0.06] border border-white/10 text-white/80' : 'bg-white/[0.06] border border-white/10 text-white/80'}`}>{testResult.message}</div>}</div>
+        <div className="mt-8 p-6 bg-white/[0.03] rounded-xl border border-white/10"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-white"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-white/60 mb-4">Simule les rappels de votre compte sans créer de notification ni envoyer d&apos;email.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-white/[0.06] border border-white/10 text-white/80' : 'bg-white/[0.06] border border-white/10 text-white/80'}`}>{testResult.message}</div>}</div>
       </div>}
     </>}
     {modaleSuppression && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"><div className="bg-[#1e1b4b] border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-white font-bold text-lg sm:text-xl mt-4">Supprimer toutes les notifications ?</h3><p className="text-white/60 text-sm mt-2">Cette action est <strong className="text-rose-400">irréversible</strong>.<br />Tu as actuellement <strong className="text-white">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white/70 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Oui, tout supprimer</button></div></div></div>}

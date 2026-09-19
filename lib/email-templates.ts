@@ -1,4 +1,5 @@
 // lib/email-templates.ts
+import { echapperHtml } from './email-html';
 
 // 🎨 CONFIGURATION CENTRALISÉE
 export const EMAIL_CONFIG = {
@@ -85,7 +86,7 @@ export function genererEmailRappel(params: EmailRappelParams): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="format-detection" content="telephone=no">
-  <title>${titreEvenement} - ${EMAIL_CONFIG.brandName}</title>
+  <title>${echapperHtml(titreEvenement)} - ${EMAIL_CONFIG.brandName}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
 
@@ -93,9 +94,9 @@ export function genererEmailRappel(params: EmailRappelParams): string {
   <!-- 📌 PREHEADER (texte invisible pour la preview email) -->
   <!-- ══════════════════════════════════════════════════════════ -->
   <div style="display: none; max-height: 0; overflow: hidden;">
-    ${preheaderText}
+    ${echapperHtml(preheaderText)}
   </div>
-  <!--[if mso | IE]><div style="display: none !important; font-size: 0; line-height: 0; width: 0; height: 0; visibility: hidden;">${preheaderText}</div><![endif]-->
+  <!--[if mso | IE]><div style="display: none !important; font-size: 0; line-height: 0; width: 0; height: 0; visibility: hidden;">${echapperHtml(preheaderText)}</div><![endif]-->
 
   <!-- ══════════════════════════════════════════════════════════ -->
   <!-- 🎯 EMAIL PRINCIPAL -->
@@ -120,7 +121,7 @@ export function genererEmailRappel(params: EmailRappelParams): string {
                       ✨ ${EMAIL_CONFIG.brandName}
                     </p>
                     <p style="margin: 8px 0 0; font-size: 13px; color: rgba(255,255,255,0.9);">
-                      ${style.emoji} ${titreEvenement} • ${timing}
+                      ${style.emoji} ${echapperHtml(titreEvenement)} • ${timing}
                     </p>
                   </td>
                 </tr>
@@ -136,7 +137,7 @@ export function genererEmailRappel(params: EmailRappelParams): string {
 
               <!-- Salutation -->
               <p style="margin: 0 0 20px; font-size: 16px; color: #1e293b; line-height: 1.5;">
-                Bonjour <strong>${prenom}</strong> 👋
+                Bonjour <strong>${echapperHtml(prenom)}</strong> 👋
               </p>
 
               <!-- Bloc de citation/message -->
@@ -144,7 +145,7 @@ export function genererEmailRappel(params: EmailRappelParams): string {
                 <tr>
                   <td style="padding: 20px 24px;">
                     <p style="margin: 0; font-size: 16px; color: #334155; line-height: 1.7; font-style: italic;">
-                      "${message}"
+                      "${echapperHtml(message)}"
                     </p>
                   </td>
                 </tr>
@@ -190,7 +191,7 @@ export function genererEmailRappel(params: EmailRappelParams): string {
                     </p>
                     <p style="margin: 0; font-size: 12px; color: rgba(255,255,255,0.75); line-height: 1.6;">
                       Vous recevez cet email car vous avez programmé un rappel sur <strong>${EMAIL_CONFIG.brandName}</strong>. 
-                      ${expediteurNom ? `Il a été envoyé par ${expediteurNom}.` : ''}
+                      ${expediteurNom ? `Il a été envoyé par ${echapperHtml(expediteurNom)}.` : ''}
                       Cet email est un <strong>rappel personnel</strong> et non une communication marketing.
                     </p>
                   </td>
@@ -331,16 +332,16 @@ export function genererNewsletterMensuelle(params: NewsletterParams): string {
                         <!-- Pastille avec le jour -->
                         <td valign="middle" style="padding-right: 16px;" width="56">
   <div style="width: 56px; height: 56px; background: linear-gradient(135deg, ${couleur}, ${couleur}cc); border-radius: 12px; text-align: center; line-height: 56px; color: #ffffff; font-size: 20px; font-weight: 700; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-    ${evt.jour}
+    ${echapperHtml(evt.jour)}
   </div>
 </td>
                         <!-- Infos du contact -->
                         <td valign="middle">
                           <p style="margin: 0; font-size: 16px; font-weight: 600; color: #1e293b; line-height: 1.3;">
-                            ${evt.emoji} ${evt.prenomContact} ${evt.nomContact}
+                            ${echapperHtml(evt.emoji)} ${echapperHtml(evt.prenomContact)} ${echapperHtml(evt.nomContact)}
                           </p>
                           <p style="margin: 4px 0 0; font-size: 13px; color: #64748b; line-height: 1.3; text-transform: capitalize;">
-                            ${typeCapitalise} • Le ${evt.jour} ${moisLibelle.split(' ')[0]}
+                            ${echapperHtml(typeCapitalise)} • Le ${echapperHtml(evt.jour)} ${echapperHtml(moisLibelle.split(' ')[0])}
                           </p>
                         </td>
                       </tr>
@@ -364,15 +365,15 @@ export function genererNewsletterMensuelle(params: NewsletterParams): string {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="color-scheme" content="light dark">
   <meta name="supported-color-schemes" content="light dark">
-  <title>Votre agenda de ${moisLibelle} - ${EMAIL_CONFIG.brandName}</title>
+  <title>Votre agenda de ${echapperHtml(moisLibelle)} - ${EMAIL_CONFIG.brandName}</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
 
   <!-- Preheader -->
   <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
-    ${preheaderText}
+    ${echapperHtml(preheaderText)}
   </div>
-  <!--[if mso | IE]><div style="display: none !important;">${preheaderText}</div><![endif]-->
+  <!--[if mso | IE]><div style="display: none !important;">${echapperHtml(preheaderText)}</div><![endif]-->
 
   <!-- Wrapper global -->
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9;">
@@ -391,10 +392,10 @@ export function genererNewsletterMensuelle(params: NewsletterParams): string {
                 📅 Votre Agenda
               </p>
               <p style="margin: 10px 0 0; font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; line-height: 1.2;">
-                ${moisLibelle}
+                ${echapperHtml(moisLibelle)}
               </p>
               <p style="margin: 12px 0 0; font-size: 14px; color: rgba(255,255,255,0.9); line-height: 1.5;">
-                Bonjour <strong>${prenomUtilisateur}</strong> 👋<br>
+                Bonjour <strong>${echapperHtml(prenomUtilisateur)}</strong> 👋<br>
                 Voici vos moments importants du mois
               </p>
               <!-- Badge compteur -->

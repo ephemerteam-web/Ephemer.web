@@ -1,13 +1,24 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import Link from 'next/link'
+import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
+
+type InvitationProps = { token: string; prenomHote: string }
+export default function FormulaireInvitation(props: InvitationProps) {
+  const ready = useBrowserValue(() => true, false)
+  return ready ? <InvitationForm key={props.token} {...props} /> : <p>Chargement du formulaire...</p>
+}
+
+function readDraft(token: string): Record<string, unknown> {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem('invitation-' + token) || '{}')
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
+  } catch { return {} }
+}
+import { supabase } from '@/lib/supabase-browser'
 import { GROUPES_INTERETS, INDICATIFS } from './interets'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
 
 const RELATIONS = [
   { valeur: 'famille', emoji: '🏡', label: 'Famille',  sous: 'On partage bien plus qu\'un nom' },
@@ -26,68 +37,49 @@ const MESSAGES_PROGRESSION = [
   'C\'est parti !'
 ]
 
-export default function FormulaireInvitation({
+function InvitationForm({
   token,
   prenomHote,
 }: {
   token: string
   prenomHote: string
 }) {
+  const [draft] = useState(() => readDraft(token))
+  const texte = (key: string, fallback = '') => typeof draft[key] === 'string' ? draft[key] as string : fallback
   const [etape, setEtape] = useState(1)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [termine, setTermine] = useState(false)
 
   // ── Champs du formulaire
-  const [prenom, setPrenom] = useState('')
-  const [nom, setNom] = useState('')
-  const [jour, setJour] = useState('')
-  const [mois, setMois] = useState('')
-  const [annee, setAnnee] = useState('')
-  const [relation, setRelation] = useState('')
-  const [interets, setInterets] = useState<string[]>([])
-  const [noteLibre, setNoteLibre] = useState('')
-  const [email, setEmail] = useState('')
-  const [indicatif, setIndicatif] = useState('+33')
-  const [tel, setTel] = useState('')
+  const [prenom, setPrenom] = useState(() => texte('prenom'))
+  const [nom, setNom] = useState(() => texte('nom'))
+  const [jour, setJour] = useState(() => texte('jour'))
+  const [mois, setMois] = useState(() => texte('mois'))
+  const [annee, setAnnee] = useState(() => texte('annee'))
+  const [relation, setRelation] = useState(() => texte('relation'))
+  const [interets, setInterets] = useState<string[]>(() => Array.isArray(draft.interets) ? draft.interets.filter((v): v is string => typeof v === 'string') : [])
+  const [noteLibre, setNoteLibre] = useState(() => texte('noteLibre'))
+  const [email, setEmail] = useState(() => texte('email'))
+  const [indicatif, setIndicatif] = useState(() => texte('indicatif', '+33'))
+  const [tel, setTel] = useState(() => texte('tel'))
   const [modalInteretsOuvert, setModalInteretsOuvert] = useState(false)
 
   // ── 💾 Sauvegarde automatique (localStorage)
-  useEffect(() => {
-    const saved = localStorage.getItem(`invitation-${token}`)
-    if (saved) {
-      try {
-        const data = JSON.parse(saved)
-        setPrenom(data.prenom || '')
-        setNom(data.nom || '')
-        setJour(data.jour || '')
-        setMois(data.mois || '')
-        setAnnee(data.annee || '')
-        setRelation(data.relation || '')
-        setInterets(data.interets || [])
-        setNoteLibre(data.noteLibre || '')
-        setEmail(data.email || '')
-        setIndicatif(data.indicatif || '+33')
-        setTel(data.tel || '')
-      } catch (e) {
-        console.error('Erreur restauration données:', e)
-      }
-    }
-  }, [token])
-
   // Sauvegarder à chaque changement
   useEffect(() => {
     const data = {
       prenom, nom, jour, mois, annee, relation,
       interets, noteLibre, email, indicatif, tel
     }
-    localStorage.setItem(`invitation-${token}`, JSON.stringify(data))
-  }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, token])
+    if (termine) return
+    try { localStorage.setItem(`invitation-${token}`, JSON.stringify(data)) } catch { /* Stockage indisponible : le formulaire reste utilisable. */ }
+  }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, token, termine])
 
   // Nettoyer après succès
   useEffect(() => {
     if (termine) {
-      localStorage.removeItem(`invitation-${token}`)
+      try { localStorage.removeItem(`invitation-${token}`) } catch { /* Stockage indisponible. */ }
     }
   }, [termine, token])
 
@@ -146,14 +138,8 @@ export default function FormulaireInvitation({
       return
     }
 
-    // ── 🆕 NOTIFIER L'HÔTE (notification + email)
-    fetch('/api/invitation-notifier', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    }).catch((err) => {
-      console.error('Erreur notification hôte:', err)
-    })
+    // Le contact est enregistré par la RPC. Les alertes à l’hôte sont
+    // suspendues tant qu’une soumission ne peut pas être identifiée sûrement.
 
     setTermine(true)
   }
@@ -168,11 +154,11 @@ export default function FormulaireInvitation({
           <div className="text-6xl mb-6 animate-bounce">🎉</div>
 
           <h1 className="text-2xl sm:text-3xl font-semibold text-white mb-4">
-            C'est noté, {prenom} !
+            C&apos;est noté, {prenom} !
           </h1>
 
           <p className="text-white/60 leading-relaxed mb-8">
-            {prenomHote} a maintenant tout ce qu'il faut pour penser à toi
+            {prenomHote} a maintenant tout ce qu&apos;il faut pour penser à toi
             au bon moment. Tu peux fermer cette page.
           </p>
 
@@ -192,12 +178,12 @@ export default function FormulaireInvitation({
               Crée ton compte Ephemer et ne plus jamais oublier les anniversaires,
               fêtes et moments importants des gens qui comptent pour toi.
             </p>
-            <a
+            <Link
               href="/"
               className="inline-block rounded-xl bg-[#C9A961] px-6 py-3.5 font-medium text-[#0F1017] transition hover:bg-[#D4B570] active:scale-[0.98]"
             >
-              Rejoindre l'aventure →
-            </a>
+              Rejoindre l&apos;aventure →
+            </Link>
             <p className="text-xs text-white/25 mt-3">
               Gratuit · 30 secondes · Sans engagement
             </p>
@@ -207,7 +193,7 @@ export default function FormulaireInvitation({
 
           <p className="text-xs tracking-[0.2em] uppercase text-white/25">Ephemer</p>
           <p className="text-white/30 text-sm mt-2">
-            N'oublie plus jamais les dates qui comptent.
+            N&apos;oublie plus jamais les dates qui comptent.
           </p>
         </div>
       </main>
@@ -327,7 +313,7 @@ export default function FormulaireInvitation({
                   />
                 </div>
                 <p className="text-xs text-white/25 mt-2">
-                  L'année n'est pas obligatoire, on ne dira rien 🤫
+                  L&apos;année n&apos;est pas obligatoire, on ne dira rien 🤫
                 </p>
               </div>
 
@@ -353,10 +339,10 @@ export default function FormulaireInvitation({
                   Étape 2 sur {TOTAL_ETAPES}
                 </p>
                 <h2 className="text-lg font-medium text-white">
-                  {prenomHote} et toi, c'est…
+                  {prenomHote} et toi, c&apos;est…
                 </h2>
                 <p className="text-sm text-white/40 mt-1.5">
-                  Ça l'aidera à trouver le bon ton.
+                  Ça l&apos;aidera à trouver le bon ton.
                 </p>
               </div>
 
@@ -414,10 +400,10 @@ export default function FormulaireInvitation({
                   Étape 3 sur {TOTAL_ETAPES}
                 </p>
                 <h2 className="text-lg font-medium text-white">
-                  Qu'est-ce qui te fait plaisir ?
+                  Qu&apos;est-ce qui te fait plaisir ?
                 </h2>
                 <p className="text-sm text-white/40 mt-1.5">
-                  Choisis tes centres d'intérêt pour aider {prenomHote} à trouver de bonnes idées.
+                  Choisis tes centres d&apos;intérêt pour aider {prenomHote} à trouver de bonnes idées.
                 </p>
               </div>
 
@@ -430,10 +416,10 @@ export default function FormulaireInvitation({
                 >
                   <span className="text-2xl block mb-2">🎯</span>
                   <span className="text-white font-medium block">
-                    Choisir mes centres d'intérêt
+                    Choisir mes centres d&apos;intérêt
                   </span>
                   <span className="text-sm text-white/40 mt-1 block">
-                    Touche ce qui te ressemble — c'est rapide !
+                    Touche ce qui te ressemble — c&apos;est rapide !
                   </span>
                 </button>
               ) : (
@@ -444,7 +430,7 @@ export default function FormulaireInvitation({
                         {interets.length}
                       </span>
                       <span className="text-white font-medium text-sm">
-                        centre{interets.length > 1 ? 's' : ''} d'intérêt choisi{interets.length > 1 ? 's' : ''}
+                        centre{interets.length > 1 ? 's' : ''} d&apos;intérêt choisi{interets.length > 1 ? 's' : ''}
                       </span>
                     </div>
                     <button
@@ -543,7 +529,7 @@ export default function FormulaireInvitation({
               {/* ── Titre + suggestions ── */}
               <div className="flex-shrink-0 px-5 pt-5 pb-3">
                 <h2 className="text-xl font-semibold text-white mb-1">
-                  Qu'est-ce qui te fait plaisir ?
+                  Qu&apos;est-ce qui te fait plaisir ?
                 </h2>
                 <p className="text-sm text-white/40">
                   Touche tout ce qui te ressemble.
@@ -624,7 +610,7 @@ export default function FormulaireInvitation({
                   Où te souhaiter tout ça ?
                 </h2>
                 <p className="text-sm text-white/40 mt-1.5">
-                  Uniquement pour que {prenomHote} puisse te joindre. Rien d'autre.
+                  Uniquement pour que {prenomHote} puisse te joindre. Rien d&apos;autre.
                 </p>
               </div>
 
@@ -713,13 +699,13 @@ export default function FormulaireInvitation({
             <p className="text-sm text-white/50 leading-relaxed mb-2">
               Toi aussi, tu as des gens qui comptent&nbsp;?
             </p>
-            <a
+            <Link
               href="/"
               className="inline-flex items-center gap-1.5 text-sm text-[#C9A961] hover:text-[#D4B570] transition font-medium"
             >
               Crée ton compte Ephemer et ne les oublie plus jamais
               <span className="text-base">→</span>
-            </a>
+            </Link>
           </div>
 
           <div className="flex items-center justify-center gap-4 text-xs">

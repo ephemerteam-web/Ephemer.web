@@ -1,3 +1,4 @@
+import { parseLocalDay, nextBirthdayDay, daysBetween } from './calendar-day'
 // lib/date-utils.ts
 // ============================================
 // 📅 FICHIER CENTRAL — TOUTES les fonctions liées aux dates
@@ -93,8 +94,8 @@ function prochaineOccurrence(mois: number, jour: number): Date {
 
 // Calcule la prochaine date d'anniversaire à partir d'une date de naissance
 function prochainAnniversaire(dateNaissance: string): Date {
-  const naissance = new Date(dateNaissance)
-  return prochaineOccurrence(naissance.getMonth() + 1, naissance.getDate())
+  const naissance = parseLocalDay(dateNaissance)
+  return parseLocalDay(nextBirthdayDay(formatDateLocale(naissance), formatDateLocale(new Date())))
 }
 
 // Trouve la fête prénomale d'un contact dans saints.ts
@@ -115,8 +116,7 @@ function joursRestants(date: Date): number {
   const cible = new Date(date)
   cible.setHours(0, 0, 0, 0)
 
-  const differenceMs = cible.getTime() - aujourdhui.getTime()
-  return Math.round(differenceMs / (1000 * 60 * 60 * 24))
+  return daysBetween(formatDateLocale(aujourdhui), formatDateLocale(cible))
 }
 
 // ============================================
@@ -144,16 +144,11 @@ export function calculerDateEvenement(
       return prochaineOccurrence(12, 25)
 
     case 'fete_des_meres':
-      // ⚠️ Approximation (dernier dimanche de mai) — à affiner plus tard
-      return prochaineOccurrence(5, 26)
-
     case 'fete_des_peres':
-      // ⚠️ Approximation (3e dimanche de juin) — à affiner plus tard
-      return prochaineOccurrence(6, 16)
-
     case 'paques':
-      // ⚠️ Approximation — calcul exact à faire plus tard
-      return prochaineOccurrence(4, 20)
+      // Une date mobile ne doit pas utiliser une approximation fixe.
+      // Demander une date explicite tant que le calendrier pays n'est pas défini.
+      return null
 
     default:
       return null
@@ -246,31 +241,12 @@ export function prochainEvenementContact(
 }
 // Calcule la prochaine date d'anniversaire, les jours restants et l'âge à venir
 export function calculerProchainAnniversaire(dateNaissance: string) {
-  const naissance = new Date(dateNaissance)
+  const naissance = parseLocalDay(dateNaissance)
   const aujourdhui = new Date()
   aujourdhui.setHours(0, 0, 0, 0)
 
-  const anneeActuelle = aujourdhui.getFullYear()
-
-  // Anniversaire cette année
-  let prochainAnniv = new Date(
-    anneeActuelle,
-    naissance.getMonth(),
-    naissance.getDate()
-  )
-
-  // Si déjà passé, on prend l'année prochaine
-  if (prochainAnniv < aujourdhui) {
-    prochainAnniv = new Date(
-      anneeActuelle + 1,
-      naissance.getMonth(),
-      naissance.getDate()
-    )
-  }
-
-  // Nombre de jours restants
-  const diffMs = prochainAnniv.getTime() - aujourdhui.getTime()
-  const joursRestants = Math.round(diffMs / (1000 * 60 * 60 * 24))
+  const prochainAnniv = parseLocalDay(nextBirthdayDay(dateNaissance, formatDateLocale(aujourdhui)))
+  const joursRestants = daysBetween(formatDateLocale(aujourdhui), formatDateLocale(prochainAnniv))
 
   // Âge qu'aura la personne à ce prochain anniversaire
   const ageAVenir = prochainAnniv.getFullYear() - naissance.getFullYear()

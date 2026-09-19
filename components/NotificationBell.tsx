@@ -125,6 +125,8 @@ export default function NotificationBell() {
 
   // ── Initialisation au chargement ────────────────────────────
   useEffect(() => {
+    // Chargement réseau initial : les mises à jour suivent la réponse Supabase.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     chargerNotifications()
   }, [chargerNotifications])
 

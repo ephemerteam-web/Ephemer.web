@@ -245,7 +245,7 @@ export default function CalendrierPage() {
                 onClick={allerAujourdhui}
                 className="px-4 py-2 rounded-full bg-[#C8A84E]/20 hover:bg-[#C8A84E]/30 active:bg-[#C8A84E]/40 text-[#C8A84E] text-xs sm:text-sm font-medium transition touch-manipulation"
               >
-                📅 Aujourd'hui
+                📅 Aujourd&apos;hui
               </button>
             </div>
 
@@ -330,7 +330,7 @@ export default function CalendrierPage() {
               </div>
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-white/30" />
-                <span className="text-xs text-white/40">Aujourd'hui</span>
+                <span className="text-xs text-white/40">Aujourd&apos;hui</span>
               </div>
             </div>
 
@@ -608,7 +608,7 @@ function PanelRecherche({
 
       {recherche.trim().length > 0 && resultatsRecherche.length === 0 && (
         <p className="text-white/30 text-sm text-center py-4">
-          Aucun résultat pour "{recherche}"
+          Aucun résultat pour &quot;{recherche}&quot;
         </p>
       )}
 

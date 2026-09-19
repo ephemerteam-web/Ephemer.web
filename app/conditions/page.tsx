@@ -15,13 +15,13 @@ export default function ConditionsPage() {
           href="/"
           className="text-sm text-[#C8A84E] hover:text-[#e0c46a] transition-colors"
         >
-          ← Retour à l'accueil
+          ← Retour à l&apos;accueil
         </Link>
 
         {/* En-tête */}
         <header className="mt-8 mb-10">
           <h1 className="text-3xl sm:text-4xl font-bold text-white leading-tight mb-3">
-            Conditions Générales d'Utilisation (CGU)
+            Conditions Générales d&apos;Utilisation (CGU)
           </h1>
           <p className="text-sm text-gray-500">
             Dernière mise à jour : 18 mai 2026
@@ -30,29 +30,29 @@ export default function ConditionsPage() {
 
         {/* 1 */}
         <Section titre="1. Objet">
-          <p>Les présentes Conditions Générales d'Utilisation (CGU) ont pour objet de définir les modalités d'utilisation du service Ephemer.name, application permettant la gestion de contacts, la génération de messages personnalisés et la planification de rappels d'événements.</p>
+          <p>Les présentes Conditions Générales d&apos;Utilisation (CGU) ont pour objet de définir les modalités d&apos;utilisation du service Ephemer.name, application permettant la gestion de contacts, la génération de messages personnalisés et la planification de rappels d&apos;événements.</p>
         </Section>
 
         {/* 2 */}
         <Section titre="2. Acceptation des conditions">
-          <p>En accédant et en utilisant le service, l'utilisateur accepte sans réserve les présentes CGU. En cas de désaccord, l'utilisateur doit cesser d'utiliser le service.</p>
+          <p>En accédant et en utilisant le service, l&apos;utilisateur accepte sans réserve les présentes CGU. En cas de désaccord, l&apos;utilisateur doit cesser d&apos;utiliser le service.</p>
         </Section>
 
         {/* 3 */}
         <Section titre="3. Accès au service">
-          <p>Le service est accessible gratuitement, hors coûts éventuels liés à l'accès internet. Certaines fonctionnalités peuvent évoluer ou être restreintes sans préavis.</p>
+          <p>Le service est accessible gratuitement, hors coûts éventuels liés à l&apos;accès internet. Certaines fonctionnalités peuvent évoluer ou être restreintes sans préavis.</p>
         </Section>
 
         {/* 4 */}
         <Section titre="4. Création de compte">
-          <p>L'utilisateur s'engage à fournir des informations exactes lors de son inscription. Il est responsable de la confidentialité de ses identifiants.</p>
+          <p>L&apos;utilisateur s&apos;engage à fournir des informations exactes lors de son inscription. Il est responsable de la confidentialité de ses identifiants.</p>
         </Section>
 
         {/* 5 */}
         <Section titre="5. Fonctionnalités">
           <Liste>
             <li>Gestion de contacts (ajout manuel ou import) ;</li>
-            <li>Détection d'événements (anniversaires, fêtes) ;</li>
+            <li>Détection d&apos;événements (anniversaires, fêtes) ;</li>
             <li>Génération de messages personnalisés ;</li>
             <li>Notifications et rappels.</li>
           </Liste>
@@ -60,14 +60,14 @@ export default function ConditionsPage() {
 
         {/* 6 */}
         <Section titre="6. Responsabilités">
-          <p>Ephemer.name met tout en œuvre pour assurer la fiabilité du service, mais ne garantit pas l'absence d'erreurs ou d'interruptions.</p>
-          <p>L'utilisateur est seul responsable de l'utilisation qu'il fait des messages générés.</p>
+          <p>Ephemer.name met tout en œuvre pour assurer la fiabilité du service, mais ne garantit pas l&apos;absence d&apos;erreurs ou d&apos;interruptions.</p>
+          <p>L&apos;utilisateur est seul responsable de l&apos;utilisation qu&apos;il fait des messages générés.</p>
         </Section>
 
         {/* 7 */}
         <Section titre="7. Données personnelles">
           <p>
-            Les données personnelles sont traitées conformément au RGPD. Pour plus d'informations, consultez la{' '}
+            Les données personnelles sont traitées conformément au RGPD. Pour plus d&apos;informations, consultez la{' '}
             <Link href="/confidentialite" className="text-[#C8A84E] hover:text-[#e0c46a] font-medium">
               politique de confidentialité
             </Link>
@@ -82,7 +82,7 @@ export default function ConditionsPage() {
 
         {/* 9 */}
         <Section titre="9. Résiliation">
-          <p>L'utilisateur peut supprimer son compte à tout moment. L'éditeur se réserve le droit de suspendre un compte en cas de non-respect des CGU.</p>
+          <p>L&apos;utilisateur peut supprimer son compte à tout moment. L&apos;éditeur se réserve le droit de suspendre un compte en cas de non-respect des CGU.</p>
         </Section>
 
         {/* 10 */}

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import PWARegistration from '@/components/PWARegistration';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,6 +15,7 @@ const geistMono = Geist_Mono({
 
 // ─── Meta tags classiques (SEO + réseaux sociaux) ───
 export const metadata: Metadata = {
+  metadataBase: new URL('https://ephemer.name'),
   title: "Ephemer — Ne rate plus aucune date importante",
   description:
     "Gérez vos anniversaires, fêtes et événements avec style. Ephemer vous rappelle les dates importantes et génère des messages personnalisés.",
@@ -84,8 +86,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1, // Empêche le zoom accidentel sur mobile (UX app native)
-  userScalable: false,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#0B1120" },
     { media: "(prefers-color-scheme: dark)", color: "#0B1120" },
@@ -129,6 +129,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-[#0B1120] text-white">
+        <PWARegistration />
         {children}
       </body>
     </html>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { programmerMessage } from "@/lib/rappels";
 import { DESTINATAIRES_RAPPEL } from "@/lib/constants";
 import type { Destinataire } from "@/lib/rappels";
-import { formaterDateFR } from "@/lib/date-utils";
+import { formaterDateFR, formatDateLocale } from "@/lib/date-utils";
 
 // ============================================================
 // 📌 TYPES
@@ -80,6 +80,7 @@ export default function ProgrammerRappel({
   }
 
   async function handleProgrammer() {
+    if (programmation.loading || programmation.success) return;
     setProgrammation({ loading: true, success: false, error: "" });
 
     // 🛡️ Sécurité : on doit avoir une date
@@ -113,6 +114,7 @@ export default function ProgrammerRappel({
         emailUtilisateur: session.user.email || "",
         dateOverride: dateEnvoi,
         ton: tone,
+        eventDate: datesPossibles ? formatDateLocale(datesPossibles.jourJ) : undefined,
       });
 
       setProgrammation({ loading: false, success: true, error: "" });
@@ -124,7 +126,7 @@ export default function ProgrammerRappel({
   }
 
   // 🆕 Date min pour le champ date = aujourd'hui (format YYYY-MM-DD)
-  const today = new Date().toISOString().split("T")[0];
+  const today = formatDateLocale(new Date());
 
   return (
     <div className="bg-white/5 rounded-xl p-4 border border-white/10 space-y-4">
@@ -148,7 +150,7 @@ export default function ProgrammerRappel({
 
       {/* Choix de la date d'envoi */}
       <div>
-        <label className="block text-sm text-white/80 mb-2">Date d'envoi :</label>
+        <label className="block text-sm text-white/80 mb-2">Date d&apos;envoi :</label>
         <div className="space-y-2">
           {/* Boutons rapides J-7 / J-1 / Jour J (seulement si datesPossibles dispo) */}
           {datesPossibles &&
@@ -159,6 +161,7 @@ export default function ProgrammerRappel({
             ].map(({ date, label }) => (
               <button
                 key={label}
+                disabled={formatDateLocale(date) < today}
                 onClick={() => {
                   setModePerso(false);
                   setDateEnvoi(date);
@@ -204,10 +207,11 @@ export default function ProgrammerRappel({
         </div>
       </div>
 
+      <p className="text-xs text-white/60">Envoi lors du passage quotidien du service. Si le passage du jour est terminé, le rappel partira au prochain passage.</p>
       {/* Bouton programmer */}
       <button
         onClick={handleProgrammer}
-        disabled={programmation.loading || !message || !dateEnvoi}
+        disabled={programmation.loading || programmation.success || !message || !dateEnvoi}
         className="w-full bg-[#C8A84E] hover:bg-[#B89742] disabled:opacity-50 disabled:cursor-not-allowed text-black font-semibold px-4 py-3 rounded-lg transition"
       >
         {programmation.loading ? "⏳ Programmation..." : "✅ Programmer le rappel"}

@@ -8,10 +8,13 @@
   "background_color": "#0B1120",
   "theme_color": "#0B1120",
   "orientation": "portrait-primary",
-  "categories": ["lifestyle", "productivity", "utilities"],
+  "categories": [
+    "lifestyle",
+    "productivity",
+    "utilities"
+  ],
   "lang": "fr",
   "dir": "ltr",
-
   "icons": [
     {
       "src": "/icon-192.png",
@@ -38,38 +41,43 @@
       "purpose": "maskable"
     }
   ],
-
   "shortcuts": [
     {
       "name": "🎂 Anniversaires du jour",
       "short_name": "Aujourd'hui",
       "description": "Voir les anniversaires du jour",
       "url": "/dashboard/anniversaires",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "📅 Calendrier",
       "short_name": "Calendrier",
       "description": "Vue calendrier complète",
       "url": "/dashboard/calendrier",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "✨ Générer un message",
       "short_name": "Message IA",
       "description": "Créer un message personnalisé",
       "url": "/dashboard/generate",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
-
-  "screenshots": [
-    {
-      "src": "/screenshots/dashboard-mobile.png",
-      "sizes": "540x720",
-      "type": "image/png",
-      "form_factor": "narrow",
-      "label": "Dashboard Ephemer"
-    }
-  ]
+  "id": "/dashboard"
 }

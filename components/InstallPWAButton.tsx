@@ -1,47 +1,54 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useBrowserValue } from '@/lib/hooks/useBrowserValue';
+type InstallPrompt = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> };
 
 export default function InstallPWAButton() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] = useState<InstallPrompt | null>(null);
   const [isInstallable, setIsInstallable] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
+  const [installed, setInstalled] = useState(false);
+  const standalone = useBrowserValue(() => window.matchMedia('(display-mode: standalone)').matches || (navigator as Navigator & { standalone?: boolean }).standalone === true, false);
+  const isIOS = useBrowserValue(() => /iPad|iPhone|iPod/.test(navigator.userAgent), false);
   const [showGuide, setShowGuide] = useState(false);
 
   useEffect(() => {
-    // Détection iOS
-    const isAppleDevice = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    setIsIOS(isAppleDevice);
 
-    const handler = (e: any) => {
+    const handler = (event: Event) => {
+      const e = event as InstallPrompt;
       e.preventDefault();
+      if (window.matchMedia('(display-mode: standalone)').matches) return;
       setDeferredPrompt(e);
       setIsInstallable(true);
     };
 
     window.addEventListener('beforeinstallprompt', handler);
 
-    // Si déjà installé en mode application
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstallable(false);
-    }
 
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    const onInstalled = () => { setInstalled(true); setDeferredPrompt(null); setIsInstallable(false); };
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
   }, []);
 
   const handleInstallClick = async () => {
     if (deferredPrompt && !isIOS) {
       // Installation automatique sur Android
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      console.log(`Installation : ${outcome}`);
-      setDeferredPrompt(null);
-      if (outcome === 'accepted') setIsInstallable(false);
+      try {
+        await deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') setInstalled(true);
+      } catch { setShowGuide(true); }
+      finally { setDeferredPrompt(null); setIsInstallable(false); }
     } else {
       // Guide pour iOS ou navigateurs sans support
       setShowGuide(true);
     }
   };
+
+  if (standalone || installed) return null;
 
   if (showGuide) {
     return (
@@ -52,6 +59,7 @@ export default function InstallPWAButton() {
         </h3>
         
         <div className="text-left space-y-6 text-white/80">
+          {!isIOS && <p className="text-sm">Ouvre le menu de ton navigateur et cherche « Installer l’application » ou « Ajouter à l’écran d’accueil ». Si cette option est absente, continue dans le navigateur.</p>}
           <div>
             <div className="font-medium text-white mb-2">Sur iPhone / iPad :</div>
             <ol className="list-decimal pl-5 space-y-3 text-sm">
@@ -82,7 +90,7 @@ export default function InstallPWAButton() {
       <div className="text-left leading-tight">
         <div className="text-lg">Installer sur mon téléphone</div>
         <div className="text-xs opacity-75">
-          {isIOS ? "Guide iPhone • Ajouter à l’écran d’accueil" : "Installation en 1 clic"}
+          {isIOS ? "Guide iPhone • Ajouter à l’écran d’accueil" : isInstallable ? "Installation disponible" : "Voir les instructions"}
         </div>
       </div>
     </button>

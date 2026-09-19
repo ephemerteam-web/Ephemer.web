@@ -125,7 +125,7 @@ export default function Dashboard() {
   // ============================================
   // ⭐ FAVORIS + leur prochain événement (anniv OU fête prénom)
   // ============================================
-  const favoris = useMemo<any[]>(() => {
+  const favoris = useMemo(() => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
@@ -136,14 +136,14 @@ export default function Dashboard() {
       )
       if (!saintTrouve) return null
       const [mois, jour] = saintTrouve.date.split('-').map(Number)
-      let dateFete = new Date(today.getFullYear(), mois - 1, jour)
+      const dateFete = new Date(today.getFullYear(), mois - 1, jour)
       if (dateFete < today) dateFete.setFullYear(dateFete.getFullYear() + 1)
       return dateFete
     }
 
     const prochainAnniv = (dateNaissance: string): Date => {
       const [, mois, jour] = dateNaissance.split('-').map(Number)
-      let anniv = new Date(today.getFullYear(), mois - 1, jour)
+      const anniv = new Date(today.getFullYear(), mois - 1, jour)
       if (anniv < today) anniv.setFullYear(anniv.getFullYear() + 1)
       return anniv
     }
@@ -169,7 +169,7 @@ export default function Dashboard() {
           }
         }
 
-        return { ...c, prochainEvent }
+        return { email: null, telephone_indicatif: null, telephone_numero: null, relation: null, note: null, ...c, prochainEvent }
       })
       .sort((a, b) => {
         if (!a.prochainEvent) return 1
@@ -275,7 +275,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : (
-            <p className="text-white/30 text-sm">Aucune fête répertoriée aujourd'hui.</p>
+            <p className="text-white/30 text-sm">Aucune fête répertoriée aujourd&apos;hui.</p>
           )}
         </div>
 
@@ -284,20 +284,20 @@ export default function Dashboard() {
         {/* Anniversaires aujourd'hui */}
         <div>
           <p className="text-xs font-semibold text-rose-400 uppercase tracking-wider mb-3">
-            🎂 Anniversaire(s) aujourd'hui
+            🎂 Anniversaire(s) aujourd&apos;hui
           </p>
           {anniversairesAujourdhui.length > 0 ? (
             <div className="flex flex-wrap gap-2.5">
               {anniversairesAujourdhui.map((c) => (
                 <div key={c.id} className="bg-rose-500/10 border border-rose-400/20 rounded-2xl px-4 py-3">
                   <p className="text-white font-bold text-sm">{c.prenom} {c.nom}</p>
-                  <p className="text-rose-300 text-xs mt-0.5">🎉 C'est son anniversaire !</p>
+                  <p className="text-rose-300 text-xs mt-0.5">🎉 C&apos;est son anniversaire !</p>
                 </div>
               ))}
             </div>
           ) : (
             <p className="text-white/40 text-sm italic">
-              Pas d'anniversaire aujourd'hui — profite de la tranquillité 😄
+              Pas d&apos;anniversaire aujourd&apos;hui — profite de la tranquillité 😄
             </p>
           )}
         </div>
@@ -357,7 +357,7 @@ export default function Dashboard() {
 
             {/* ============ ⭐ VEDETTES : L'ESSENTIEL ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-white mb-4">L'essentiel</h2>
+        <h2 className="text-base md:text-lg font-bold text-white mb-4">L&apos;essentiel</h2>
 
         {/* grid-cols-1 = 1 colonne sur mobile | md:grid-cols-2 = 2 colonnes sur tablette/ordinateur */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -480,7 +480,7 @@ export default function Dashboard() {
           className="flex items-center gap-2 text-indigo-300/70 hover:text-indigo-200 text-sm transition-colors"
         >
           <span>💡</span>
-          <span>Besoin d'aide ? Comment ça marche</span>
+          <span>Besoin d&apos;aide ? Comment ça marche</span>
           <span className={`transform transition-transform ${aideOuverte ? 'rotate-180' : ''}`}>▾</span>
         </button>
 

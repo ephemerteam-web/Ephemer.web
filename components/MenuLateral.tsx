@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import PushPermissionButton from './PushPermissionButton'
+import { removePushDevice } from '@/lib/push-device'
 
 type MenuLateralProps = {
   ouvert: boolean
@@ -39,8 +40,23 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   }, [ouvert])
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    router.push('/connexion')
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration('/')
+        const sub = await reg?.pushManager?.getSubscription()
+        if (sub) {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (user) await removePushDevice(user.id, sub)
+          else if (!await sub.unsubscribe()) throw new Error('Désabonnement impossible')
+        }
+      }
+    } catch {
+      window.alert('Impossible de désactiver les notifications de cet appareil. Réessaie avant de te déconnecter.')
+      return
+    }
+    const { error } = await supabase.auth.signOut()
+    if (error) { window.alert('La déconnexion a échoué. Réessaie.'); return }
+    window.location.replace('/connexion')
   }
 
   const naviguerVers = (chemin: string) => {

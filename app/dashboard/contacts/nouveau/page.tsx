@@ -1,6 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
+type PickedContact = { name?: string[]; email?: string[]; tel?: string[] }
+type ContactNavigator = Navigator & { contacts?: { select: (fields: string[], options: { multiple: boolean }) => Promise<PickedContact[]> } }
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import { INDICATIFS_PAYS } from '@/lib/constants'
@@ -40,24 +43,14 @@ export default function NouveauContact() {
 
 
   // États pour l’import téléphone
-  const [isMobile, setIsMobile] = useState(false)
-  const [supporteContactPicker, setSupporteContactPicker] = useState(false)
+  const isMobile = useBrowserValue(() => /android|iphone|ipad|ipod|blackberry|windows phone/i.test(navigator.userAgent), false)
+  const supporteContactPicker = useBrowserValue(() => typeof (navigator as ContactNavigator).contacts?.select === 'function', false)
   const [importEnCours, setImportEnCours] = useState(false)
   const [contactsTelephone, setContactsTelephone] = useState<ContactTelephone[]>([])
 
-  useEffect(() => {
-    const userAgent = navigator.userAgent.toLowerCase()
-    const estMobile = /android|iphone|ipad|ipod|blackberry|windows phone/.test(userAgent)
-
-    setIsMobile(estMobile)
-
-    if ('contacts' in navigator && typeof (navigator as any).contacts?.select === 'function') {
-      setSupporteContactPicker(true)
-    }
-  }, [])
 
   const nettoyerNumeroTelephone = (tel: string): { indicatif: string; numero: string } => {
-    let cleaned = tel.replace(/[^0-9+]/g, '')
+    const cleaned = tel.replace(/[^0-9+]/g, '')
 
     if (cleaned.startsWith('+33')) {
       return { indicatif: '+33', numero: cleaned.slice(3) }
@@ -88,7 +81,9 @@ export default function NouveauContact() {
     setErreur('')
 
     try {
-      const contactsSelectionnes = await (navigator as any).contacts.select(
+      const picker = (navigator as ContactNavigator).contacts
+      if (!picker) throw new Error('Import non disponible')
+      const contactsSelectionnes = await picker.select(
         ['name', 'email', 'tel'],
         { multiple: true }
       )
@@ -99,7 +94,7 @@ export default function NouveauContact() {
       }
 
       const contactsFormates: ContactTelephone[] = contactsSelectionnes.map(
-        (contact: any, index: number) => {
+        (contact: PickedContact, index: number) => {
           const nomComplet = contact.name?.[0] || ''
           const noms = separerPrenomNom(nomComplet)
 
@@ -133,10 +128,10 @@ export default function NouveauContact() {
           contactsFormates.length > 1 ? 's' : ''
         } prêt${contactsFormates.length > 1 ? 's' : ''} à importer. Vérifie la liste ci-dessous.`
       )
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Contact Picker Error:', error)
 
-      if (error.name === 'AbortError') {
+      if (error instanceof Error && error.name === 'AbortError') {
         setErreur('Import annulé.')
       } else {
         setErreur(

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
+import type { Session } from '@supabase/supabase-js';
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
@@ -13,6 +14,8 @@ import {
   necessiteDateManuelle,
 } from "@/lib/constants";
 import { genererMessage } from "@/lib/api-messages";
+import { parseLocalDay, isCalendarDay } from '@/lib/calendar-day';
+import { formatDateLocale } from '@/lib/date-utils';
 import ProgrammerRappel from "@/components/ProgrammerRappel";
 import { useDrawer } from "@/components/DrawerContext"; // ← On importe le contexte !
 
@@ -85,7 +88,7 @@ function GenerateForm() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [session, setSession] = useState<any | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourJ");
   const [dateCustom, setDateCustom] = useState<string>("");
   const [eventDate, setEventDate] = useState<string>("");
@@ -106,7 +109,7 @@ function GenerateForm() {
     setRelation(contact.relation || "ami");
 
     if (contact.date_naissance) {
-      const naissance = new Date(contact.date_naissance);
+      const naissance = parseLocalDay(contact.date_naissance);
       const aujourdhui = new Date();
       let ageCalcule = aujourdhui.getFullYear() - naissance.getFullYear();
       const anniversaireCetteAnnee = new Date(
@@ -176,7 +179,7 @@ function GenerateForm() {
       if (needsManualDate && eventDate) {
         dateEvenementPourIA = eventDate;
       } else if (datesPossibles) {
-        dateEvenementPourIA = datesPossibles.jourJ.toISOString().split("T")[0];
+        dateEvenementPourIA = formatDateLocale(datesPossibles.jourJ);
       }
 
       const messageGenere = await genererMessage({
@@ -251,9 +254,8 @@ function GenerateForm() {
     if (!selectedContact) return null;
 
     if (needsManualDate && eventDate) {
-      const dateSaisie = new Date(eventDate);
-      const prochaineDate = prochaineOccurrenceAnnuelle(dateSaisie);
-      return calculerDatesJ7J1JourJ(prochaineDate);
+      if (!isCalendarDay(eventDate)) return null;
+      return calculerDatesJ7J1JourJ(parseLocalDay(eventDate));
     }
 
     const typeEvt = EVENT_TYPE_MAP[eventType];
@@ -504,7 +506,7 @@ function GenerateForm() {
             {/* Type d'événement */}
             <div>
               <label className="block text-sm font-medium text-white/60 mb-1">
-                Type d'événement <span className="text-red-400">*</span>
+                Type d&apos;événement <span className="text-red-400">*</span>
               </label>
               <AppSelect
                 options={TYPES_EVENEMENT.map((type) => ({ value: type.value, label: type.label }))}
@@ -524,7 +526,7 @@ function GenerateForm() {
               <div className="space-y-4 pt-4 border-t border-white/10">
                 <div>
                   <label className="block text-sm font-medium text-white/60 mb-1">
-                    📅 Date de l'événement <span className="text-red-400">*</span>
+                    📅 Date de l&apos;événement <span className="text-red-400">*</span>
                   </label>
                   <input
                     type="date"
@@ -616,6 +618,7 @@ function GenerateForm() {
             {message && selectedContact && session && (
               <>
                 <ProgrammerRappel
+                  key={String(selectedContact.id) + eventType + eventDate + message}
                   session={session}
                   selectedContact={selectedContact}
                   message={message}
@@ -630,13 +633,13 @@ function GenerateForm() {
                     ℹ️ Pas de date automatique pour cet événement.
                     {eventType === "fete_prenomale" && (
                       <p className="mt-1">
-                        Le prénom <strong>{selectedContact.prenom}</strong> n'a pas été trouvé
+                        Le prénom <strong>{selectedContact.prenom}</strong> n&apos;a pas été trouvé
                         dans notre calendrier des saints.
                       </p>
                     )}
                     {eventType === "anniversaire" && !selectedContact.date_naissance && (
                       <p className="mt-1">
-                        Ce contact n'a pas de <strong>date de naissance</strong> renseignée.
+                        Ce contact n&apos;a pas de <strong>date de naissance</strong> renseignée.
                       </p>
                     )}
                     <p className="mt-2">
@@ -648,7 +651,7 @@ function GenerateForm() {
                 {/* ✅ Avertissement email manquant */}
                 {!selectedContact.email && (
                   <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-orange-200">
-                    ℹ️ Ce contact n'a pas d'<strong>adresse email</strong> renseignée.
+                    ℹ️ Ce contact n&apos;a pas d&apos;<strong>adresse email</strong> renseignée.
                     <p className="mt-2">
                       👉 Clique sur <strong>✏️ Modifier</strong> pour ajouter un email 
                       et pouvoir envoyer des messages par email.

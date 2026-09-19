@@ -1,3 +1,4 @@
+import { parisDay } from '@/lib/calendar-day';
 // app/api/envoyer-rappels/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { resend } from '@/lib/resend';
@@ -6,7 +7,6 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 
 // 🔐 Secrets lus depuis les variables d'environnement (jamais en clair dans le code)
 const CRON_SECRET = process.env.CRON_SECRET;
-const EMAIL_TEST = process.env.EMAIL_TEST || '';
 
 // 🆕 Préférences par défaut (si l'utilisateur n'a jamais réglé ses préférences)
 const PREFS_DEFAUT = {
@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const aujourdhui = new Date().toISOString().split('T')[0];
-    const force = request.nextUrl.searchParams.get('force') === 'true';
+    const aujourdhui = parisDay();
+    const force = false; // Aucun envoi anticipé par paramètre URL.
 
     console.log(`\n📅 === CRON RAPPELS EPHEMER - ${aujourdhui} ===`);
     console.log(`🔧 Mode force : ${force ? 'OUI (tous les rappels programmés)' : 'NON (date_envoi <= aujourd\'hui)'}`);
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       .from('rappels')
       .select(`
         *,
-        contacts (prenom, nom, email)
+        contacts (prenom, nom, email, user_id)
       `)
       .eq('statut', 'programme')
       .order('created_at', { ascending: false });
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
         .in('id', userIds);
 
       if (errorProfils) {
-        console.error('⚠️ Erreur récupération profils:', errorProfils.message);
+        throw errorProfils;
       } else {
         profils?.forEach(p => { if (p.id) profilsMap[p.id] = p; });
       }
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
         .in('user_id', userIds);
 
       if (errorPrefs) {
-        console.error('⚠️ Erreur récupération préférences:', errorPrefs.message);
+        throw errorPrefs;
       } else {
         prefs?.forEach(p => {
           if (p.user_id) {
@@ -136,14 +136,14 @@ export async function GET(request: NextRequest) {
       // 👤 Expéditeur
       const expediteur = profilsMap[rappel.user_id] || {};
       const expediteurNom = `${expediteur.prenom || ''} ${expediteur.nom || ''}`.trim() || 'Un ami Ephemer';
-      const expediteurEmail = expediteur.email || 'noreply@ephemer.name';
+      const expediteurEmail = expediteur.email || '';
 
       // 🤝 Contact (sécurisé contre null/undefined)
       const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '' };
 
       // 📍 Logique de destination
       let destEmail: string | string[];
-      const emailContactFallback = rappel.email_destinataire || EMAIL_TEST;
+      const emailContactFallback = rappel.email_destinataire || contact.email || '';
 
       switch (rappel.destinataire) {
         case 'moi':
@@ -153,9 +153,17 @@ export async function GET(request: NextRequest) {
           destEmail = emailContactFallback;
           break;
         case 'les_deux':
-        default:
           destEmail = [expediteurEmail, emailContactFallback].filter(Boolean);
           break;
+        default:
+          resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Destination inconnue' });
+          continue;
+      }
+      if (!rappel.contacts || contact.user_id !== rappel.user_id ||
+          (rappel.destinataire !== 'contact' && !expediteurEmail) ||
+          (rappel.destinataire !== 'moi' && !emailContactFallback)) {
+        resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Contact ou adresse de destination invalide' });
+        continue;
       }
 
       console.log(`📬 Traitement ID ${rappel.id} -> ${Array.isArray(destEmail) ? destEmail.join(', ') : destEmail}`);
@@ -163,9 +171,9 @@ export async function GET(request: NextRequest) {
       try {
         // ✉️ Envoi via Resend
         const { data, error: errorEmail } = await resend.emails.send({
-          from: `${expediteurNom} <noreply@ephemer.name>`,
+          from: 'Ephemer <noreply@ephemer.name>',
           to: destEmail,
-          replyTo: expediteurEmail,
+          replyTo: expediteurEmail || undefined,
           subject: rappel.sujet_email || `Rappel - ${rappel.type_evenement || 'Événement'}`,
           html: genererEmailRappel({
             prenom: contact.prenom || 'ton contact',
@@ -177,7 +185,7 @@ export async function GET(request: NextRequest) {
             expediteurNom,
             expediteurEmail
           }),
-        });
+        }, { idempotencyKey: `rappel/${rappel.id}` });
 
         if (errorEmail) throw errorEmail;
 
@@ -185,28 +193,28 @@ export async function GET(request: NextRequest) {
         const { error: updateError } = await supabaseAdmin
           .from('rappels')
           .update({ statut: 'envoye', sent_at: new Date().toISOString() })
-          .eq('id', rappel.id);
+          .eq('id', rappel.id)
+          .eq('user_id', rappel.user_id)
+          .eq('statut', 'programme');
 
-        if (updateError) {
-          console.error(`❌ Erreur update statut rappel ${rappel.id}:`, updateError.message);
-        }
+        if (updateError) throw updateError;
 
         resultats.push({ id: rappel.id, statut: 'envoye', emailId: data?.id });
-      } catch (err: any) {
-        console.error(`❌ Échec envoi rappel ${rappel.id}:`, err.message);
-        resultats.push({ id: rappel.id, statut: 'erreur', erreur: err.message });
+      } catch (err: unknown) {
+        console.error(`❌ Échec envoi rappel ${rappel.id}:`, (err instanceof Error ? err.message : 'Erreur inconnue'));
+        resultats.push({ id: rappel.id, statut: 'erreur', erreur: (err instanceof Error ? err.message : 'Erreur inconnue') });
       }
     }
 
     return NextResponse.json({
-      success: true,
+      success: !resultats.some(r => r.statut === 'erreur'),
       date: aujourdhui,
       total_traites: resultats.length,
       resultats,
-    });
+    }, { status: resultats.some(r => r.statut === 'erreur') ? 500 : 200 });
 
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('❌ Erreur générale cron:', err);
-    return NextResponse.json({ error: 'Erreur interne', details: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Erreur interne', details: (err instanceof Error ? err.message : 'Erreur inconnue') }, { status: 500 });
   }
 }

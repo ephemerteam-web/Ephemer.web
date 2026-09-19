@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import AppLayout from '@/components/AppLayout'
@@ -14,6 +14,22 @@ export default function ResetPasswordPage() {
   const [message, setMessage] = useState('')
   const [isError, setIsError] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [sessionReady, setSessionReady] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    void supabase.auth.getUser().then(({ data, error }) => {
+      if (!active) return
+      setSessionReady(!error && !!data.user)
+      if (error || !data.user) {
+        setIsError(true)
+        setMessage('Lien expiré ou session absente. Demande un nouveau lien depuis la connexion.')
+      }
+    }).catch(() => {
+      if (active) { setIsError(true); setMessage('Impossible de vérifier la session. Réessaie.') }
+    })
+    return () => { active = false }
+  }, [])
 
   // ✅ Calcul force mot de passe
   const getStrength = () => {
@@ -23,6 +39,7 @@ export default function ResetPasswordPage() {
   }
 
   const handleResetPassword = async () => {
+    if (!sessionReady || loading) return
     setLoading(true)
     setMessage('')
 
@@ -119,7 +136,7 @@ export default function ResetPasswordPage() {
           {/* BUTTON */}
           <button
             onClick={handleResetPassword}
-            disabled={loading}
+            disabled={loading || !sessionReady}
             className="w-full bg-[#C8A84E] text-black py-3 rounded-xl font-semibold hover:opacity-90 transition"
           >
             {loading ? 'Chargement...' : 'Valider'}

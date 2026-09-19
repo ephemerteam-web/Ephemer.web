@@ -1,6 +1,8 @@
+import { parisDay, nextBirthdayDay, daysBetween, isCalendarDay } from '@/lib/calendar-day';
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
+import { echapperHtml } from '@/lib/email-html';
 
 // Client admin (contourne les RLS)
 const supabaseAdmin = createClient(
@@ -13,7 +15,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 // Sécurité : vérifier que c'est bien Vercel qui appelle (pas un pirate)
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization');
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
@@ -63,14 +65,14 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
     if (!contacts?.length) return { notifs: 0, emails: 0 };
 
     // Récupérer ses préférences
-    const { data: prefs } = await supabaseAdmin
+    const { data: prefs, error: prefsError } = await supabaseAdmin
       .from('notification_preferences')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
+    if (prefsError) throw prefsError;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = parisDay();
 
     const paliers = [
       { jours: 7, enabled: prefs?.rappel_j7 ?? true },
@@ -79,16 +81,15 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
       { jours: 0, enabled: prefs?.rappel_jourj ?? true }
     ];
 
-    const notifsToInsert: any[] = [];
-    const notifsForEmail: any[] = [];
+    const notifsToInsert: { user_id: string; contact_id: number; type: string; message: string; event_date: string; event_description: string; jours_restants: number; lue: boolean; email_envoye: boolean }[] = [];
+    const notifsForEmail: { contact: string; date: string; jours: number }[] = [];
 
     // Pour chaque contact, calculer les paliers
     for (const contact of contacts) {
-      if (!contact.date_naissance) continue;
+      if (!contact.date_naissance || !isCalendarDay(contact.date_naissance)) continue;
 
-      const birthDate = new Date(contact.date_naissance);
-      const nextBirthday = getNextBirthday(birthDate, today);
-      const daysUntil = Math.floor((nextBirthday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      const nextBirthday = nextBirthdayDay(contact.date_naissance, today);
+      const daysUntil = daysBetween(today, nextBirthday);
 
       for (const palier of paliers) {
         if (!palier.enabled) continue;
@@ -100,7 +101,7 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
           contact_id: contact.id,
           type: 'anniversaire',
           message: `C'est bientôt l'anniversaire de ${contact.prenom || contact.nom || 'quelqu\'un'} !`,
-          event_date: nextBirthday.toISOString().split('T')[0],
+          event_date: nextBirthday,
           event_description: `Anniversaire de ${contact.prenom || contact.nom || 'quelqu\'un'}`,
           jours_restants: palier.jours,
           lue: false,
@@ -110,7 +111,7 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
         notifsToInsert.push(notif);
         notifsForEmail.push({
           contact: contact.prenom || contact.nom || 'quelqu\'un',
-          date: nextBirthday.toLocaleDateString('fr-FR'),
+          date: new Date(nextBirthday + 'T12:00:00Z').toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }),
           jours: palier.jours
         });
       }
@@ -118,50 +119,47 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
 
     // Insérer les notifications (l'index unique empêche les doublons)
     if (notifsToInsert.length > 0) {
-      const { error: insertError } = await supabaseAdmin
+      const { data: inserted, error: insertError } = await supabaseAdmin
         .from('notifications')
         .upsert(notifsToInsert, { 
           onConflict: 'user_id,contact_id,type,event_date,jours_restants',
           ignoreDuplicates: true 
-        });
+        }).select('id');
 
       if (insertError) throw insertError;
-      notifsCreated = notifsToInsert.length;
+      notifsCreated = inserted?.length || 0;
     }
 
-    // Envoyer l'email récap si activé
-    if (notifsForEmail.length > 0 && prefs?.canal_email) {
-      await sendRecapEmail(user, notifsForEmail);
-      emailSent = 1;
-
-      // Marquer ces notifs comme "email envoyé"
-      await supabaseAdmin
-        .from('notifications')
-        .update({ email_envoye: true })
-        .eq('user_id', user.id)
-        .eq('email_envoye', false);
+    // Ne marquer que les lignes réellement incluses dans cet email.
+    if (notifsToInsert.length > 0 && prefs?.canal_email && user.email) {
+      const { data: pending, error: pendingError } = await supabaseAdmin.from('notifications')
+        .select('id, contact_id, type, event_date, jours_restants')
+        .eq('user_id', user.id).eq('email_envoye', false).eq('type', 'anniversaire');
+      if (pendingError) throw pendingError;
+      const selected = (pending || []).filter(n => notifsToInsert.some(item =>
+        item.contact_id === n.contact_id && item.event_date === n.event_date && item.jours_restants === n.jours_restants));
+      const emails = selected.map(n => {
+        const index = notifsToInsert.findIndex(item => item.contact_id === n.contact_id && item.event_date === n.event_date && item.jours_restants === n.jours_restants);
+        return notifsForEmail[index];
+      });
+      if (selected.length) {
+        await sendRecapEmail(user, emails, 'recap/' + user.id + '/' + today);
+        const { error: markError } = await supabaseAdmin.from('notifications')
+          .update({ email_envoye: true }).eq('user_id', user.id).in('id', selected.map(n => n.id));
+        if (markError) throw markError;
+        emailSent = 1;
+      }
     }
 
     return { notifs: notifsCreated, emails: emailSent };
   } catch (error) {
     console.error(`❌ Error processing user ${user.id}:`, error);
-    return { notifs: 0, emails: 0 };
+    throw error;
   }
 }
 
-function getNextBirthday(birthDate: Date, today: Date): Date {
-  const next = new Date(today);
-  next.setMonth(birthDate.getMonth());
-  next.setDate(birthDate.getDate());
-  
-  if (next < today) {
-    next.setFullYear(next.getFullYear() + 1);
-  }
-  
-  return next;
-}
 
-async function sendRecapEmail(user: any, notifs: any[]) {
+async function sendRecapEmail(user: { email: string; prenom?: string | null }, notifs: { contact: string; date: string; jours: number }[], idempotencyKey?: string) {
   // Grouper par urgence
   const urgents = notifs.filter(n => n.jours <= 1);
   const normaux = notifs.filter(n => n.jours > 1);
@@ -275,7 +273,7 @@ async function sendRecapEmail(user: any, notifs: any[]) {
   <div class="container">
     <div class="header">
       <h1>🎂 ${notifs.length} événement${notifs.length > 1 ? 's' : ''} à venir</h1>
-      <p>Bonjour ${user.prenom || ''}, voici vos rappels</p>
+      <p>Bonjour ${echapperHtml(user.prenom)}, voici vos rappels</p>
     </div>
     
     <div class="content">
@@ -287,10 +285,10 @@ async function sendRecapEmail(user: any, notifs: any[]) {
         ${urgents.map(n => `
           <div class="event urgent">
             <p class="event-name">
-              ${n.contact}
-              <span class="event-badge">J-${n.jours}</span>
+              ${echapperHtml(n.contact)}
+              <span class="event-badge">J-${echapperHtml(n.jours)}</span>
             </p>
-            <p class="event-date">${n.date}</p>
+            <p class="event-date">${echapperHtml(n.date)}</p>
           </div>
         `).join('')}
       ` : ''}
@@ -303,10 +301,10 @@ async function sendRecapEmail(user: any, notifs: any[]) {
         ${normaux.map(n => `
           <div class="event">
             <p class="event-name">
-              ${n.contact}
-              <span class="event-badge">J-${n.jours}</span>
+              ${echapperHtml(n.contact)}
+              <span class="event-badge">J-${echapperHtml(n.jours)}</span>
             </p>
-            <p class="event-date">${n.date}</p>
+            <p class="event-date">${echapperHtml(n.date)}</p>
           </div>
         `).join('')}
       ` : ''}
@@ -327,10 +325,11 @@ async function sendRecapEmail(user: any, notifs: any[]) {
 </html>
   `;
 
-  await resend.emails.send({
+  const { error } = await resend.emails.send({
     from: 'Ephemer <notifications@ephemer.name>',
     to: user.email,
     subject: `🎂 ${notifs.length} événement${notifs.length > 1 ? 's' : ''} à ne pas oublier`,
     html
-  });
+  }, { idempotencyKey });
+  if (error) throw error;
 }
