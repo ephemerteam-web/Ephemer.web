@@ -145,6 +145,17 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
   background: var(--muted);
 }
 
+/* Scrollbar cachee pour les conteneurs horizontaux */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Masquer aussi sur Firefox */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* Sur mobile : pas d'effet de hover sur les flip-cards (on utilise le tap) */
 @media (hover: hover) {
   .gift-flip-card:hover .gift-flip-inner {

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { supabase } from "@/lib/supabase-browser"
 import AuthDrawer from "@/components/AuthDrawer"
 import HeroSection from "@/components/HeroSection"
+import SaintDuJour from "@/components/SaintDuJour"
 
 export default function Accueil() {
   const router = useRouter()
@@ -39,6 +40,8 @@ export default function Accueil() {
         onOpenInscription={openInscription}
         onOpenConnexion={openConnexion}
       />
+
+      <SaintDuJour />
 
       <AuthDrawer
         isOpen={drawerOpen}

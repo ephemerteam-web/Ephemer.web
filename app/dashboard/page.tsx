@@ -8,6 +8,7 @@ import Link from 'next/link'
 import { useUserProfile } from '@/lib/hooks/useUserProfile'
 import IconeLuneIA from '@/components/IconeLuneIA'
 import FavorisRow from '@/components/FavorisRow'
+import SaintDuJour from '@/components/SaintDuJour'
 
 
 
@@ -256,6 +257,8 @@ export default function Dashboard() {
           </p>
         )}
       </div>
+
+      <SaintDuJour />
 
       {/* ============ BLOC FÊTE + ANNIVERSAIRES ============ */}
       <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-4 md:p-5 mb-8 flex flex-col gap-5">

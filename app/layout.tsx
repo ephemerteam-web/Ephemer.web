@@ -129,7 +129,7 @@ export default function RootLayout({
         <ThemeRuntime />
         <PWARegistration />
         {children}
-        <footer className="relative z-10 border-t border-line bg-canvas px-4 py-5 flex flex-wrap justify-center items-center gap-4 text-sm text-muted">
+        <footer className="border-t border-line bg-canvas px-4 py-5 flex flex-wrap justify-center items-center gap-4 text-sm text-muted">
           <span>Ephemer · Un moment pour chaque lien</span>
         </footer>
       </body>
