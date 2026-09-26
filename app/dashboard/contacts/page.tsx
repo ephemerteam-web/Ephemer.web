@@ -143,12 +143,20 @@ export default function ContactsPage() {
             </span>
           </h1>
 
-          <Link
-            href="/dashboard/contacts/nouveau"
-            className="w-full sm:w-auto text-center bg-action hover:bg-action text-on-action font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
-          >
-            + Nouveau
-          </Link>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Link
+              href="/dashboard/contacts/rapide"
+              className="flex-1 sm:flex-none text-center bg-gradient-to-r from-action to-action/80 hover:from-action hover:to-action text-on-action font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap shadow-lg hover:shadow-xl active:scale-95"
+            >
+              ⚡ Rapide
+            </Link>
+            <Link
+              href="/dashboard/contacts/nouveau"
+              className="flex-1 sm:flex-none text-center bg-ink/5 hover:bg-ink/10 border border-line text-ink font-bold text-sm px-4 py-2 rounded-xl transition whitespace-nowrap"
+            >
+              + Nouveau
+            </Link>
+          </div>
         </div>
 
         <ContactSearchFilters
@@ -164,13 +172,21 @@ export default function ContactsPage() {
           <div className="text-center mt-16">
             <span className="text-6xl mb-4 block">👥</span>
             <p className="text-info">Aucun contact pour le moment.</p>
-
-            <Link
-              href="/dashboard/contacts/nouveau"
-              className="inline-block mt-4 text-sm text-accent hover:text-ink underline transition"
-            >
-              Ajouter mon premier contact →
-            </Link>
+            
+            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+              <Link
+                href="/dashboard/contacts/rapide"
+                className="bg-gradient-to-r from-action to-action/80 text-on-action font-bold px-6 py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
+              >
+                ⚡ Ajout rapide
+              </Link>
+              <Link
+                href="/dashboard/contacts/nouveau"
+                className="bg-ink/5 hover:bg-ink/10 border border-line text-ink font-bold px-6 py-3 rounded-xl transition"
+              >
+                + Nouveau contact
+              </Link>
+            </div>
           </div>
         ) : contactsFiltres.length === 0 ? (
           <div className="text-center mt-16">
