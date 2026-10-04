@@ -1,4 +1,7 @@
 'use client'
+import Modal from '@/components/Modal'
+import { birthdayInYear, isCalendarDay, parseLocalDay } from '@/lib/calendar-day'
+import { readAllResult } from '@/lib/pagination'
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
@@ -32,6 +35,7 @@ export default function CalendrierPage() {
   const [moisActuel, setMoisActuel] = useState(new Date())
   const [recherche, setRecherche] = useState('')
   const [resultatsRecherche, setResultatsRecherche] = useState<Saint[]>([])
+  const [listError, setListError] = useState('')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [jourSelectionne, setJourSelectionne] = useState<JourSelectionne>(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false) // ✅ Pour mobile
@@ -45,10 +49,11 @@ export default function CalendrierPage() {
         router.push('/connexion')
         return
       }
-      const { data, error } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from('contacts')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', session.user.id))
+      if (error) setListError('Chargement incomplet. Recharge la page pour obtenir tous tes contacts.')
       if (!error && data) setContacts(data as Contact[])
     }
     init()
@@ -133,8 +138,8 @@ export default function CalendrierPage() {
   const anniversairesParJour: Record<number, Contact[]> = useMemo(() => {
     const map: Record<number, Contact[]> = {}
     contacts.forEach((contact) => {
-      if (contact.date_naissance) {
-        const naissance = new Date(contact.date_naissance)
+      if (contact.date_naissance && isCalendarDay(contact.date_naissance)) {
+        const naissance = parseLocalDay(birthdayInYear(contact.date_naissance, moisActuel.getFullYear()))
         const jour = naissance.getDate()
         const mois = naissance.getMonth()
         if (mois === moisActuel.getMonth()) {
@@ -190,7 +195,7 @@ export default function CalendrierPage() {
   // ── Couleurs par relation ──────────────────────────────────────────────────
   const couleurRelation: Record<string, string> = {
     famille: 'text-info',
-    amis: 'text-info',
+    ami: 'text-info',
     pro: 'text-warning',
   }
 
@@ -209,6 +214,7 @@ export default function CalendrierPage() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ========== CALENDRIER ========== */}
@@ -370,7 +376,7 @@ export default function CalendrierPage() {
 
           {/* Mobile : bottom sheet */}
           {jourSelectionne && showBottomSheet && (
-            <div className="lg:hidden fixed inset-0 z-50 flex items-end">
+            <Modal open={showBottomSheet} onClose={() => setShowBottomSheet(false)} title="Détails du jour" className="lg:hidden fixed inset-0 w-screen h-dvh flex items-end bg-transparent p-0 border-0 rounded-none">
               {/* Fond semi-transparent */}
               <div
                 className="absolute inset-0 bg-black/50"
@@ -395,7 +401,7 @@ export default function CalendrierPage() {
                   }}
                 />
               </div>
-            </div>
+            </Modal>
           )}
         </>
 

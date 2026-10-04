@@ -1,3 +1,4 @@
+import { normalizeRelation } from '../constants'
 import { useMemo, useState } from 'react'
 import { compareContactNames } from '@/lib/contact-alphabet'
 
@@ -21,7 +22,7 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
       .filter((contact) => {
         const prenom = contact.prenom ?? ''
         const nom = contact.nom ?? ''
-        const relation = contact.relation ?? ''
+        const relation = normalizeRelation(contact.relation)
 
         const texte = `${prenom} ${nom} ${relation}`.toLowerCase()
         const rechercheNettoyee = recherche.trim().toLowerCase()

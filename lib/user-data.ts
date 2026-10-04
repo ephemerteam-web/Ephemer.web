@@ -1,3 +1,4 @@
+import { readPages } from './pagination'
 import { supabase } from './supabase-browser'
 
 export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations', userId: string) {
@@ -6,13 +7,13 @@ export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications
   const order = table === 'notification_preferences' ? 'user_id' : 'id'
   // Les liens d'invitation sont des capacités d'accès : ne pas exporter leurs tokens.
   const columns = table === 'invitations' ? 'id,user_id,actif,expires_at,nb_utilisations,max_utilisations' : '*'
-  for (let offset = 0; offset < 100000; offset += 200) {
-    const { data, error } = await supabase.from(table).select<string, Record<string, unknown>>(columns).eq(owner, userId).order(order).range(offset, offset + 199)
-    if (error) throw new Error(`Lecture impossible : ${table}. Aucun export partiel n’a été téléchargé.`)
-    rows.push(...(data ?? []))
-    if (!data || data.length < 200) return rows
-  }
-  throw new Error('Export trop volumineux pour le navigateur. Aucun fichier partiel téléchargé.')
+  try {
+    for await (const page of readPages(() => supabase.from(table).select<string, Record<string, unknown>>(columns).eq(owner, userId), order)) {
+      rows.push(...page)
+      if (rows.length > 100000) throw new Error('Export trop volumineux')
+    }
+    return rows
+  } catch { throw new Error(`Lecture impossible : ${table}. Aucun export partiel n’a été téléchargé.`) }
 }
 
 export async function exportOwnData() {

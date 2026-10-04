@@ -1,4 +1,5 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
 // "use client" veut dire : ce composant tourne dans le NAVIGATEUR (pas sur le serveur)
 // Il a besoin de React, des clics utilisateur, etc.
 
@@ -27,6 +28,7 @@ export default function NotificationBell() {
   const [error, setError] = useState<string | null>(null)
   const { ouvrirDrawer } = useDrawer()
   const panelRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
 
   // ── Fonction utilitaire : couleur selon l'urgence ───────────────
   const getCouleurUrgence = (notif: Notification) => {
@@ -47,18 +49,16 @@ export default function NotificationBell() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.user?.id) { setLoading(false); return }
 
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await readAllResult(() => supabase
         .from('notifications')
         .select('id, message, lue, created_at, contact_id, jours_restants, type')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .limit(30)
+        .eq('user_id', session.user.id))
 
       if (fetchError) {
         console.error('Erreur chargement notifs:', fetchError.message)
         setError('Impossible de charger les notifications')
       } else if (data) {
-        setNotifications(data)
+        setNotifications(data.sort((a,b) => b.created_at.localeCompare(a.created_at)))
         setError(null)
       }
     } catch (err) {
@@ -134,7 +134,7 @@ export default function NotificationBell() {
   useEffect(() => {
     if (!ouvert) return
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOuvert(false)
+      if (e.key === 'Escape') { setOuvert(false); triggerRef.current?.focus() }
     }
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
@@ -181,6 +181,7 @@ export default function NotificationBell() {
     <div className="relative">
       {/* ── Bouton cloche ── */}
       <button
+        ref={triggerRef}
         onClick={() => setOuvert(!ouvert)}
         className="relative p-3 rounded-full hover:bg-ink/10 transition focus:outline-none focus:ring-2 focus:ring-accent/50"
         title="Notifications"

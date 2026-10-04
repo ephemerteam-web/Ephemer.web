@@ -1,6 +1,8 @@
 import { parisDay, nextBirthdayDay, daysBetween, isCalendarDay } from '@/lib/calendar-day';
 // app/api/cron/test-notifications/route.ts
 import { createServerClient } from '@supabase/ssr'
+import { readAllResult } from '@/lib/pagination'
+import { resolvePreferences } from '@/lib/notification-preferences'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin' // On réutilise ton client admin existant
 import { resend } from '@/lib/resend'                 // On réutilise ton client Resend existant
@@ -78,10 +80,10 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
 
   try {
     // Récupérer les contacts
-    const { data: contacts, error } = await supabaseAdmin
+    const { data: contacts, error } = await readAllResult(() => supabaseAdmin
       .from('contacts')
       .select('id, prenom, nom, date_naissance')
-      .eq('user_id', user.id);
+      .eq('user_id', user.id));
 
     if (error) throw error;
     if (!contacts?.length) return { notifs: 0, emails: 0, previewNotifs: 0, preview: [], recipient: null };
@@ -97,10 +99,10 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
     const today = parisDay();
 
     const paliers = [
-      { jours: 7, enabled: prefs?.rappel_j7 ?? true },
-      { jours: 3, enabled: prefs?.rappel_j3 ?? true },
-      { jours: 1, enabled: prefs?.rappel_j1 ?? false },
-      { jours: 0, enabled: prefs?.rappel_jourj ?? true }
+      { jours: 7, enabled: resolvePreferences(prefs).rappel_j7 },
+      { jours: 3, enabled: resolvePreferences(prefs).rappel_j3 },
+      { jours: 1, enabled: resolvePreferences(prefs).rappel_j1 },
+      { jours: 0, enabled: resolvePreferences(prefs).rappel_jourj }
     ];
 
     const notifsToInsert: { user_id: string; contact_id: number; type: string; message: string; event_date: string; event_description: string; jours_restants: number; lue: boolean; email_envoye: boolean }[] = [];
@@ -138,7 +140,7 @@ async function processUser(user: { id: string; email: string; prenom?: string; n
     }
 
     // Simulation uniquement : aucune insertion, mise à jour ni email.
-    return { notifs: 0, emails: 0, previewNotifs: notifsToInsert.length, preview: notifsForEmail, recipient: (prefs?.canal_email ?? true) && user.email ? user.email : null };
+    return { notifs: 0, emails: 0, previewNotifs: notifsToInsert.length, preview: notifsForEmail, recipient: (resolvePreferences(prefs).canal_email) && user.email ? user.email : null };
   } catch (error) {
     console.error(`❌ Error processing user ${user.id}:`, error);
     throw error;

@@ -1,4 +1,5 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
 
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
@@ -31,6 +32,7 @@ type ContactAvecLien = Contact & {
 export default function ContactsPage() {
   const router = useRouter()
   const { ouvrirDrawer } = useDrawer()
+  const [listError, setListError] = useState('')
   const [contacts, setContacts] = useState<ContactAvecLien[]>([])
   const [loading, setLoading] = useState(true)
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
@@ -100,15 +102,14 @@ export default function ContactsPage() {
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from('contacts')
         .select('*')
-        .eq('user_id', session.user.id)
-        .order('nom', { ascending: true, nullsFirst: false })
+        .eq('user_id', session.user.id))
 
       if (error) {
         console.error('Erreur chargement contacts :', error)
-        setContacts([])
+        setListError(error.message); setContacts([])
         setLoading(false)
         return
       }
@@ -186,6 +187,7 @@ export default function ContactsPage() {
 
   return (
     <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip px-3 pt-4 pb-28 sm:px-4 md:px-8 md:pt-8">
+      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
       <div className={`mx-auto w-full min-w-0 max-w-2xl ${letters.length > 1 ? 'pr-11' : ''}`}>
         {/* EN-TETE */}
         <div className="mb-4">

@@ -1,5 +1,5 @@
 // État du formulaire : un changement de destinataire ou de réglage efface l'ancien résultat.
-import { TYPES_EVENEMENT, TYPES_RELATION, TONS_MESSAGE } from '@/lib/constants'
+import { TYPES_EVENEMENT, TYPES_RELATION, TONS_MESSAGE, normalizeRelation } from '@/lib/constants'
 import type { Contact } from '@/types/database'
 
 export type GeneratorContact = Pick<Contact, 'id' | 'prenom' | 'nom' | 'relation' | 'date_naissance' | 'email' | 'est_favori'>
@@ -44,7 +44,7 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
   const resetResult = { message: '', hasResult: false, error: '' }
   switch (action.type) {
     case 'contact': {
-      const relation = TYPES_RELATION.some(item => item.value === action.contact.relation) ? action.contact.relation! : 'autre'
+      const relation = normalizeRelation(action.contact.relation)
       return { ...state, ...resetResult, contact: action.contact, manual: false, firstName: action.contact.prenom?.trim() ?? '', relation, tone: relation === 'pro' ? 'formel' : 'familier' }
     }
     case 'manual':

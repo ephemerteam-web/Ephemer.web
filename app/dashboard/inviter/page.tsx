@@ -1,4 +1,5 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -41,17 +42,16 @@ export default function InviterPage() {
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from('invitations')
         .select('*')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
+        .eq('user_id', session.user.id))
 
       if (error) {
         console.error('Erreur chargement invitations :', error)
-        setInvitations([])
+        setInvitations([]); setMessage('Chargement incomplet. Recharge la page pour retrouver tous tes liens.')
       } else {
-        setInvitations((data ?? []) as Invitation[])
+        setInvitations(((data ?? []) as Invitation[]).sort((a,b) => b.created_at.localeCompare(a.created_at)))
       }
 
       setLoading(false)
@@ -219,7 +219,7 @@ export default function InviterPage() {
 
         {/* ─────── MESSAGE FLASH ─────── */}
         {message && (
-          <div className="mb-6 bg-ink/5 border border-accent/30 rounded-xl px-4 py-3 text-sm text-center text-info">
+          <div role="status" className="mb-6 bg-ink/5 border border-accent/30 rounded-xl px-4 py-3 text-sm text-center text-info">
             {message}
           </div>
         )}

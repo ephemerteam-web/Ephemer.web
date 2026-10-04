@@ -2,25 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 
-const CATEGORIES_VALIDES = [
-  "loisir",
-  "bien_etre",
-  "tech",
-  "decoration",
-  "gourmand",
-] as const;
-
-// 👈 Table de correspondance : code technique → description lisible pour l'IA
-const LABELS_EVENEMENT: Record<string, string> = {
-  anniversaire: "un anniversaire",
-  fete_prenom: "sa fête (prénom)",
-  noel: "Noël",
-  saint_valentin: "la Saint-Valentin",
-  fete_meres: "la fête des mères",
-  fete_peres: "la fête des pères",
-  nouvel_an: "le Nouvel An",
-  autre: "une occasion spéciale",
-};
+import { giftOccasion, usableGiftIdeas } from '@/lib/gift-ideas';
+import { normalizeRelation } from '@/lib/constants';
 
 import { verifierGardeIA } from '@/lib/garde-ia';
 
@@ -35,8 +18,9 @@ export async function POST(request: NextRequest) {
     // ... ton code existant
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
-    const occasionTexte = LABELS_EVENEMENT[body.eventType] || 'une occasion spéciale';
-    const relation = ['ami', 'famille', 'couple', 'pro', 'autre'].includes(body.relation) ? body.relation : 'autre';
+    const occasionTexte = giftOccasion(body.eventType);
+    if (!occasionTexte) return NextResponse.json({ error: 'Occasion inconnue' }, { status: 400 });
+    const relation = normalizeRelation(body.relation);
     const prompt = `
 Tu es un expert cadeau français très créatif et réaliste.
 
@@ -104,38 +88,11 @@ Format attendu (exemple) :
 
     raw = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
 
-    let ideas: Array<{
-      idee: string;
-      raison: string;
-      categorie: string;
-      recherche: string;
-      emoji?: string;
-    }> = [];
-
-    try {
-      ideas = JSON.parse(raw);
-    } catch {
-      console.error("JSON invalide reçu de l’IA");
-      return NextResponse.json(
-        { error: "L'IA n'a pas renvoyé un JSON valide" },
-        { status: 500 }
-      );
-    }
-
-    if (!Array.isArray(ideas)) return NextResponse.json({ error: "Format de réponse inattendu" }, { status: 502 });
-    ideas = ideas
-      .filter(
-        (i) =>
-          i &&
-          typeof i.idee === "string" &&
-          typeof i.raison === "string" &&
-          typeof i.categorie === "string" &&
-          typeof i.recherche === "string"
-      )
-      .filter((i) =>
-        CATEGORIES_VALIDES.includes(i.categorie as typeof CATEGORIES_VALIDES[number])
-      )
-      .slice(0, 6);
+    let parsed: unknown;
+    try { parsed = JSON.parse(raw); }
+    catch { return NextResponse.json({ error: 'L’IA n’a pas renvoyé une réponse utilisable. Réessaie.' }, { status: 502 }); }
+    const ideas = usableGiftIdeas(parsed);
+    if (!ideas.length) return NextResponse.json({ error: 'Aucune idée utilisable n’a été proposée. Réessaie.' }, { status: 502 });
 
     return NextResponse.json({ ideas });
   } catch (error) {

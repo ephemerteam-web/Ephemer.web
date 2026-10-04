@@ -1,5 +1,6 @@
 'use client'
 
+import Modal from '@/components/Modal'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -144,7 +145,7 @@ export default function DashboardProfil() {
 
       const result = await response.json()
 
-      if (!response.ok) {
+      if (!response.ok || result.success !== true) {
         throw new Error(result.error || 'Erreur inconnue')
       }
 
@@ -156,6 +157,8 @@ export default function DashboardProfil() {
         text: `Erreur : ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
         type: 'error'
       })
+    } finally {
+      // Réactiver la confirmation après une erreur ou une session expirée.
       setDeleting(false)
     }
   }
@@ -235,10 +238,10 @@ export default function DashboardProfil() {
             {/* Prénom + Nom côte à côte sur mobile (gain de place) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
+                <label htmlFor="profile-field-0" className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Prénom
                 </label>
-                <input
+                <input id="profile-field-0"
                   type="text"
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
@@ -251,10 +254,10 @@ export default function DashboardProfil() {
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-semibold text-muted uppercase tracking-wide">
+                <label htmlFor="profile-field-1" className="text-xs font-semibold text-muted uppercase tracking-wide">
                   Nom
                 </label>
-                <input
+                <input id="profile-field-1"
                   type="text"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
@@ -269,11 +272,11 @@ export default function DashboardProfil() {
 
             {/* Email (lecture seule) */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
+              <label htmlFor="profile-field-2" className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Email
               </label>
               <div className="relative">
-                <input
+                <input id="profile-field-2"
                   type="email"
                   value={email}
                   disabled
@@ -289,10 +292,10 @@ export default function DashboardProfil() {
 
             {/* Date de naissance */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
+              <label htmlFor="profile-field-3" className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Date de naissance
               </label>
-              <input
+              <input id="profile-field-3"
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
@@ -310,7 +313,7 @@ export default function DashboardProfil() {
 
             {/* ── TÉLÉPHONE ── version empilée sur mobile */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-muted uppercase tracking-wide">
+              <label htmlFor="profile-field-4" className="text-xs font-semibold text-muted uppercase tracking-wide">
                 Téléphone
               </label>
 
@@ -322,7 +325,7 @@ export default function DashboardProfil() {
               <div className="flex flex-col sm:flex-row gap-2">
 
                 {/* Sélecteur pays */}
-                <select
+                <select id="profile-field-4"
                   value={telephoneIndicatif}
                   onChange={(e) => setTelephoneIndicatif(e.target.value)}
                   className="bg-surface border border-line text-ink rounded-xl
@@ -362,7 +365,7 @@ export default function DashboardProfil() {
 
             {/* ── MESSAGE FEEDBACK ── */}
             {message && (
-              <div className={`
+              <div role={message.type === "success" ? "status" : "alert"} className={`
                 p-3.5 rounded-xl text-sm border leading-relaxed
                 ${message.type === 'success'
                   ? 'bg-green-500/10 text-success border-green-500/20'
@@ -424,7 +427,7 @@ export default function DashboardProfil() {
                 Confirmation de suppression
                 Plus compact sur mobile : texte court, boutons bien espacés
               */
-              <div className="border border-red-500/30 rounded-2xl p-4 bg-red-500/5">
+              <Modal open={showDeleteConfirm} onClose={() => { if (!deleting) setShowDeleteConfirm(false) }} title="Supprimer mon compte" className="border border-red-500/30 rounded-2xl p-4 bg-red-500/5">
                 <p className="text-danger font-semibold text-sm mb-1">
                   ⚠️ Es-tu sûr(e) ?
                 </p>
@@ -462,7 +465,7 @@ export default function DashboardProfil() {
                     )}
                   </button>
                 </div>
-              </div>
+              </Modal>
             )}
 
           </div>

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import PWARegistration from '@/components/PWARegistration';
+import InvitationDraftCleanup from '@/components/InvitationDraftCleanup';
 import ThemeRuntime from '@/components/ThemeRuntime';
 
 const geistSans = Geist({
@@ -126,7 +127,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-canvas text-ink">
-        <ThemeRuntime />
+        <ThemeRuntime /><InvitationDraftCleanup />
         <PWARegistration />
         {children}
         <footer className="border-t border-line bg-canvas px-4 py-5 flex flex-wrap justify-center items-center gap-4 text-sm text-muted">

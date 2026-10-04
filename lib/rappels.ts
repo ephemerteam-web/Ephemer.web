@@ -1,3 +1,4 @@
+import { readAllResult } from '@/lib/pagination'
 import { parseLocalDay } from './calendar-day'
 import { supabase } from './supabase-browser'
 import { calculerDateEvenement, formatDateLocale, TypeEvenement } from './date-utils'
@@ -89,16 +90,16 @@ export async function programmerRappels(
 }
 
 export async function getRappelsContact(userId: string, contactId: string) {
-  const { data, error } = await supabase
+  const { data, error } = await readAllResult(() => supabase
     .from('rappels')
     .select('*')
     .eq('user_id', userId)
     .eq('contact_id', contactId)
-    .eq('statut', 'programme')
+    .eq('statut', 'programme'))
 
   if (error) {
     console.error('Erreur récupération rappels:', error)
-    return []
+    throw error
   }
 
   return data || []

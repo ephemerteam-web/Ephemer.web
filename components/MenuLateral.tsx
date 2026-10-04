@@ -1,7 +1,9 @@
 'use client'
+import Modal from '@/components/Modal'
+import { useContactDraft } from '@/components/ContactDraftProvider'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 import ThemeControl from './ThemeControl'
 import PushPermissionButton from './PushPermissionButton'
@@ -27,7 +29,7 @@ type MenuSection = {
 }
 
 export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps) {
-  const router = useRouter()
+  const { navigate, confirm, contacts, prenom } = useContactDraft()
   const pathname = usePathname()
 
   const [translateX, setTranslateX] = useState(0)
@@ -41,6 +43,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   }, [ouvert])
 
   const handleLogout = async () => {
+    if ((contacts.length || prenom.trim()) && !await confirm("Te déconnecter et effacer le brouillon de contacts ?")) return
     try {
       if ('serviceWorker' in navigator) {
         const reg = await navigator.serviceWorker.getRegistration('/')
@@ -61,8 +64,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   }
 
   const naviguerVers = (chemin: string) => {
-    onFermer()
-    router.push(chemin)
+    void navigate(chemin, onFermer)
   }
 
   const initiale = user?.prenom ? user.prenom.charAt(0).toUpperCase() : null
@@ -126,7 +128,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   let compteurItem = 0
 
   return (
-    <>
+    <Modal open={ouvert} onClose={onFermer} title="Menu du compte" className="w-screen h-dvh bg-transparent border-0 rounded-none p-0">
       {/* OVERLAY */}
       <div
         onClick={onFermer}
@@ -243,6 +245,6 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
         </div>
       </aside>
       </div>
-    </>
+    </Modal>
   )
 }

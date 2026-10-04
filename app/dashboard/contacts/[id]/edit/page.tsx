@@ -1,13 +1,15 @@
 'use client'
 
+import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter, useParams } from 'next/navigation'
-import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI } from '@/lib/constants'
+import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI, normalizeRelation } from '@/lib/constants'
 
 
 export default function ModifierContact() {
   const router = useRouter()
+  const { confirm } = useContactDraft()
   const params = useParams()
   const contactId = params.id as string
 
@@ -23,7 +25,6 @@ export default function ModifierContact() {
   const [chargement, setChargement] = useState(true)
   const [saving, setSaving] = useState(false)
   const [erreur, setErreur] = useState('')
-  const [confirmSupprimer, setConfirmSupprimer] = useState(false)
 
   useEffect(() => {
     async function chargerContact() {
@@ -50,7 +51,7 @@ export default function ModifierContact() {
       setPrenom(data.prenom)
       setNom(data.nom || '')
       setDateNaissance(data.date_naissance || '')
-      setRelation(data.relation || 'ami')
+      setRelation(normalizeRelation(data.relation || TYPES_RELATION[0].value))
       setEmail(data.email || '')
       setTelephoneIndicatif(data.telephone_indicatif || '+33')
       setTelephoneNumero(data.telephone_numero || '')
@@ -74,7 +75,7 @@ export default function ModifierContact() {
         prenom,
         nom,
         date_naissance: dateNaissance || null,
-        relation,
+        relation: normalizeRelation(relation),
         email: email || null,
         telephone_indicatif: telephoneNumero ? telephoneIndicatif : null,
         telephone_numero: telephoneNumero || null,
@@ -213,12 +214,12 @@ export default function ModifierContact() {
 
           {/* Téléphone — le point le plus sensible sur mobile */}
           <div className="min-w-0">
-            <label className="block text-sm font-semibold text-muted">
+            <label htmlFor="edit-contact-0" className="block text-sm font-semibold text-muted">
               Téléphone
             </label>
             {/* Sur très petit écran : colonne ; à partir de sm : ligne */}
             <div className="mt-1.5 flex flex-col sm:flex-row gap-2 min-w-0">
-              <select
+              <select id="edit-contact-0"
                 value={telephoneIndicatif}
                 onChange={(e) => setTelephoneIndicatif(e.target.value)}
                 aria-label="Indicatif pays"
@@ -298,7 +299,7 @@ export default function ModifierContact() {
           </div>
 
           {erreur && (
-            <p className="text-danger text-sm break-words">
+            <p role="alert" className="text-danger text-sm break-words">
               {erreur || MESSAGES_UI.erreur_genérique}
             </p>
           )}
@@ -314,37 +315,8 @@ export default function ModifierContact() {
 
         {/* Suppression */}
         <div className="mt-6 border-t border-line pt-4">
-          {!confirmSupprimer ? (
-            <button
-              type="button"
-              onClick={() => setConfirmSupprimer(true)}
-              className="w-full py-3 rounded-xl text-sm text-danger border border-red-500/20 hover:bg-red-500/10 transition active:scale-[0.98]"
-            >
-              🗑️ Supprimer ce contact
-            </button>
-          ) : (
-            <div className="bg-red-500/10 rounded-xl p-4 flex flex-col gap-3">
-              <p className="text-sm text-danger font-medium leading-relaxed">
-                ⚠️ Action irréversible. Confirmer ?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  type="button"
-                  onClick={handleSupprimer}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium bg-red-500 text-white hover:bg-red-600 transition active:scale-[0.98]"
-                >
-                  Oui, supprimer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmSupprimer(false)}
-                  className="flex-1 py-3 rounded-xl text-sm font-medium border border-line text-muted hover:text-ink transition active:scale-[0.98]"
-                >
-                  Annuler
-                </button>
-              </div>
-            </div>
-          )}
+          <button type="button" onClick={async () => { if (await confirm('Supprimer définitivement ce contact et ses rappels ?')) await handleSupprimer() }}
+            className="w-full py-3 rounded-xl text-sm text-danger border border-red-500/20 hover:bg-red-500/10">Supprimer ce contact</button>
         </div>
 
       </div>

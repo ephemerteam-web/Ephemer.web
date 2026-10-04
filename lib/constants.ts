@@ -39,6 +39,14 @@ export const TYPES_RELATION = [
 
 // ============================================
 // 📅 TYPES D'ÉVÉNEMENTS
+// Les anciennes fiches d'invitation restent lisibles avant la normalisation SQL.
+export function normalizeRelation(value: unknown): string {
+  const relation = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (relation === 'amis') return 'ami'
+  return TYPES_RELATION.some(item => item.value === relation) ? relation : 'autre'
+}
+
+// ============================================
 // ============================================
 export const TYPES_EVENEMENT = [
   { value: 'anniversaire', label: '🎂 Anniversaire' },
@@ -48,6 +56,10 @@ export const TYPES_EVENEMENT = [
   { value: 'naissance', label: '👶 Naissance' },
   { value: 'autre', label: '🎉 Autre' },
 ] as const
+
+export function normalizeOccasion(value: unknown): string {
+  return value === 'fete_prenom' ? 'fete_prenomale' : typeof value === 'string' ? value : 'autre'
+}
 
 // ============================================
 // 🔔 TYPES DE RAPPELS
@@ -96,6 +108,7 @@ export const STATUTS_RAPPEL = [
 // ============================================
 export const QUOTAS_GRATUIT = {
   max_contacts: 50,
+  max_rappels_actifs: 100,
   max_rappels_par_mois: 100,
   max_generateurs_par_jour: 10,
   delai_min_entre_rappels_secondes: 3600, // 1 heure minimum entre 2 rappels du même contact

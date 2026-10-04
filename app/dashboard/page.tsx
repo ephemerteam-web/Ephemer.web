@@ -1,4 +1,7 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
+import { birthdayInYear, isCalendarDay, nextBirthdayDay, parseLocalDay, daysBetween } from '@/lib/calendar-day'
+import { formatDateLocale } from '@/lib/date-utils'
 
 import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -28,6 +31,7 @@ export default function Dashboard() {
   const [userName, setUserName] = useState<string | null>(null)
   const [prenom, setPrenom] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
+  const [listError, setListError] = useState('')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [profile, setProfile] = useState<Profile | null>(null)
   const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
@@ -45,12 +49,13 @@ export default function Dashboard() {
 
       setUserName(session.user.email?.split('@')[0] ?? null)
 
-      const { data } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from('contacts')
         .select('*')
         .eq('user_id', session.user.id)
-        .eq('est_favori', true)
+        .eq('est_favori', true))
 
+      if (error) setListError('Chargement incomplet. Recharge la page pour retrouver tous tes contacts.')
       if (data) setContacts(data as Contact[])
 
       const { data: profileData, error: profileError } = await supabase
@@ -86,13 +91,12 @@ export default function Dashboard() {
     today.setHours(0, 0, 0, 0)
 
     const prochainAnniv = (dateNaissance: string): Date => {
-      const [annee, mois, jour] = dateNaissance.split('-').map(Number)
-      const anniv = new Date(today.getFullYear(), mois - 1, jour)
+      const anniv = parseLocalDay(birthdayInYear(dateNaissance, today.getFullYear()))
       return anniv
     }
 
     const diffJours = (d: Date): number => {
-      return Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      return daysBetween(formatDateLocale(today), formatDateLocale(d))
     }
 
     const aujourd: Contact[] = []
@@ -100,7 +104,7 @@ export default function Dashboard() {
     const bientot: (Contact & { joursRestants: number })[] = []
 
     for (const c of contacts) {
-      if (!c.date_naissance) continue
+      if (!c.date_naissance || !isCalendarDay(c.date_naissance)) continue
       const anniv = prochainAnniv(c.date_naissance)
       const diff = diffJours(anniv)
 
@@ -143,19 +147,17 @@ export default function Dashboard() {
     }
 
     const prochainAnniv = (dateNaissance: string): Date => {
-      const [, mois, jour] = dateNaissance.split('-').map(Number)
-      const anniv = new Date(today.getFullYear(), mois - 1, jour)
-      if (anniv < today) anniv.setFullYear(anniv.getFullYear() + 1)
+      const anniv = parseLocalDay(nextBirthdayDay(dateNaissance, formatDateLocale(today)))
       return anniv
     }
 
     const diffJours = (d: Date): number =>
-      Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+      daysBetween(formatDateLocale(today), formatDateLocale(d))
 
     return contacts
       .filter((c) => c.est_favori)
       .map((c) => {
-        const dateAnniv = c.date_naissance ? prochainAnniv(c.date_naissance) : null
+        const dateAnniv = c.date_naissance && isCalendarDay(c.date_naissance) ? prochainAnniv(c.date_naissance) : null
         const dateFete = prochaineFetePrenom(c.prenom)
 
         let prochainEvent: { type: 'anniversaire' | 'fete_prenom'; date: Date; jours: number } | null = null
@@ -243,6 +245,7 @@ export default function Dashboard() {
 
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
 
       {/* ============ EN-TÊTE ============ */}
       <div className="mb-6">

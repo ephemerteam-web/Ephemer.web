@@ -1,9 +1,13 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useContactDraft } from '@/components/ContactDraftProvider'
+import { TYPES_RELATION, normalizeRelation } from '@/lib/constants'
+import { readAllRows } from '@/lib/pagination'
+import { validateContactBatch, contactMatches } from '@/lib/contact-quality'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import { trouverProchaineFete, Sainte } from '@/lib/saints'
+import { trouverProchaineFete } from '@/lib/saints'
 import Link from 'next/link'
 
 type ContactRapide = {
@@ -36,23 +40,18 @@ const BULLES: InfoBulle[] = [
   { type: 'note', icon: '✏️', label: 'Note', couleur: 'from-fuchsia-500 to-purple-500' },
 ]
 
-const RELATIONS = [
-  { value: 'ami', label: '👫 Ami(e)' },
-  { value: 'famille', label: '👨‍👩‍👧 Famille' },
-  { value: 'pro', label: '💼 Professionnel' },
-  { value: 'autre', label: '✨ Autre' },
-]
+const RELATIONS = TYPES_RELATION
 
 const INDICATIFS = ['+33', '+32', '+41', '+44', '+1']
 
 export default function AjoutRapideContacts() {
   const router = useRouter()
+  const bulleTrigger = useRef<HTMLElement | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   
   // État principal
-  const [prenom, setPrenom] = useState('')
-  const [feteInfo, setFeteInfo] = useState<Sainte & { dateObj: Date; jours: number } | null>(null)
-  const [contacts, setContacts] = useState<ContactRapide[]>([])
+  const { prenom, setPrenom, contacts, setContacts, clear, confirm } = useContactDraft()
+
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [succes, setSucces] = useState<string | null>(null)
@@ -80,19 +79,19 @@ export default function AjoutRapideContacts() {
   }, [router])
 
   // Rechercher la fête quand le prénom change
-  useEffect(() => {
+  const feteInfo = useMemo(() => {
     if (prenom.trim().length >= 2) {
       const result = trouverProchaineFete(prenom)
       if (result) {
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const diffJours = Math.round((result.dateObj.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-        setFeteInfo({ ...result, jours: diffJours })
+        return { ...result, jours: diffJours }
       } else {
-        setFeteInfo(null)
+        return null
       }
     } else {
-      setFeteInfo(null)
+      return null
     }
   }, [prenom])
 
@@ -105,7 +104,8 @@ export default function AjoutRapideContacts() {
 
   // Gestion des bulles
   const ouvrirBulle = (type: BulleType, event: React.MouseEvent) => {
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect()
+    bulleTrigger.current = event.currentTarget as HTMLElement
+    const rect = bulleTrigger.current.getBoundingClientRect()
     const viewportWidth = window.innerWidth
     const bulleWidth = 288 // largeur approximative de la bulle (72 * 4 = 288px)
     
@@ -132,7 +132,17 @@ export default function AjoutRapideContacts() {
 
   const fermerBulle = () => {
     setBulleOuverte(null)
+    bulleTrigger.current?.focus()
   }
+
+  useEffect(() => {
+    if (!bulleOuverte) return
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { setBulleOuverte(null); bulleTrigger.current?.focus() }
+    }
+    document.addEventListener('keydown', escape)
+    return () => document.removeEventListener('keydown', escape)
+  }, [bulleOuverte])
 
   // Formater la date de fête
   const formaterDate = (date: string) => {
@@ -157,11 +167,11 @@ export default function AjoutRapideContacts() {
   }
 
   // Ajouter un contact
-  const ajouterContact = useCallback(() => {
+  const ajouterContact = () => {
     if (!prenom.trim()) return
     
     const nouveauContact: ContactRapide = {
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       prenom: prenom.trim(),
       nom: undefined,
       email: undefined,
@@ -174,13 +184,12 @@ export default function AjoutRapideContacts() {
     
     setContacts([...contacts, nouveauContact])
     setPrenom('')
-    setFeteInfo(null)
     setContactSelectionneId(nouveauContact.id)
     setSucces(`✨ ${prenom.trim()} ajouté !`)
     
     // Clear success message after animation
     setTimeout(() => setSucces(null), 2000)
-  }, [prenom, contacts])
+  }
 
   // Gérer la touche Entrée
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -209,20 +218,30 @@ export default function AjoutRapideContacts() {
 
   // Sauvegarder tous les contacts
   const sauvegarderContacts = async () => {
-    if (!userId || contacts.length === 0) return
+    if (!userId || contacts.length === 0 || sauvegardeEnCours) return
     
+    const emailValid = (value: string) => {
+      const input = document.createElement('input'); input.type = 'email'; input.value = value
+      return input.checkValidity()
+    }
+    const errors = validateContactBatch(contacts, emailValid)
+    if (errors.length) { setErreur(errors.join(' ')); return }
     setSauvegardeEnCours(true)
+    setBulleOuverte(null)
     setErreur(null)
     
     try {
+      const existing = await readAllRows(() => supabase.from('contacts').select('id, prenom, nom, email, telephone_indicatif, telephone_numero').eq('user_id', userId))
+      const matches = contactMatches(contacts, existing)
+      if (matches.length && !await confirm(matches.join('\n') + '\nCréer quand même ces fiches distinctes ? Aucune fusion ne sera effectuée.')) return
       // Préparer les données pour Supabase
       const contactsPourSupabase = contacts.map(c => ({
         user_id: userId,
-        prenom: c.prenom,
+        prenom: c.prenom.trim(),
         nom: c.nom || null,
         date_naissance: c.date_naissance || null,
-        relation: c.relation || 'ami',
-        email: c.email || null,
+        relation: normalizeRelation(c.relation || TYPES_RELATION[0].value),
+        email: c.email?.trim() || null,
         telephone_indicatif: c.telephone_indicatif || null,
         telephone_numero: c.telephone_numero || null,
         note: c.note || null,
@@ -238,8 +257,7 @@ export default function AjoutRapideContacts() {
       }
       
       setSucces(`🎉 ${contacts.length} contact(s) enregistré(s) avec succès !`)
-      setContacts([])
-      setPrenom('')
+      clear()
       setContactSelectionneId(null)
       router.refresh()
       
@@ -297,8 +315,8 @@ export default function AjoutRapideContacts() {
       case 'nom':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Nom de famille</label>
-            <input
+            <label htmlFor="bulle-nom" className="block text-sm font-semibold text-ink">Nom de famille</label>
+            <input id="bulle-nom"
               type="text"
               placeholder="Dupont"
               defaultValue={getValeur('nom')}
@@ -316,8 +334,8 @@ export default function AjoutRapideContacts() {
       case 'email':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Email</label>
-            <input
+            <label htmlFor="bulle-email" className="block text-sm font-semibold text-ink">Email</label>
+            <input id="bulle-email"
               type="email"
               placeholder="contact@email.com"
               defaultValue={getValeur('email')}
@@ -335,9 +353,9 @@ export default function AjoutRapideContacts() {
       case 'telephone':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Téléphone</label>
+            <label htmlFor="bulle-telephone" className="block text-sm font-semibold text-ink">Téléphone</label>
             <div className="flex gap-2">
-              <select
+              <select aria-label="Indicatif téléphonique"
                 defaultValue={getValeur('telephone_indicatif') || '+33'}
                 onChange={(e) => {
                   if (contactCibleId) {
@@ -350,7 +368,7 @@ export default function AjoutRapideContacts() {
                   <option key={code} value={code}>{code}</option>
                 ))}
               </select>
-              <input
+              <input id="bulle-telephone"
                 type="tel"
                 placeholder="612345678"
                 defaultValue={getValeur('telephone_numero')}
@@ -369,8 +387,8 @@ export default function AjoutRapideContacts() {
       case 'naissance':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Date de naissance</label>
-            <input
+            <label htmlFor="bulle-naissance" className="block text-sm font-semibold text-ink">Date de naissance</label>
+            <input id="bulle-naissance"
               type="date"
               defaultValue={getValeur('date_naissance')}
               onChange={(e) => {
@@ -387,8 +405,8 @@ export default function AjoutRapideContacts() {
       case 'relation':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Relation</label>
-            <select
+            <label htmlFor="bulle-relation" className="block text-sm font-semibold text-ink">Relation</label>
+            <select id="bulle-relation"
               defaultValue={getValeur('relation') || 'ami'}
               onChange={(e) => {
                 if (contactCibleId) {
@@ -408,8 +426,8 @@ export default function AjoutRapideContacts() {
       case 'note':
         content = (
           <div className="space-y-3">
-            <label className="block text-sm font-semibold text-ink">Note</label>
-            <textarea
+            <label htmlFor="bulle-note" className="block text-sm font-semibold text-ink">Note</label>
+            <textarea id="bulle-note"
               placeholder="Aime le café, vit à Paris..."
               rows={3}
               defaultValue={getValeur('note')}
@@ -456,7 +474,7 @@ export default function AjoutRapideContacts() {
 
   return (
     <div className="min-h-screen bg-canvas/50 backdrop-blur-lg p-4 md:p-8">
-      <div className="max-w-2xl mx-auto">
+      <fieldset disabled={sauvegardeEnCours} className="max-w-2xl mx-auto min-w-0">
         
         {/* En-tête */}
         <div className="flex items-center justify-between mb-8">
@@ -478,13 +496,13 @@ export default function AjoutRapideContacts() {
 
         {/* Messages */}
         {erreur && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-danger text-sm animate-[shake_0.5s_ease]">
+          <div role="alert" className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-danger text-sm animate-[shake_0.5s_ease]">
             {erreur}
           </div>
         )}
         
         {succes && (
-          <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-success text-sm animate-[pulse_0.5s_ease]">
+          <div role="status" className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-success text-sm animate-[pulse_0.5s_ease]">
             {succes}
           </div>
         )}
@@ -494,11 +512,11 @@ export default function AjoutRapideContacts() {
           <div className="flex flex-col sm:flex-row items-start gap-4">
             {/* Champ prénom */}
             <div className="flex-1 w-full">
-              <label className="block text-sm font-semibold text-muted mb-2">
+              <label htmlFor="contact-prenom" className="block text-sm font-semibold text-muted mb-2">
                 Prénom *
               </label>
               <input
-                ref={inputRef}
+                id="contact-prenom" ref={inputRef}
                 type="text"
                 value={prenom}
                 onChange={(e) => setPrenom(e.target.value)}
@@ -564,10 +582,7 @@ export default function AjoutRapideContacts() {
                 <span className="text-sm font-normal text-info">({contacts.length})</span>
               </h2>
               <button
-                onClick={() => {
-                  setContacts([])
-                  setContactSelectionneId(null)
-                }}
+                onClick={async () => { if (await confirm('Effacer toutes les saisies de ce brouillon ?')) { clear(); setContactSelectionneId(null) } }}
                 className="text-muted hover:text-danger transition text-sm flex items-center gap-1"
               >
                 <span>🗑️</span> Vider
@@ -582,6 +597,7 @@ export default function AjoutRapideContacts() {
                   <div
                     key={contact.id}
                     onClick={() => selectionnerContact(contact.id)}
+                    role="button" tabIndex={0} aria-label={`Modifier ${contact.prenom}`} onKeyDown={e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectionnerContact(contact.id) } }}
                     className={`group relative bg-canvas border rounded-xl p-4 flex items-center justify-between gap-4 transition-all animate-[slideUp_0.3s_ease] cursor-pointer ${
                       estSelectionne 
                         ? 'border-accent/50 bg-action/5 shadow-[0_0_15px_-3px_rgba(200,168,78,0.15)]' 
@@ -642,6 +658,7 @@ export default function AjoutRapideContacts() {
             {/* Bouton de sauvegarde */}
             <button
               onClick={sauvegarderContacts}
+              aria-busy={sauvegardeEnCours}
               disabled={sauvegardeEnCours || contacts.length === 0}
               className="mt-6 w-full rounded-xl bg-action hover:bg-action/90 py-3 text-base font-semibold text-on-action shadow-lg transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
@@ -685,7 +702,7 @@ export default function AjoutRapideContacts() {
             </p>
           </div>
         )}
-      </div>
+      </fieldset>
 
       {/* Overlay des bulles */}
       {bulleOuverte && (

@@ -1,7 +1,11 @@
-"use client";
+"use client"
+import { useContactDraft } from '@/components/ContactDraftProvider';
+import { readAllResult } from '@/lib/pagination';
 
 import { deliveryStatus, deliveryLimit } from '@/lib/delivery-status';
 import { parseLocalDay } from '@/lib/calendar-day';
+import { parisDay, isCalendarDay } from '@/lib/calendar-day';
+import { messageNeedsRescheduling } from '@/lib/reminder-policy';
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
@@ -17,6 +21,9 @@ type MessageProgramme = {
   source: string;
   ton: string | null;
   email_destinataire: string | null;
+  email_state?: string;
+  resend_id?: string | null;
+  delivery_status?: string;
   contacts:
     | { prenom: string; nom: string }
     | { prenom: string; nom: string }[]
@@ -88,6 +95,7 @@ function keyHistorique(type: string) {
 
 export default function MessagesProgrammesPage() {
   const router = useRouter();
+  const { confirm } = useContactDraft();
 
   const [messages, setMessages] = useState<MessageProgramme[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,14 +124,13 @@ export default function MessagesProgrammesPage() {
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await readAllResult(() => supabase
       .from("rappels")
       .select(`
         id, created_at, type_evenement, date_envoi, message, statut, source, ton, email_destinataire,
         contacts (prenom, nom)
       `)
-      .eq("user_id", user.id)
-      .order("date_envoi", { ascending: true });
+      .eq("user_id", user.id));
 
     if (error) {
       console.error("Erreur Supabase:", error);
@@ -132,7 +139,15 @@ export default function MessagesProgrammesPage() {
       return;
     }
 
-    const list = (data as MessageProgramme[]) || [];
+    const { data: emailStatuses, error: journalError } = await supabase.rpc('my_email_status');
+    const statuses = new Map<number, { state: string; resend_id: string | null; delivery_status: string }>(
+      (emailStatuses || []).map((row: { rappel_id: number; state: string; resend_id: string | null; delivery_status: string }) => [row.rappel_id, row])
+    );
+    const list = ((data as MessageProgramme[]) || []).map(m => {
+      const status = statuses.get(m.id);
+      return status ? { ...m, email_state: status.state, resend_id: status.resend_id, delivery_status: status.delivery_status } : m;
+    });
+    if (journalError) setErreur("Le suivi des emails est indisponible. Les livraisons restent non confirmées.");
     setMessages(list);
 
     const aVenir = list.filter(
@@ -159,7 +174,7 @@ export default function MessagesProgrammesPage() {
   }
 
   async function handleAnnuler(id: number) {
-    const confirme = window.confirm("Es-tu sûr de vouloir annuler l'envoi de ce message ?");
+    const confirme = await confirm("Es-tu sûr de vouloir annuler l'envoi de ce message ?");
     if (!confirme) return;
 
     setAnnulationId(id);
@@ -180,7 +195,12 @@ export default function MessagesProgrammesPage() {
   }
 
   async function handleReactiver(id: number) {
-    const confirme = window.confirm("Réactiver cet envoi ? Il reprendra sa date d'origine.");
+    const message = messages.find(m => m.id === id);
+    if (message?.source === 'message_programme' && message.date_envoi < parisDay()) {
+      setErreur("Choisis une nouvelle date avec « Reprogrammer » avant de réactiver ce message.");
+      return;
+    }
+    const confirme = await confirm("Réactiver cet envoi ? Il reprendra sa date d'origine.");
     if (!confirme) return;
 
     setReactivationId(id);
@@ -200,8 +220,27 @@ export default function MessagesProgrammesPage() {
     setReactivationId(null);
   }
 
+  async function handleReprogrammer(id: number, date: string) {
+    if (!isCalendarDay(date) || date < parisDay()) {
+      setErreur("Choisis une date d’envoi à partir d’aujourd’hui.");
+      return false;
+    }
+    setSauvegardeId(id);
+    const { data, error } = await supabase.from('rappels')
+      .update({ date_envoi: date, statut: 'programme' }).eq('id', id)
+      .eq('source', 'message_programme').in('statut', ['programme', 'annule']).select('id');
+    setSauvegardeId(null);
+    if (error || !data?.length) {
+      setErreur("Impossible de reprogrammer ce message. Recharge la liste puis réessaie.");
+      return false;
+    }
+    setErreur(null);
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, date_envoi: date, statut: 'programme' } : m));
+    return true;
+  }
+
   async function handleSupprimer(id: number) {
-    const confirme = window.confirm(
+    const confirme = await confirm(
       "⚠️ Supprimer définitivement ce message ? Cette action est irréversible."
     );
     if (!confirme) return;
@@ -277,7 +316,7 @@ export default function MessagesProgrammesPage() {
         </div>
 
         {erreur && (
-          <div className="bg-red-500/10 border border-red-500/20 text-danger p-3 sm:p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
+          <div role="alert" className="bg-red-500/10 border border-red-500/20 text-danger p-3 sm:p-4 rounded-xl mb-4 flex items-start justify-between gap-3">
             <p className="font-medium text-sm">⚠️ {erreur}</p>
             <button
               onClick={() => loadMessages()}
@@ -288,7 +327,7 @@ export default function MessagesProgrammesPage() {
           </div>
         )}
 
-        {loading && <div className="text-center py-20 text-muted">Chargement...</div>}
+        {loading && <div role="status" className="text-center py-20 text-muted">Chargement...</div>}
 
         {!loading && !erreur && allMessagesCount === 0 && (
           <div className="bg-ink/5 border border-dashed border-accent/20 rounded-2xl p-8 sm:p-12 text-center">
@@ -337,6 +376,7 @@ export default function MessagesProgrammesPage() {
                           message={m}
                           onAnnuler={handleAnnuler}
                           onReactiver={handleReactiver}
+                          onReprogrammer={handleReprogrammer}
                           onSupprimer={handleSupprimer}
                           onModifier={handleModifier}
                           estEnCours={annulationId === m.id}
@@ -386,6 +426,7 @@ export default function MessagesProgrammesPage() {
                           message={m}
                           onAnnuler={handleAnnuler}
                           onReactiver={handleReactiver}
+                          onReprogrammer={handleReprogrammer}
                           onSupprimer={handleSupprimer}
                           onModifier={handleModifier}
                           estEnCours={false}
@@ -409,6 +450,7 @@ function MessageCard({
   message: m,
   onAnnuler,
   onReactiver,
+  onReprogrammer,
   onSupprimer,
   onModifier,
   estEnCours,
@@ -419,6 +461,7 @@ function MessageCard({
   message: MessageProgramme;
   onAnnuler: (id: number) => void;
   onReactiver: (id: number) => void;
+  onReprogrammer: (id: number, date: string) => Promise<boolean>;
   onSupprimer: (id: number) => void;
   onModifier: (id: number, nouveauTexte: string) => Promise<boolean>;
   estEnCours: boolean;
@@ -431,13 +474,17 @@ function MessageCard({
   const [texteEdite, setTexteEdite] = useState(m.message);
   const [menuOuvert, setMenuOuvert] = useState(false);
   const [partageMsg, setPartageMsg] = useState<string | null>(null);
+  const [nouvelleDate, setNouvelleDate] = useState('');
+  const aReprogrammer = m.source === 'message_programme' && m.statut === 'programme' && messageNeedsRescheduling(m.date_envoi);
+  const traitementBloque = ['sending', 'uncertain', 'review'].includes(m.email_state || '');
+  const peutReprogrammer = !traitementBloque && m.source === 'message_programme' && m.statut !== 'envoye' && m.date_envoi < parisDay();
 
   const contactNom = extractContactName(m.contacts);
   const joursRestants = getRelativeDate(m.date_envoi);
 
-  const estAnnulable = m.statut === "programme";
+  const estAnnulable = !traitementBloque && m.statut === "programme";
   const estAnnule = m.statut === "annule";
-  const estModifiable = m.statut === "programme";
+  const estModifiable = !traitementBloque && m.statut === "programme";
   const dateFR = formatDateFR(m.date_envoi);
 
   function handleCarteClick() {
@@ -512,7 +559,7 @@ function MessageCard({
                 STATUT_STYLE[m.statut] ?? "bg-ink/10 text-muted"
               }`}
             >
-              {deliveryStatus(m.statut)}
+              {aReprogrammer && !traitementBloque ? 'Suspendu — à reprogrammer' : deliveryStatus(m.statut, m.delivery_status, m.email_state)}
             </span>
           </div>
 
@@ -525,6 +572,7 @@ function MessageCard({
           {m.email_destinataire && (
             <p className="text-[10px] sm:text-xs text-muted mt-0.5 break-words truncate">✉️ {m.email_destinataire}</p>
           )}
+          {traitementBloque && <p className="mt-1 text-xs text-warning">Envoi en cours ou incertain : modification, annulation et nouvel envoi bloqués pendant le rapprochement.</p>}
         </div>
 
         {/* 🔧 MOBILE FIX : boutons plus compacts sur mobile, pas de flex-wrap qui pousse */}
@@ -601,7 +649,7 @@ function MessageCard({
                     </button>
                   )}
 
-                  {estAnnule && (
+                  {estAnnule && !peutReprogrammer && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -635,6 +683,21 @@ function MessageCard({
 
       {partageMsg && (
         <p className="text-xs text-success mt-2 text-right">{partageMsg}</p>
+      )}
+
+      {peutReprogrammer && (
+        <div className="mt-3 space-y-2" onClick={e => e.stopPropagation()}>
+          <p className="text-xs text-warning">{aReprogrammer ? 'La date est dépassée : aucun envoi automatique. Choisis une nouvelle date.' : 'Tu peux choisir une nouvelle date pour cet envoi.'}</p>
+          <div className="flex flex-wrap gap-2">
+            <input type="date" aria-label={`Nouvelle date d’envoi pour ${contactNom}`} min={parisDay()}
+              value={nouvelleDate} onChange={e => setNouvelleDate(e.target.value)} disabled={estSauvegardeEnCours}
+              className="min-w-0 max-w-full rounded-lg border border-line bg-surface p-2 text-sm" />
+            <button disabled={!nouvelleDate || estSauvegardeEnCours} className="rounded-lg bg-action px-3 py-2 text-sm text-on-action disabled:opacity-50"
+              onClick={async () => { if (await onReprogrammer(m.id, nouvelleDate)) setNouvelleDate(''); }}>
+              {estSauvegardeEnCours ? 'Enregistrement…' : 'Reprogrammer'}
+            </button>
+          </div>
+        </div>
       )}
 
       {expanded && (

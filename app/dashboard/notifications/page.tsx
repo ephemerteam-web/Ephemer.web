@@ -1,4 +1,8 @@
 'use client'
+import Modal from '@/components/Modal'
+import { DEFAULT_PREFERENCES, resolvePreferences } from '@/lib/notification-preferences'
+import type { NotificationPreferences } from '@/lib/notification-preferences'
+import { readAllResult } from '@/lib/pagination'
 
 import { useEffect, useState, useCallback } from 'react'
 import { useClock } from '@/lib/hooks/useClock'
@@ -9,20 +13,14 @@ type Notification = {
   id: string; user_id: string; contact_id: number; type: string; message: string
   lue: boolean; event_date: string; created_at: string; event_description: string | null
 }
-type Preferences = {
-  canal_email: boolean; canal_push: boolean; rappel_j7: boolean; rappel_j3: boolean
-  rappel_j1: boolean; rappel_jourj: boolean; newsletter_mensuelle: boolean
-}
-const PREFS_DEFAUT: Preferences = {
-  canal_email: true, canal_push: false, rappel_j7: true, rappel_j3: false,
-  rappel_j1: false, rappel_jourj: true, newsletter_mensuelle: false,
-}
+type Preferences = NotificationPreferences
+const PREFS_DEFAUT = DEFAULT_PREFERENCES
 
 function Toggle({ actif, onChange, titre, description, emoji, desactive = false }: {
   actif: boolean; onChange: (v: boolean) => void; titre: string; description: string
   emoji: string; desactive?: boolean
 }) {
-  return <button onClick={() => !desactive && onChange(!actif)} disabled={desactive}
+  return <button onClick={() => !desactive && onChange(!actif)} disabled={desactive} role="switch" aria-checked={actif}
     className={`w-full flex items-center justify-between gap-4 p-4 rounded-2xl bg-ink/[0.03] border border-line transition text-left ${desactive ? 'opacity-50 cursor-wait' : 'hover:bg-ink/[0.06]'}`}>
     <div className="flex items-start gap-3 min-w-0"><span className="text-2xl flex-shrink-0">{emoji}</span><div className="min-w-0"><p className="text-ink font-semibold text-sm">{titre}</p><p className="text-muted text-xs mt-0.5">{description}</p></div></div>
     <div className={`relative w-12 h-7 rounded-full flex-shrink-0 transition-colors ${actif ? 'bg-indigo-500' : 'bg-ink/15'}`}><div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow transition-transform ${actif ? 'translate-x-6' : 'translate-x-1'}`} /></div>
@@ -32,6 +30,8 @@ function Toggle({ actif, onChange, titre, description, emoji, desactive = false 
 export default function CentreNotifications() {
   const router = useRouter()
   const now = useClock()
+  const [prefsUnavailable, setPrefsUnavailable] = useState(false)
+  const [listUnavailable, setListUnavailable] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [prefs, setPrefs] = useState<Preferences>(PREFS_DEFAUT)
   const [chargement, setChargement] = useState(true)
@@ -63,7 +63,7 @@ export default function CentreNotifications() {
     })
     const data = await res.json()
     setTestResult(data.success
-      ? { success: true, message: `✅ Simulation terminée ! ${data.notifs} notification(s) créée(s), ${data.emails} email(s) envoyé(s).` }
+      ? { success: true, message: `✅ Simulation terminée ! ${data.notifs} notification(s) prévue(s), ${data.emails} email(s) prévu(s).` }
       : { success: false, message: `❌ Erreur : ${data.error || 'Erreur inconnue'}` })
   } catch { setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
   finally { setTestLoading(false) }
@@ -78,12 +78,12 @@ export default function CentreNotifications() {
     if (errUser || !user) { router.push('/connexion'); return }
     setChargement(true); setErreur(null)
     setUserId(user.id)
-    const { data: notifs, error: errNotifs } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).order('event_date', { ascending: true })
-    if (errNotifs) { console.error('❌ Erreur chargement notifications :', errNotifs.message); flash('erreur', `Impossible de charger tes notifications : ${errNotifs.message}`) }
-    else setNotifications(notifs || [])
+    const { data: notifs, error: errNotifs } = await readAllResult(() => supabase.from('notifications').select('*').eq('user_id', user.id))
+    if (errNotifs) { setListUnavailable(true); console.error('❌ Erreur chargement notifications :', errNotifs.message); flash('erreur', `Impossible de charger tes notifications : ${errNotifs.message}`) }
+    else setNotifications((notifs || []).sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id)))
     const { data: pref, error: errPref } = await supabase.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle()
-    if (errPref) { console.error('❌ Erreur chargement préférences :', errPref.message); flash('erreur', `Impossible de charger tes préférences : ${errPref.message}`) }
-    else if (pref) setPrefs({ canal_email: pref.canal_email, canal_push: pref.canal_push, rappel_j7: pref.rappel_j7, rappel_j3: pref.rappel_j3, rappel_j1: pref.rappel_j1, rappel_jourj: pref.rappel_jourj, newsletter_mensuelle: pref.newsletter_mensuelle })
+    if (errPref) { setPrefsUnavailable(true); console.error('❌ Erreur chargement préférences :', errPref.message); flash('erreur', `Impossible de charger tes préférences : ${errPref.message}`) }
+    else setPrefs(resolvePreferences(pref))
     setChargement(false)
   }, [router])
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function CentreNotifications() {
     else flash('succes', 'Toutes les notifications ont été supprimées.')
   }
   async function changerPref(cle: keyof Preferences, valeur: boolean) {
-    if (!userId) return
+    if (!userId || prefsUnavailable || sauvegardePrefs) return
     const ancienesPrefs = prefs; const nouvellesPrefs = { ...prefs, [cle]: valeur }
     setPrefs(nouvellesPrefs); setSauvegardePrefs(true)
     const { error } = await supabase.from('notification_preferences').upsert({ user_id: userId, ...nouvellesPrefs, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
@@ -137,8 +137,9 @@ export default function CentreNotifications() {
 
   return <div className="p-4 md:p-8"><div className="max-w-3xl mx-auto">
     <div className="mb-6"><h1 className="text-2xl sm:text-3xl font-bold text-ink">🔔 Centre de notifications</h1><p className="text-muted mt-1 text-sm sm:text-base">Consulte tes alertes et règle tes préférences.</p></div>
-    {erreur && <div className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-danger text-sm flex items-start gap-2"><span>⚠️</span><span className="min-w-0 break-words">{erreur}</span></div>}
-    {succes && <div className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-success text-sm flex items-center gap-2"><span>✓</span><span>{succes}</span></div>}
+    {erreur && <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-danger text-sm flex items-start gap-2"><span>⚠️</span><span className="min-w-0 break-words">{erreur}</span></div>}
+    {prefsUnavailable && <p role="alert" className="p-3 mb-4 text-danger">Lecture des préférences indisponible. Recharge la page avant de modifier tes réglages.</p>}
+    {succes && <div role="status" className="mb-4 p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-success text-sm flex items-center gap-2"><span>✓</span><span>{succes}</span></div>}
     <div className="flex gap-2 mb-6 bg-ink/[0.03] p-1 rounded-2xl border border-line">
       <button onClick={() => setOnglet('liste')} className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === 'liste' ? 'bg-indigo-500 text-white' : 'text-muted hover:text-ink'}`}>📬 <span className="hidden xs:inline">Mes </span>notifications{nonLues > 0 && <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 text-xs font-bold bg-rose-500 text-white rounded-full">{nonLues}</span>}</button>
       <button onClick={() => setOnglet('parametres')} className={`flex-1 py-2.5 px-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === 'parametres' ? 'bg-indigo-500 text-white' : 'text-muted hover:text-ink'}`}>⚙️ Paramètres</button>
@@ -146,16 +147,16 @@ export default function CentreNotifications() {
     {chargement ? <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-ink/[0.03] border border-line animate-pulse" />)}</div> : <>
       {onglet === 'liste' && <div>
         {notifications.length > 0 && <div className="flex flex-wrap justify-between items-center gap-3 mb-3"><p className="text-xs text-muted">Les plus récentes en premier</p><div className="flex gap-4 ml-auto">{nonLues > 0 && <button onClick={toutMarquerLu} className="text-xs text-info hover:text-info font-semibold transition">✓ Tout marquer comme lu</button>}<button onClick={() => setModaleSuppression(true)} className="text-xs text-danger hover:text-danger font-semibold transition">🗑 Tout supprimer</button></div></div>}
-        {notifications.length === 0 ? <div className="text-center py-16 bg-ink/[0.03] border border-line rounded-2xl"><span className="text-5xl">📭</span><p className="text-ink font-semibold mt-4">Aucune notification</p><p className="text-muted text-sm mt-1">Tes prochains événements apparaîtront ici.</p></div> : <div className="space-y-3">{notifications.map(notif => <div key={notif.id} className={`p-4 rounded-2xl border transition ${notif.lue ? 'bg-ink/[0.02] border-line' : 'bg-indigo-500/10 border-indigo-500/30'}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className={`text-sm break-words ${notif.lue ? 'text-muted' : 'text-ink font-medium'}`}>{!notif.lue && <span className="inline-block w-2 h-2 bg-indigo-400 rounded-full mr-2" />}{notif.message}</p><div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5"><span className="text-muted text-xs">📅 {formaterDate(notif.event_date)}</span><span className="text-muted text-xs">• reçue {depuisQuand(notif.created_at)}</span></div></div><div className="flex flex-col gap-2 flex-shrink-0">{!notif.lue && <button onClick={() => marquerLue(notif.id)} className="px-3 py-1.5 text-sm text-info hover:text-info font-semibold whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition" title="Marquer comme lu">✓ Lu</button>}<button onClick={() => supprimer(notif.id)} className="p-2 text-danger hover:text-danger hover:bg-rose-500/10 rounded-lg transition" title="Supprimer"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div></div></div>)}</div>}
+        {listUnavailable ? <p role="alert">Chargement incomplet. Recharge la page pour retrouver toutes tes notifications.</p> : notifications.length === 0 ? <div className="text-center py-16 bg-ink/[0.03] border border-line rounded-2xl"><span className="text-5xl">📭</span><p className="text-ink font-semibold mt-4">Aucune notification</p><p className="text-muted text-sm mt-1">Tes prochains événements apparaîtront ici.</p></div> : <div className="space-y-3">{notifications.map(notif => <div key={notif.id} className={`p-4 rounded-2xl border transition ${notif.lue ? 'bg-ink/[0.02] border-line' : 'bg-indigo-500/10 border-indigo-500/30'}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className={`text-sm break-words ${notif.lue ? 'text-muted' : 'text-ink font-medium'}`}>{!notif.lue && <span className="inline-block w-2 h-2 bg-indigo-400 rounded-full mr-2" />}{notif.message}</p><div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5"><span className="text-muted text-xs">📅 {formaterDate(notif.event_date)}</span><span className="text-muted text-xs">• reçue {depuisQuand(notif.created_at)}</span></div></div><div className="flex flex-col gap-2 flex-shrink-0">{!notif.lue && <button onClick={() => marquerLue(notif.id)} className="px-3 py-1.5 text-sm text-info hover:text-info font-semibold whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition" title="Marquer comme lu">✓ Lu</button>}<button onClick={() => supprimer(notif.id)} className="p-2 text-danger hover:text-danger hover:bg-rose-500/10 rounded-lg transition" title="Supprimer"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div></div></div>)}</div>}
       </div>}
       {onglet === 'parametres' && <div className="space-y-6">
         <div className="h-4 text-right">{sauvegardePrefs && <p className="text-xs text-muted">💾 Sauvegarde…</p>}</div>
-        <div><h2 className="text-ink font-bold text-lg mb-3">📡 Comment être prévenu ?</h2><div className="space-y-3"><Toggle emoji="📧" titre="Par email" description="Recevoir les alertes dans ta boîte mail." actif={prefs.canal_email} onChange={v => changerPref('canal_email', v)} desactive={sauvegardePrefs} /><Toggle emoji="🔔" titre="Notifications push" description="Préférence enregistrée ; envoi push non disponible actuellement." actif={prefs.canal_push} onChange={v => changerPref('canal_push', v)} desactive={sauvegardePrefs} /></div></div>
-        <div><h2 className="text-ink font-bold text-lg mb-3">⏰ Quand être prévenu ?</h2><div className="space-y-3"><Toggle emoji="7️⃣" titre="7 jours avant" description="Un rappel une semaine à l'avance." actif={prefs.rappel_j7} onChange={v => changerPref('rappel_j7', v)} desactive={sauvegardePrefs} /><Toggle emoji="1️⃣" titre="1 jour avant" description="Un rappel la veille de l'événement." actif={prefs.rappel_j1} onChange={v => changerPref('rappel_j1', v)} desactive={sauvegardePrefs} /><Toggle emoji="🎯" titre="Le jour J" description="Un rappel le jour même." actif={prefs.rappel_jourj} onChange={v => changerPref('rappel_jourj', v)} desactive={sauvegardePrefs} /></div></div>
-        <div><h2 className="text-ink font-bold text-lg mb-3">📰 Résumé mensuel</h2><Toggle emoji="🗓" titre="Newsletter du mois" description="Recevoir la liste des événements du mois à venir." actif={prefs.newsletter_mensuelle} onChange={v => changerPref('newsletter_mensuelle', v)} desactive={sauvegardePrefs} /></div>
+        <div><h2 className="text-ink font-bold text-lg mb-3">📡 Comment être prévenu ?</h2><div className="space-y-3"><Toggle emoji="📧" titre="Par email" description="Recevoir les alertes dans ta boîte mail." actif={prefs.canal_email} onChange={v => changerPref('canal_email', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="🔔" titre="Préparer cet appareil" description="Préférence enregistrée. Envoi push indisponible actuellement." actif={prefs.canal_push} onChange={v => changerPref('canal_push', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div></div>
+        <div><h2 className="text-ink font-bold text-lg mb-3">⏰ Quand être prévenu ?</h2><div className="space-y-3"><Toggle emoji="7️⃣" titre="7 jours avant" description="Un rappel une semaine à l'avance." actif={prefs.rappel_j7} onChange={v => changerPref('rappel_j7', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="3️⃣" titre="3 jours avant" description="Un rappel trois jours avant l’événement." actif={prefs.rappel_j3} onChange={v => changerPref('rappel_j3', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="1️⃣" titre="1 jour avant" description="Un rappel la veille de l'événement." actif={prefs.rappel_j1} onChange={v => changerPref('rappel_j1', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="🎯" titre="Le jour J" description="Un rappel le jour même." actif={prefs.rappel_jourj} onChange={v => changerPref('rappel_jourj', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div></div>
+        <div><h2 className="text-ink font-bold text-lg mb-3">📰 Résumé mensuel</h2><Toggle emoji="🗓" titre="Newsletter du mois" description="Recevoir la liste des événements du mois à venir." actif={prefs.newsletter_mensuelle} onChange={v => changerPref('newsletter_mensuelle', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div>
         <div className="mt-8 p-6 bg-ink/[0.03] rounded-xl border border-line"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-ink"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-muted mb-4">Simule les rappels de votre compte sans créer de notification ni envoyer d&apos;email.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-ink/10 text-ink font-semibold rounded-lg hover:bg-ink/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-line border-t-line rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-ink/[0.06] border border-line text-muted' : 'bg-ink/[0.06] border border-line text-muted'}`}>{testResult.message}</div>}</div>
       </div>}
     </>}
-    {modaleSuppression && <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"><div className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-ink font-bold text-lg sm:text-xl mt-4">Supprimer toutes les notifications ?</h3><p className="text-muted text-sm mt-2">Cette action est <strong className="text-danger">irréversible</strong>.<br />Tu as actuellement <strong className="text-ink">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink bg-ink/5 hover:bg-ink/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Oui, tout supprimer</button></div></div></div>}
+    {modaleSuppression && <Modal open={modaleSuppression} onClose={() => setModaleSuppression(false)} title="Supprimer toutes les notifications ?"><div className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-ink font-bold text-lg sm:text-xl mt-4">Supprimer toutes les notifications ?</h3><p className="text-muted text-sm mt-2">Cette action est <strong className="text-danger">irréversible</strong>.<br />Tu as actuellement <strong className="text-ink">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink bg-ink/5 hover:bg-ink/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Oui, tout supprimer</button></div></div></Modal>}
   </div></div>
 }

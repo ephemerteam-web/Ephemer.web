@@ -1,189 +1,51 @@
-import { parisDay, parseLocalDay } from '@/lib/calendar-day';
-// app/api/envoyer-newsletter/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { resend } from '@/lib/resend';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import {
-  genererNewsletterMensuelle,
-  EvenementNewsletter,
-  EMAIL_CONFIG,
-} from '@/lib/email-templates';
-
-// 🆕 AJOUT : on importe la fonction qui retrouve une fête prénomale
-import { trouverSaintParPrenom } from '@/lib/saints';
-
-const CRON_SECRET = process.env.CRON_SECRET;
+// 📰 Newsletter mensuelle, traitements par lots et réservation d’envoi conservée.
+import { NextRequest, NextResponse } from 'next/server'
+import { parisDay, parseLocalDay } from '@/lib/calendar-day'
+import { monthEvents } from '@/lib/month-events'
+import { readPages, readAllRows } from '@/lib/pagination'
+import { deliverEmail } from '@/lib/email-delivery'
+import { supabaseAdmin } from '@/lib/supabase-admin'
+import { genererNewsletterMensuelle, EMAIL_CONFIG } from '@/lib/email-templates'
 
 export async function GET(request: NextRequest) {
-  // ─────────────────────────────────────────────
-  // 1️⃣ SÉCURITÉ : on vérifie le mot de passe
-  // Vercel Cron envoie automatiquement le header
-  // "Authorization: Bearer <CRON_SECRET>"
-  // Placé AVANT le try : une requête non autorisée
-  // ne doit pas entrer dans la logique métier.
-  // ─────────────────────────────────────────────
-  const authHeader = request.headers.get('authorization');
-
-  if (!CRON_SECRET || authHeader !== `Bearer ${CRON_SECRET}`) {
-    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 });
+  const secret = process.env.CRON_SECRET
+  if (!secret || request.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Non autorisé' }, { status: 401 })
   }
-
   try {
-    const maintenant = parseLocalDay(parisDay());
-    const annee = maintenant.getFullYear();
-    const mois = maintenant.getMonth(); // 0 = janvier, 11 = décembre
-
-    const moisLibelle = maintenant.toLocaleDateString('fr-FR', {
-      month: 'long',
-      year: 'numeric',
-    });
-
-    // ─────────────────────────────────────────────
-    // 3️⃣ On récupère les users qui ont COCHÉ la newsletter
-    // ─────────────────────────────────────────────
-    const { data: prefs, error: errPrefs } = await supabaseAdmin
-      .from('notification_preferences')
-      .select('user_id')
-      .eq('newsletter_mensuelle', true)
-      .eq('canal_email', true);
-
-    if (errPrefs) throw errPrefs;
-
-    if (!prefs || prefs.length === 0) {
-      return NextResponse.json({
-        success: true,
-        message: 'Aucun utilisateur abonné à la newsletter',
-        total: 0,
-      });
-    }
-
-    const userIds = prefs.map((p) => p.user_id);
-
-    // ─────────────────────────────────────────────
-    // 4️⃣ On récupère les profils (pour email + prénom)
-    // ─────────────────────────────────────────────
-    const { data: profils, error: errProfils } = await supabaseAdmin
-      .from('profiles')
-      .select('id, prenom, email')
-      .in('id', userIds);
-
-    if (errProfils) throw errProfils;
-
-    // ─────────────────────────────────────────────
-    // 5️⃣ On récupère TOUS les contacts de ces users
-    // 🆕 CORRECTION : on ne filtre PLUS sur date_naissance
-    // car on veut aussi les fêtes prénôminales (pas besoin de date de naissance !)
-    // ─────────────────────────────────────────────
-    const { data: contacts, error: errContacts } = await supabaseAdmin
-      .from('contacts')
-      .select('user_id, prenom, nom, date_naissance')
-      .in('user_id', userIds);
-
-    if (errContacts) throw errContacts;
-
-    // ─────────────────────────────────────────────
-    // 6️⃣ Pour chaque user, on construit la liste des événements du mois
-    // ─────────────────────────────────────────────
-    const resultats = [];
-
-    for (const profil of profils || []) {
-      if (!profil.email) continue;
-
-      const mesContacts = (contacts || []).filter((c) => c.user_id === profil.id);
-      const evenements: EvenementNewsletter[] = [];
-
-      for (const contact of mesContacts) {
-        // 🅰️ ANNIVERSAIRE : si le contact a une date de naissance CE mois-ci
-        if (contact.date_naissance) {
-          const dateNaiss = parseLocalDay(contact.date_naissance);
-          if (dateNaiss.getMonth() === mois) {
-            evenements.push({
-              prenomContact: contact.prenom || 'Contact',
-              nomContact: contact.nom || '',
-              typeEvenement: 'anniversaire',
-              jour: dateNaiss.getDate(),
-              emoji: '🎂',
-            });
-          }
-        }
-
-        // 🆕 🅱️ Fête prénomale : si le prénom matche UNE fête CE mois-ci
-        if (contact.prenom) {
-          const saint = trouverSaintParPrenom(contact.prenom);
-          if (saint) {
-            // saint.date est au format "MM-JJ" (ex: "07-23" pour le 23 juillet)
-            const moisFete = parseInt(saint.date.split('-')[0], 10) - 1; // -1 car janvier=0
-            const jourFete = parseInt(saint.date.split('-')[1], 10);
-
-            if (moisFete === mois) {
-              evenements.push({
-                prenomContact: contact.prenom || 'Contact',
-                nomContact: contact.nom || '',
-                typeEvenement: 'fete_prenomale',
-                jour: jourFete,
-                emoji: '🎉',
-              });
-            }
-          }
+    const today = parisDay()
+    const annee = Number(today.slice(0, 4)), mois = Number(today.slice(5, 7)) - 1
+    const moisLibelle = parseLocalDay(today).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+    const resultats: { user: string; statut: string; nbEvenements?: number; emailId?: string }[] = []
+    for await (const preferences of readPages(() => supabaseAdmin.from('notification_preferences')
+      .select('user_id').eq('newsletter_mensuelle', true), 'user_id')) {
+      const profils = await readAllRows(() => supabaseAdmin.from('profiles').select('id, prenom, email')
+        .in('id', preferences.map(p => p.user_id)))
+      for (const profil of profils) {
+        if (!profil.email) continue
+        try {
+          const contacts = await readAllRows(() => supabaseAdmin.from('contacts')
+            .select('id, prenom, nom, date_naissance').eq('user_id', profil.id))
+          const evenements = monthEvents(contacts, mois, annee).map(e => ({ prenomContact: e.prenom,
+            nomContact: e.nom, typeEvenement: e.typeEvenement, jour: e.jour, emoji: e.emoji }))
+          const html = genererNewsletterMensuelle({ prenomUtilisateur: profil.prenom || 'cher utilisateur',
+            moisLibelle: moisLibelle.charAt(0).toUpperCase() + moisLibelle.slice(1), evenements })
+          const result = await deliverEmail({ key: `newsletter/${profil.id}/${annee}-${mois + 1}`,
+            kind: 'newsletter', userId: profil.id,
+            expiresOn: new Date(Date.UTC(annee, mois + 1, 0)).toISOString().slice(0, 10), payload: {
+              from: `${EMAIL_CONFIG.brandName} <${EMAIL_CONFIG.defaultFrom}>`, to: profil.email,
+              subject: `📅 Votre agenda de ${moisLibelle}`, html,
+            } })
+          resultats.push({ user: profil.email, statut: ['accepted', 'already_accepted'].includes(result.state) ? 'envoye' : result.state,
+            nbEvenements: evenements.length, emailId: result.emailId })
+        } catch {
+          resultats.push({ user: profil.email, statut: 'erreur' })
         }
       }
-
-      // On trie par jour croissant
-      evenements.sort((a, b) => a.jour - b.jour);
-
-      // ─────────────────────────────────────────────
-      // 7️⃣ On génère et envoie l'email
-      // ─────────────────────────────────────────────
-      try {
-        const html = genererNewsletterMensuelle({
-          prenomUtilisateur: profil.prenom || 'cher utilisateur',
-          moisLibelle: moisLibelle.charAt(0).toUpperCase() + moisLibelle.slice(1),
-          evenements,
-        });
-
-        const { data, error } = await resend.emails.send({
-          from: `${EMAIL_CONFIG.brandName} <${EMAIL_CONFIG.defaultFrom}>`,
-          to: profil.email,
-          subject: `📅 Votre agenda de ${moisLibelle}`,
-          html,
-        }, { idempotencyKey: `newsletter/${profil.id}/${annee}-${mois + 1}` });
-
-        if (error) throw error;
-
-        resultats.push({
-          user: profil.email,
-          statut: 'envoye',
-          nbEvenements: evenements.length,
-          emailId: data?.id,
-        });
-
-        console.log(`📰 Newsletter envoyée -> ${profil.email} (${evenements.length} événements)`);
-      } catch (err: unknown) {
-        console.error(`❌ Échec newsletter ${profil.email}:`, (err instanceof Error ? err.message : 'Erreur inconnue'));
-        resultats.push({
-          user: profil.email,
-          statut: 'erreur',
-          erreur: (err instanceof Error ? err.message : 'Erreur inconnue'),
-        });
-      }
     }
-
-    // ─────────────────────────────────────────────
-    // 8️⃣ On renvoie le bilan
-    // (le "bilan" = un résumé JSON de tout ce qui s'est passé,
-    //  pour qu'on sache si ça a marché)
-    // ─────────────────────────────────────────────
-    return NextResponse.json({
-      success: !resultats.some(r => r.statut === 'erreur'),
-      mois: moisLibelle,
-      total_traites: resultats.length,
-      resultats,
-    }, { status: resultats.some(r => r.statut === 'erreur') ? 500 : 200 });
-  } catch (err: unknown) {
-    console.error('❌ Erreur générale newsletter:', err);
-    return NextResponse.json(
-      { error: 'Erreur interne', details: (err instanceof Error ? err.message : 'Erreur inconnue') },
-      { status: 500 }
-    );
+    const success = !resultats.some(r => ['erreur', 'review', 'failed'].includes(r.statut))
+    return NextResponse.json({ success, mois: moisLibelle, total: resultats.length, total_traites: resultats.length, resultats }, { status: success ? 200 : 500 })
+  } catch {
+    return NextResponse.json({ error: 'Traitement incomplet. Certains envois peuvent déjà être acceptés ; le journal protège les reprises.' }, { status: 500 })
   }
 }

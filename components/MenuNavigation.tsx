@@ -1,7 +1,9 @@
 'use client'
+import Modal from '@/components/Modal'
+import { useContactDraft } from '@/components/ContactDraftProvider'
 
 import { useEffect, useRef, useState } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 
 type MenuNavigationProps = {
   ouvert: boolean
@@ -49,7 +51,7 @@ const GROUPES: Groupe[] = [
 ]
 
 export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps) {
-  const router = useRouter()
+  const { navigate } = useContactDraft()
   const pathname = usePathname()
 
   // États pour le swipe tactile
@@ -65,8 +67,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
   }, [ouvert])
 
   const naviguerVers = (chemin: string) => {
-    onFermer()
-    router.push(chemin)
+    void navigate(chemin, onFermer)
   }
 
   // =========================
@@ -103,7 +104,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
   let compteurLien = 0
 
   return (
-    <>
+    <Modal open={ouvert} onClose={onFermer} title="Navigation" className="w-screen h-dvh bg-transparent border-0 rounded-none p-0">
       {/* ═══════════ OVERLAY (fond sombre flou) ═══════════ */}
       <div
         onClick={onFermer}
@@ -232,6 +233,6 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
           <p className="text-muted text-xs text-center tracking-wide">Ephemer • v1.0</p>
         </div>
       </aside>
-    </>
+    </Modal>
   )
 }

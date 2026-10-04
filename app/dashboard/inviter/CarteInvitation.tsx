@@ -1,4 +1,5 @@
 'use client'
+import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useClock } from '@/lib/hooks/useClock'
 
 type Invitation = {
@@ -27,6 +28,7 @@ export default function CarteInvitation({
   onDesactiver,
   copie,
 }: Props) {
+  const { confirm } = useContactDraft()
   const now = useClock()
   // ── Calculs d'affichage ──
   const origine =
@@ -116,8 +118,8 @@ export default function CarteInvitation({
 
         {invitation.actif && !complet && !expire && (
           <button
-            onClick={() => {
-              if (confirm('Désactiver ce lien ? Il ne sera plus utilisable.')) {
+            onClick={async () => {
+              if (await confirm('Désactiver ce lien ? Il ne sera plus utilisable.')) {
                 onDesactiver(invitation.id)
               }
             }}

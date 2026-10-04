@@ -1,5 +1,5 @@
 "use client"
-
+import Modal from "@/components/Modal"
 import { supabase } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
@@ -107,9 +107,9 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
   if (!isOpen) return null
 
   return (
-    <div
+    <Modal open={isOpen} onClose={onClose} title={mode === "inscription" ? "Inscription" : "Connexion"}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm"
-      onClick={onClose}
+
     >
       {/* ---- Panneau du drawer avec gradient thématique ---- */}
       <div
@@ -222,6 +222,6 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
         </button>
 
       </div>
-    </div>
+    </Modal>
   )
 }

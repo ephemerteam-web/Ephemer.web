@@ -1,5 +1,9 @@
 'use client'
 
+import Modal from '@/components/Modal'
+import { restoreInvitationDraft, saveInvitationDraft, eraseInvitationDraft } from '@/lib/invitation-drafts'
+import { normalizeRelation } from '@/lib/constants'
+import { useRef } from 'react'
 import { partialBirthDate } from '@/lib/contact-quality'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
@@ -12,10 +16,7 @@ export default function FormulaireInvitation(props: InvitationProps) {
 }
 
 function readDraft(token: string): Record<string, unknown> {
-  try {
-    const value: unknown = JSON.parse(localStorage.getItem('invitation-' + token) || '{}')
-    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {}
-  } catch { return {} }
+  try { return restoreInvitationDraft(localStorage, token) } catch { return {} }
 }
 import { supabase } from '@/lib/supabase-browser'
 import { GROUPES_INTERETS, INDICATIFS } from './interets'
@@ -23,7 +24,7 @@ import { GROUPES_INTERETS, INDICATIFS } from './interets'
 
 const RELATIONS = [
   { valeur: 'famille', emoji: '🏡', label: 'Famille',  sous: 'On partage bien plus qu\'un nom' },
-  { valeur: 'amis',    emoji: '✨', label: 'Ami·e',    sous: 'Choisi·e, pas subi·e' },
+  { valeur: 'ami',    emoji: '✨', label: 'Ami·e',    sous: 'Choisi·e, pas subi·e' },
   { valeur: 'pro',     emoji: '💼', label: 'Pro',      sous: 'Collègue, client, partenaire' },
   { valeur: 'autre',   emoji: '🌍', label: 'Autre',    sous: 'Voisin, prof, coéquipier…' },
 ]
@@ -58,12 +59,14 @@ function InvitationForm({
   const [jour, setJour] = useState(() => texte('jour'))
   const [mois, setMois] = useState(() => texte('mois'))
   const [annee, setAnnee] = useState(() => texte('annee'))
-  const [relation, setRelation] = useState(() => texte('relation'))
+  const [relation, setRelation] = useState(() => texte('relation') ? normalizeRelation(texte('relation')) : '')
   const [interets, setInterets] = useState<string[]>(() => Array.isArray(draft.interets) ? draft.interets.filter((v): v is string => typeof v === 'string') : [])
   const [noteLibre, setNoteLibre] = useState(() => texte('noteLibre'))
   const [email, setEmail] = useState(() => texte('email'))
   const [indicatif, setIndicatif] = useState(() => texte('indicatif', '+33'))
   const [tel, setTel] = useState(() => texte('tel'))
+  const previousData = useRef<string | null>(null)
+  const [storageUnavailable, setStorageUnavailable] = useState(false)
   const [modalInteretsOuvert, setModalInteretsOuvert] = useState(false)
 
   // ── 💾 Sauvegarde automatique (localStorage)
@@ -74,13 +77,20 @@ function InvitationForm({
       interets, noteLibre, email, indicatif, tel
     }
     if (termine) return
-    try { localStorage.setItem(`invitation-${token}`, JSON.stringify(data)) } catch { /* Stockage indisponible : le formulaire reste utilisable. */ }
+    const serialized = JSON.stringify(data)
+    // Le premier affichage restaure seulement : il ne crée ni ne renouvelle le brouillon.
+    if (previousData.current === null) { previousData.current = serialized; return }
+    if (previousData.current === serialized) return
+    previousData.current = serialized
+    // Le stockage est une synchronisation externe ; son échec doit être visible.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    try { setStorageUnavailable(!saveInvitationDraft(localStorage, token, data)) } catch { setStorageUnavailable(true) }
   }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, token, termine])
 
   // Nettoyer après succès
   useEffect(() => {
     if (termine) {
-      try { localStorage.removeItem(`invitation-${token}`) } catch { /* Stockage indisponible. */ }
+      try { eraseInvitationDraft(localStorage, token) } catch { /* Stockage indisponible. */ }
     }
   }, [termine, token])
 
@@ -124,7 +134,7 @@ function InvitationForm({
       p_prenom: prenom.trim(),
       p_nom: nom.trim() || null,
       p_date_naissance: birth,
-      p_relation: relation || 'autre',
+      p_relation: normalizeRelation(relation),
       p_email: email.trim() || null,
       p_telephone_indicatif: tel.trim() ? indicatif : null,
       p_telephone_numero: tel.trim() || null,
@@ -140,8 +150,8 @@ function InvitationForm({
       return
     }
 
-    // Le contact est enregistré par la RPC. Les alertes à l’hôte sont
-    // suspendues tant qu’une soumission ne peut pas être identifiée sûrement.
+    // La RPC crée la fiche. Le trigger SQL validé par l'administrateur
+    // produit l'alerte dans l'application, dans la même transaction.
 
     setTermine(true)
   }
@@ -153,6 +163,8 @@ function InvitationForm({
     return (
       <main className="min-h-screen bg-gradient-to-b from-canvas via-surface to-canvas flex items-center justify-center px-5 py-12">
         <div className="w-full max-w-md text-center">
+
+
           <div className="text-6xl mb-6 animate-bounce">🎉</div>
 
           <h1 className="text-2xl sm:text-3xl font-semibold text-ink mb-4">
@@ -208,6 +220,14 @@ function InvitationForm({
   return (
     <main className="min-h-screen bg-gradient-to-b from-canvas via-surface to-canvas px-5 py-8 sm:py-12">
       <div className="w-full max-w-lg mx-auto">
+        <div role="status" className="p-3 text-sm text-muted">
+          {storageUnavailable ? 'Stockage indisponible : tes saisies restent utilisables sur cette page.' : 'Brouillon conservé sur cet appareil pendant 7 jours après ta dernière modification.'}
+          <button type="button" className="ml-3 underline" onClick={() => {
+            try { eraseInvitationDraft(localStorage, token) } catch { /* Stockage interdit. */ }
+            setPrenom(''); setNom(''); setJour(''); setMois(''); setAnnee(''); setRelation(''); setInterets([]); setNoteLibre(''); setEmail(''); setIndicatif('+33'); setTel(''); setEtape(1);
+            previousData.current = null
+          }}>Effacer mon brouillon</button>
+        </div>
 
         {/* ── En-tête ── */}
         <div className="text-center mb-8">
@@ -256,10 +276,10 @@ function InvitationForm({
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-0" className="block text-sm text-muted mb-2">
                   Ton prénom <span className="text-accent">*</span>
                 </label>
-                <input
+                <input id="inv-field-0"
                   value={prenom}
                   onChange={(e) => setPrenom(e.target.value)}
                   placeholder="Camille"
@@ -275,10 +295,10 @@ function InvitationForm({
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-1" className="block text-sm text-muted mb-2">
                   Ton nom <span className="text-muted">(optionnel)</span>
                 </label>
-                <input
+                <input id="inv-field-1"
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Durand"
@@ -288,26 +308,26 @@ function InvitationForm({
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-2" className="block text-sm text-muted mb-2">
                   Ton anniversaire 🎂
                 </label>
                 <div className="grid grid-cols-3 gap-2.5">
-                  <input
-                    value={jour}
+                  <input id="inv-field-2"
+                    aria-label="Jour de naissance" value={jour}
                     onChange={(e) => setJour(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="Jour"
                     inputMode="numeric"
                     className="rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-center text-ink placeholder-muted outline-none focus:border-accent/50 transition"
                   />
                   <input
-                    value={mois}
+                    aria-label="Mois de naissance" value={mois}
                     onChange={(e) => setMois(e.target.value.replace(/\D/g, '').slice(0, 2))}
                     placeholder="Mois"
                     inputMode="numeric"
                     className="rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-center text-ink placeholder-muted outline-none focus:border-accent/50 transition"
                   />
                   <input
-                    value={annee}
+                    aria-label="Année de naissance" value={annee}
                     onChange={(e) => setAnnee(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     placeholder="Année"
                     inputMode="numeric"
@@ -463,10 +483,10 @@ function InvitationForm({
 
               {/* ── Champ "Autre chose" ── */}
               <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-3" className="block text-sm text-muted mb-2">
                   Autre chose à ajouter ? <span className="text-muted">(optionnel)</span>
                 </label>
-                <textarea
+                <textarea id="inv-field-3"
                   value={noteLibre}
                   onChange={(e) => setNoteLibre(e.target.value)}
                   placeholder="Ma passion secrète, ma taille de pull, ce que je ne veux surtout pas…"
@@ -509,7 +529,7 @@ function InvitationForm({
 
           {/* ════════ MODAL PLEIN ÉCRAN : SÉLECTEUR D'INTÉRÊTS ════════ */}
           {modalInteretsOuvert && (
-            <div className="fixed inset-0 z-50 flex flex-col bg-canvas">
+            <Modal open={modalInteretsOuvert} onClose={() => setModalInteretsOuvert(false)} title="Choisir mes intérêts" className="w-screen h-dvh flex flex-col bg-canvas rounded-none p-0">
               {/* ── Barre du haut ── */}
               <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-line">
                 <button
@@ -598,7 +618,7 @@ function InvitationForm({
                     : 'Valider (aucun choix)'}
                 </button>
               </div>
-            </div>
+            </Modal>
           )}
 
           {/* ════════ ÉTAPE 4 : CONTACT ════════ */}
@@ -617,10 +637,10 @@ function InvitationForm({
               </div>
 
               <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-4" className="block text-sm text-muted mb-2">
                   Email <span className="text-muted">(optionnel)</span>
                 </label>
-                <input
+                <input id="inv-field-4"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -631,12 +651,12 @@ function InvitationForm({
               </div>
 
                             <div>
-                <label className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-field-5" className="block text-sm text-muted mb-2">
                   Téléphone <span className="text-muted">(optionnel)</span>
                 </label>
                 <div className="flex gap-2.5">
-                  <select
-                    value={indicatif}
+                  <select id="inv-field-5"
+                    aria-label="Indicatif téléphonique" value={indicatif}
                     onChange={(e) => setIndicatif(e.target.value)}
                     className="w-[110px] flex-shrink-0 rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-ink outline-none focus:border-accent/50 transition appearance-none bg-[url('data:image/svg+xml;charset=UTF-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20fill%3D%22%23ffffff80%22%20d%3D%22M6%208L1%203h10z%22%2F%3E%3C%2Fsvg%3E')] bg-[length:12px] bg-[right_12px_center] bg-no-repeat pr-8"
                   >
@@ -667,7 +687,7 @@ function InvitationForm({
               </div>
 
               {erreur && (
-                <div className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3">
+                <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3">
                   <p className="text-sm text-danger">{erreur}</p>
                 </div>
               )}

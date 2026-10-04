@@ -135,8 +135,8 @@ export default function ProgrammerRappel({
 
       {/* Choix du destinataire */}
       <div>
-        <label className="block text-sm text-muted mb-2">Envoyer à :</label>
-        <select
+        <label htmlFor="reminder-field-0" className="block text-sm text-muted mb-2">Envoyer à :</label>
+        <select id="reminder-field-0"
           value={destinataire}
           onChange={(e) => setDestinataire(e.target.value as Destinataire)}
           className="w-full bg-ink/10 border border-line rounded-lg px-3 py-2 text-ink"
@@ -151,7 +151,7 @@ export default function ProgrammerRappel({
 
       {/* Choix de la date d'envoi */}
       <div>
-        <label className="block text-sm text-muted mb-2">Date d&apos;envoi :</label>
+        <label htmlFor="reminder-field-1" className="block text-sm text-muted mb-2">Date d&apos;envoi :</label>
         <div className="space-y-2">
           {/* Boutons rapides J-7 / J-1 / Jour J (seulement si datesPossibles dispo) */}
           {datesPossibles &&
@@ -197,8 +197,8 @@ export default function ProgrammerRappel({
 
           {/* 🆕 Champ date qui apparaît si mode perso activé */}
           {modePerso && (
-            <input
-              type="date"
+            <input id="reminder-field-1"
+              aria-label="Date d’envoi personnalisée" type="date"
               value={datePerso}
               min={today}
               onChange={(e) => appliquerDatePerso(e.target.value)}
@@ -208,7 +208,7 @@ export default function ProgrammerRappel({
         </div>
       </div>
 
-      <p className="text-xs text-muted">Envoi lors du passage quotidien du service. Si le passage du jour est terminé, le rappel sera éligible au prochain passage ; la livraison dépend du traitement et du prestataire.</p>
+      <p className="text-xs text-muted">Ce message sera envoyé indépendamment de tes préférences d’alertes personnelles. Envoi lors du passage quotidien du service, avec reprise possible jusqu’au lendemain en cas de panne ou de programmation après le passage. Au-delà, le message est suspendu : tu devras le reprogrammer dans « Messages programmés ». La livraison dépend du prestataire.</p>
       {/* Bouton programmer */}
       <Button
         onClick={handleProgrammer}

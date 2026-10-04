@@ -49,15 +49,18 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
     auth: { getSession: async () => ({ data: { session }, error: null }) },
     from(table) {
       assert.equal(table, 'contacts')
-      return { select: () => ({ eq: (field, id) => {
-        assert.equal(field, 'user_id'); assert.equal(id, session.user.id)
-        return { order: async () => {
+      let cursor = null
+      const query = { select:()=>query, order:()=>query, limit:()=>query,
+        eq:(field,id)=>{ assert.equal(field,'user_id'); assert.equal(id,session.user.id); return query },
+        gt:(key,value)=>{ assert.equal(key,'id'); cursor=value; return query },
+        async then(resolve) {
           if (contactsWait) await contactsWait
-          return { data: failLoad ? null : contactData, error: failLoad ? { message: 'test' } : null }
-        } }
-      } }) }
+          return resolve({ data: failLoad ? null : contactData.filter(c=>cursor===null || c.id>cursor).sort((a,b)=>a.id-b.id), error: failLoad ? {message:'test'} : null })
+        }
+      }; return query
     },
   }
+
   const overrides = {
     react: hooks,
     'next/navigation': { useSearchParams: () => new URLSearchParams({ ...(contactId ? { contactId } : {}), ...(occasion ? { eventType: occasion } : {}) }) },

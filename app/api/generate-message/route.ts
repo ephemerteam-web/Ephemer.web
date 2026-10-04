@@ -5,6 +5,8 @@ import {
   TYPES_EVENEMENT,
   TONS_MESSAGE,
   MESSAGES_UI,
+  normalizeRelation,
+  normalizeOccasion,
 } from "@/lib/constants";
 import { verifierGardeIA } from '@/lib/garde-ia';
 
@@ -16,9 +18,9 @@ function getLabelFromValue(array: readonly LabelValueItem[], value: string): str
   return item ? item.label : array[0]?.label || value;
 }
 
-const VALID_EVENT_TYPES = new Set(TYPES_EVENEMENT.map(e => e.value));
-const VALID_RELATIONS = new Set(TYPES_RELATION.map(r => r.value));
-const VALID_TONES = new Set(TONS_MESSAGE.map(t => t.value));
+const VALID_EVENT_TYPES = new Set<string>(TYPES_EVENEMENT.map(e => e.value));
+const VALID_RELATIONS = new Set<string>(TYPES_RELATION.map(r => r.value));
+const VALID_TONES = new Set<string>(TONS_MESSAGE.map(t => t.value));
 
 function getToneInstruction(tone: string): string {
   switch (tone) {
@@ -68,8 +70,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
     // Liste fermée : aucun texte personnel libre ne part vers le prestataire.
-    const validatedEventType = VALID_EVENT_TYPES.has(body.eventType) ? body.eventType : TYPES_EVENEMENT[0].value;
-    const validatedRelation = VALID_RELATIONS.has(body.relation) ? body.relation : TYPES_RELATION[0].value;
+    const validatedEventType = VALID_EVENT_TYPES.has(normalizeOccasion(body.eventType)) ? normalizeOccasion(body.eventType) : TYPES_EVENEMENT[0].value;
+    const validatedRelation = VALID_RELATIONS.has(normalizeRelation(body.relation)) ? normalizeRelation(body.relation) : TYPES_RELATION[0].value;
     const validatedTone = VALID_TONES.has(body.tone) ? body.tone : TONS_MESSAGE[0].value;
     const eventLabel = getLabelFromValue(TYPES_EVENEMENT, validatedEventType);
     const relationLabel = getLabelFromValue(TYPES_RELATION, validatedRelation);

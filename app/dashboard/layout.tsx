@@ -1,8 +1,9 @@
 'use client'
 
+import ContactDraftProvider from '@/components/ContactDraftProvider'
 import CelestialBackdrop from '@/components/CelestialBackdrop'
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase-browser'
 import { DrawerProvider } from '@/components/DrawerContext'
@@ -25,16 +26,21 @@ export default function DashboardLayout({
   const [menuOuvert, setMenuOuvert] = useState(false)
 
   // On remonte le user ici pour le partager avec MenuLateral ET le bouton
-  const [user, setUser] = useState<{ email: string; prenom?: string } | null>(null)
+  const [user, setUser] = useState<{ id: string; email: string; prenom?: string } | null>(null)
   const [authError, setAuthError] = useState(false)
+  const accountId = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         active = false
         setUser(null)
         router.replace('/connexion')
+      } else if (session && accountId.current !== session.user.id) {
+        // La clé du provider change : aucun brouillon n'est partagé entre deux comptes.
+        accountId.current = session.user.id
+        setUser({ id: session.user.id, email: session.user.email || '' })
       }
     })
     const chargerUser = async () => {
@@ -42,14 +48,17 @@ export default function DashboardLayout({
       if (!active) return
       if (error || !supabaseUser) { setAuthError(true); return }
       if (supabaseUser) {
+        if (accountId.current && accountId.current !== supabaseUser.id) return
+        accountId.current = supabaseUser.id
         const { data: profil } = await supabase
           .from('profiles') // ⚠️ adapte si besoin
           .select('prenom')
           .eq('id', supabaseUser.id)
           .single()
 
-        if (!active) return
+        if (!active || accountId.current !== supabaseUser.id) return
         setUser({
+          id: supabaseUser.id,
           email: supabaseUser.email || '',
           prenom: profil?.prenom,
         })
@@ -67,7 +76,7 @@ export default function DashboardLayout({
   if (!user) return <main className="p-8 text-ink" role="status">{authError ? 'Session indisponible. Recharge la page ou reconnecte-toi.' : 'Vérification de la session…'}<Link href="/connexion"> Connexion</Link></main>
 
   return (
-    <DrawerProvider>
+    <ContactDraftProvider key={user.id}><DrawerProvider>
       <div className="min-h-screen bg-canvas relative isolate">
 
         <CelestialBackdrop />
@@ -143,6 +152,6 @@ export default function DashboardLayout({
         <DrawerGlobal />
 
       </div>
-    </DrawerProvider>
+    </DrawerProvider></ContactDraftProvider>
   )
 }

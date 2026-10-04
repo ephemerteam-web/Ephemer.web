@@ -1,3 +1,4 @@
+import { p2Helpers, pageDatabase } from './p2-helpers.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
@@ -6,7 +7,7 @@ import test from 'node:test'
 function load(path, names, context = {}) {
   const source = stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
     .replace(/^import[\s\S]*?from ['"][^'"]+['"];?\r?\n/gm, '').replace(/^export /gm, '')
-  return runInNewContext(`${source}\n;({${names}})`, context)
+  return runInNewContext(`${source}\n;({${names}})`, { ...p2Helpers, ...context })
 }
 const calendar = load('lib/calendar-day.ts', 'isCalendarDay,nextBirthdayDay')
 const quality = load('lib/contact-quality.ts', 'ageKnown,partialBirthDate,duplicateReason', calendar)
@@ -33,7 +34,7 @@ test('IA : les champs personnels sont exclus même dans une requête directe hos
   for (const route of ['generate-message', 'generate-gift-ideas']) {
     const requests = []
     const { POST } = load(`app/api/${route}/route.ts`, 'POST', { ...constants, verifierGardeIA: async () => ({ ok: true }), NextResponse: { json: (body, opts) => ({ body, status: opts?.status ?? 200 }) }, AbortSignal, process: { env: {} }, console,
-      fetch: async (url, options) => { requests.push(options.body); return { ok: true, json: async () => ({ choices: [{ message: { content: route === 'generate-message' ? 'Bonne journée !' : '[]' } }] }) } },
+      fetch: async (url, options) => { requests.push(options.body); return { ok: true, json: async () => ({ choices: [{ message: { content: route === 'generate-message' ? 'Bonne journée !' : JSON.stringify([{ idee:'Livre', raison:'Lecture', categorie:'loisir', recherche:'livre' }]) } }] }) } },
     })
     const response = await POST({ json: async () => ({ ...secrets, relation: 'ami', eventType: 'anniversaire', tone: 'familier' }) })
     assert.equal(response.status, 200)
@@ -42,12 +43,11 @@ test('IA : les champs personnels sont exclus même dans une requête directe hos
   }
 })
 test('export : pagination, filtres propriétaire et arrêt sur erreur sans résultat partiel', async () => {
-  const filters = [], ranges = []
-  let fail = false
-  const supabase = { from: () => { const q = { select: () => q, order: () => q, eq: (...args) => { filters.push(args); return q }, range: async (a,b) => { ranges.push([a,b]); return { data: a === 0 ? Array.from({ length: 200 }, (_,id) => ({ id })) : [{ id: 201 }], error: fail ? new Error() : null } } }; return q } }
+  const rows = Array.from({ length: 1205 }, (_,id) => ({ id, user_id:'u1' }))
+  const supabase = pageDatabase({ contacts: [...rows, { id:9999,user_id:'u2' }] },{cap:73})
   const { readOwnRows } = load('lib/user-data.ts', 'readOwnRows', { supabase })
-  assert.equal((await readOwnRows('contacts', 'u1')).length, 201)
-  assert.deepEqual(ranges, [[0,199],[200,399]])
-  assert.ok(filters.every(([key,id]) => key === 'user_id' && id === 'u1'))
-  fail = true; await assert.rejects(readOwnRows('contacts', 'u1'), /Aucun export partiel/)
+  assert.equal((await readOwnRows('contacts', 'u1')).length, 1205)
+  const failing = pageDatabase({ contacts: rows },{cap:73,failAt:4})
+  const broken = load('lib/user-data.ts', 'readOwnRows', { supabase:failing })
+  await assert.rejects(broken.readOwnRows('contacts', 'u1'), /Aucun export partiel/)
 })

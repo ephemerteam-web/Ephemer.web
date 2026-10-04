@@ -1,4 +1,5 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -57,6 +58,7 @@ function SkeletonCard() {
 
 export default function AnniversairesPage() {
   const router = useRouter()
+  const [listError, setListError] = useState('')
   const [contacts, setContacts] = useState<Contact[]>([])
   const [loading, setLoading] = useState(true)
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
@@ -73,11 +75,11 @@ export default function AnniversairesPage() {
         return
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from('contacts')
         .select('id, nom, prenom, date_naissance, relation, email')
-        .eq('user_id', session.user.id)
-        .order('prenom')
+        .eq('user_id', session.user.id))
+      if (error) setListError('Chargement incomplet. Recharge la page pour obtenir tous tes contacts.')
 
       if (!error && data) {
         setContacts(data as Contact[])
@@ -149,6 +151,7 @@ export default function AnniversairesPage() {
   // ── Rendu ──
   return (
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
+      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
       <main className="max-w-5xl mx-auto space-y-6">
 
         {/* En-tête */}

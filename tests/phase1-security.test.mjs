@@ -83,6 +83,7 @@ for (const route of ['generate-notifications', 'test-notifications']) {
     const envois = []
     const { sendRecapEmail } = charger(source.slice(debut), ['sendRecapEmail'], {
       echapperHtml,
+      deliverEmail: async job => { envois.push(job.payload); return { state: 'accepted' } },
       resend: { emails: { send: async (email) => {
         envois.push(email)
         return { data: { id: 'simulation' }, error: null }

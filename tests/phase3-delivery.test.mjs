@@ -1,31 +1,35 @@
+import { p2Helpers } from './p2-helpers.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import test from 'node:test'
+import { createHash } from 'node:crypto'
 
 function load(path, name, context) {
   const source = stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
     .replace(/^import[\s\S]*?from ['"][^'"]+['"];?\r?\n/gm, '')
     .replace(/^export /gm, '')
-  return runInNewContext(`${source}\n;${name}`, context)
+  return runInNewContext(`${source}\n;${name}`, { ...p2Helpers, ...context })
 }
 class Today extends Date {
   constructor(...args) { super(...(args.length ? args : ['2026-09-19T00:00:00Z'])) }
 }
 function database(tables, operations) {
   return { from(table) {
-    let action = 'read'
+    let action = 'read', key = 'id', cursor = null, limit = 200, single = false
     const filters = []
     const query = {
-      select: () => query, single: () => query, maybeSingle: () => query,
+      select: () => query, single: () => { single = true; return query }, maybeSingle: () => { single = true; return query },
+      order: column => { key = column; return query }, limit: size => { limit = size; return query }, gt: (k,v) => { cursor = v; return query },
       eq: (key, value) => { filters.push([key, value]); return query },
       in: (key, value) => { filters.push([key, value]); return query },
+      gte: (key, value) => { filters.push([key, value]); return query },
       upsert: () => { action = 'upsert'; return query },
       update: () => { action = 'update'; return query },
       then(resolve) {
         operations.push({ table, action, filters })
-        return Promise.resolve({ data: action === 'read' ? tables[table] : [{ id: 'n1' }], error: null }).then(resolve)
+        return Promise.resolve({ data: action === 'read' ? single ? tables[table] : (Array.isArray(tables[table]) ? [...tables[table]].filter(r => cursor === null || r[key] > cursor).sort((a,b) => a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0).slice(0,limit) : []) : [{ id: 'n1' }], error: null }).then(resolve)
       },
     }
     return query
@@ -33,8 +37,18 @@ function database(tables, operations) {
 }
 function context(db, send, secret = 'simulation') {
   const resend = { emails: { send } }
+  const calendar = load('lib/calendar-day.ts', '({ parisDay, nextBirthdayDay, daysBetween, isCalendarDay, parseLocalDay })', { Date: Today })
   return {
-    ...load('lib/calendar-day.ts', '({ parisDay, nextBirthdayDay, daysBetween, isCalendarDay, parseLocalDay })', { Date: Today }),
+    ...calendar,
+    ...load('lib/reminder-policy.ts', '({ birthdayNotifications, selectBirthdayRecap })', { ...calendar, Date: Today }),
+    createHash,
+    recordCronRun: async () => {},
+    deliverEmail: async job => {
+      const result = await send(job.payload, { idempotencyKey: job.key })
+      if (result.error) throw result.error
+      await db.from('notifications').update({ email_envoye: true }).eq('user_id', job.userId).in('id', job.notificationIds)
+      return { state: 'accepted', emailId: result.data?.id }
+    },
     process: { env: { CRON_SECRET: secret } }, Date: Today,
     console: { log() {}, error() {} },
     createClient: () => db, supabaseAdmin: db, resend,
@@ -58,14 +72,15 @@ test('récapitulatif : seuls les IDs inclus sont marqués, clé stable transmise
   }))
   await fn({ id: 'u1', email: 'simulation@example.invalid' })
   assert.equal(sends.length, 1)
-  assert.equal(sends[0][1].idempotencyKey, 'recap/u1/' + tables.notifications[0].event_date)
+  assert.match(sends[0][1].idempotencyKey, /^recap\/u1\/[a-f0-9]{64}$/)
   const update = operations.find(op => op.action === 'update')
   assert.equal(JSON.stringify(update.filters), JSON.stringify([['user_id', 'u1'], ['id', ['n1']]]))
 })
 test('Resend en erreur : aucun marquage envoyé', async () => {
   const operations = []
   const fn = load('app/api/cron/generate-notifications/route.ts', 'processUser', context(database(tables, operations), async () => ({ error: new Error('simulation refus') })))
-  await assert.rejects(fn({ id: 'u1', email: 'simulation@example.invalid' }), /simulation refus/)
+  const result = await fn({ id: 'u1', email: 'simulation@example.invalid' })
+  assert.equal(JSON.stringify(result.errors), JSON.stringify(['livraison']))
   assert.ok(!operations.some(op => op.action === 'update'))
 })
 test('simulation : ni écriture DB ni envoi Resend', async () => {

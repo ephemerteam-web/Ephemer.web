@@ -1,13 +1,14 @@
 'use client'
+import Modal from '@/components/Modal'
+import { useContactDraft } from '@/components/ContactDraftProvider'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useDrawer } from '@/components/DrawerContext'
 import { TYPES_RELATION } from '@/lib/constants'
 import { trouverSaintParPrenom } from '@/lib/saints'
 
 export default function DrawerGlobal() {
-  const router = useRouter()
+  const { navigate } = useContactDraft()
   const { contactAffiche, fermerDrawer } = useDrawer()
   
   // 🆕 État pour gérer l'ouverture/fermeture du menu d'actions
@@ -61,7 +62,7 @@ export default function DrawerGlobal() {
   }
 
   return (
-    <>
+    <Modal open={Boolean(contactAffiche)} onClose={fermerDrawer} title="Fiche du contact" className="w-screen h-dvh bg-transparent border-0 rounded-none p-0">
       {/* OVERLAY (Fond assombri) */}
       {contactAffiche && (
         <div
@@ -204,14 +205,14 @@ export default function DrawerGlobal() {
               </button>
 
               {/* 🆕 La zone qui s'ouvre (Effet Accordéon) */}
-              <div className={`overflow-hidden transition-all duration-300 ease-in-out ${showActions ? 'max-h-60 mt-3 opacity-100' : 'max-h-0 opacity-0'}`}>
+              <div inert={!showActions} className={`overflow-hidden transition-all duration-300 ease-in-out ${showActions ? 'max-h-60 mt-3 opacity-100' : 'max-h-0 opacity-0'}`}>
                 <div className="flex flex-col gap-3">
                   
                   <button
                     onClick={() => {
                       const id = contactAffiche.id
                       fermerDrawer()
-                      router.push(`/dashboard/contacts/${id}/edit/`)
+                      void navigate(`/dashboard/contacts/${id}/edit/`)
                     }}
                     className="w-full bg-indigo-600/50 hover:bg-indigo-600 text-white font-semibold py-3 rounded-xl transition border border-indigo-400/30"
                   >
@@ -222,7 +223,7 @@ export default function DrawerGlobal() {
                     onClick={() => {
                       const id = contactAffiche.id
                       fermerDrawer()
-                      router.push(`/dashboard/generate?contactId=${id}`)
+                      void navigate(`/dashboard/generate?contactId=${id}`)
                     }}
                     className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition"
                   >
@@ -233,7 +234,7 @@ export default function DrawerGlobal() {
                     onClick={() => {
                       const id = contactAffiche.id
                       fermerDrawer()
-                      router.push(`/dashboard/gift-ideas?contactId=${id}`)
+                      void navigate(`/dashboard/gift-ideas?contactId=${id}`)
                     }}
                     className="w-full bg-gradient-to-r from-emerald-500 to-teal-500 text-ink font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(16,185,129,0.3)] transition"
                   >
@@ -247,6 +248,6 @@ export default function DrawerGlobal() {
           </div>
         )}
       </div>
-    </>
+    </Modal>
   )
 }

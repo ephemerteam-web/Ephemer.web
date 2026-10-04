@@ -1,7 +1,10 @@
-"use client";
+"use client"
+import { readAllResult } from '@/lib/pagination';
 import { AI_NOTICE, minimalAIInput } from "@/lib/ai-privacy";
+import { usableGiftIdeas } from '@/lib/gift-ideas';
+import { normalizeOccasion } from '@/lib/constants';
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import type { Session } from '@supabase/supabase-js';
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
@@ -78,7 +81,13 @@ const CATEGORIE_STYLES: Record<CategorieCadeau, { borderColor: string; gradient:
 // 🎴 COMPOSANT FLIP CARD (Le cœur du design)
 // ============================================================
 function FlipCard({ idea, index }: { idea: Idea; index: number }) {
+  const cardRef = useRef<HTMLDivElement>(null);
+  const changed = useRef(false);
   const [isFlipped, setIsFlipped] = useState(false);
+  useEffect(() => {
+    if (!changed.current) return;
+    cardRef.current?.querySelector<HTMLElement>('[aria-hidden="false"] button')?.focus();
+  }, [isFlipped]);
   const marchands = marchandsPourCategorie(idea.categorie);
   const categorie = getCategorieById(idea.categorie);
 
@@ -91,8 +100,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
 
   return (
     <div
-      className="group h-[250px] sm:h-[280px] cursor-pointer perspective-1000"
-      onClick={() => setIsFlipped(!isFlipped)}
+      ref={cardRef} className="group h-[250px] sm:h-[280px] cursor-pointer perspective-1000"
     >
       <div
         className={`
@@ -102,7 +110,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
         `}
       >
         {/* ─── RECTO : L'idée visuelle ─── */}
-        <div
+        <div aria-hidden={isFlipped} inert={isFlipped}
           className={`
             absolute inset-0 rounded-2xl border ${borderColor}
             bg-gradient-to-br from-surface to-canvas
@@ -132,16 +140,11 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
             </span>
           )}
 
-          {/* Indication Tactile / Souris */}
-          <div className="absolute bottom-3 right-3 flex items-center gap-1 text-[10px] text-muted">
-            <span className="inline-block animate-pulse">👆</span>
-            <span className="hidden sm:inline">survoler</span>
-            <span className="sm:hidden">tap pour voir</span>
-          </div>
+          <button type="button" onClick={() => { changed.current = true; setIsFlipped(true) }} aria-expanded={isFlipped} className="mt-3 p-2 rounded-lg border border-line text-sm">Voir les détails de {idea.idee}</button>
         </div>
 
         {/* ─── VERSO : Détails + Actions ─── */}
-        <div
+        <div aria-hidden={!isFlipped} inert={!isFlipped}
           className={`
             absolute inset-0 rounded-2xl border ${borderColor}
             bg-gradient-to-br ${gradient}
@@ -194,7 +197,7 @@ function FlipCard({ idea, index }: { idea: Idea; index: number }) {
             className="mt-auto w-full py-2 text-center text-xs text-muted hover:text-ink transition"
             onClick={(e) => {
               e.stopPropagation();
-              setIsFlipped(false);
+              changed.current = true; setIsFlipped(false);
             }}
           >
             ← Revenir à l&apos;idée
@@ -262,14 +265,13 @@ function GiftIdeasForm() {
 
   const refreshContacts = async () => {
     if (!session) return;
-    const { data, error } = await supabase
+    const { data, error } = await readAllResult(() => supabase
       .from("contacts")
       .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-      .eq("user_id", session.user.id)
-      .order("prenom");
+      .eq("user_id", session.user.id));
 
     if (!error && data) {
-      setContacts(data as Contact[]);
+      setContacts((data as Contact[]).sort((a,b) => (a.prenom || "").localeCompare(b.prenom || "", "fr")));
       if (selectedContactId) {
         const updated = data.find((c) => String(c.id) === selectedContactId);
         if (updated) appliquerContact(updated as Contact);
@@ -322,11 +324,9 @@ const res = await fetch("/api/generate-gift-ideas", {
         );
       }
 
-      if (data.ideas && Array.isArray(data.ideas)) {
-        setIdeas(data.ideas as Idea[]);
-      } else {
-        setIdeas([]);
-      }
+      const usable = usableGiftIdeas(data.ideas);
+      if (!usable.length) throw new Error('Aucune idée utilisable reçue. Réessaie.');
+      setIdeas(usable as Idea[]);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Impossible de générer les idées.";
       setError(errorMessage);
@@ -347,23 +347,23 @@ const res = await fetch("/api/generate-gift-ideas", {
       setSession(session);
       if (!session) return;
 
-      const { data, error } = await supabase
+      const { data, error } = await readAllResult(() => supabase
         .from("contacts")
         .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-        .eq("user_id", session.user.id)
-        .order("prenom");
+        .eq("user_id", session.user.id));
 
       if (error) {
         console.warn("Erreur chargement contacts:", error);
+        setError('Chargement incomplet. Recharge la page pour retrouver tous tes contacts.');
         return;
       }
 
-      setContacts(data as Contact[]);
+      setContacts((data as Contact[]).sort((a,b) => (a.prenom || "").localeCompare(b.prenom || "", "fr")));
 
       const contactIdFromUrl = searchParams.get("contactId");
       const eventTypeFromUrl = searchParams.get("eventType");
 
-      if (eventTypeFromUrl) setEventType(eventTypeFromUrl);
+      if (eventTypeFromUrl) setEventType(normalizeOccasion(eventTypeFromUrl));
 
       if (contactIdFromUrl && data) {
         const contactTrouve = data.find((c) => String(c.id) === contactIdFromUrl);
@@ -533,8 +533,8 @@ const res = await fetch("/api/generate-gift-ideas", {
                 {needsManualDate && (
                   <div className="mt-4 space-y-3 p-4 bg-ink/5 rounded-xl border border-line animate-in fade-in">
                     <div>
-                      <label className="text-[10px] uppercase text-muted font-bold tracking-wider">Date</label>
-                      <input
+                      <label htmlFor="gift-field-0" className="text-[10px] uppercase text-muted font-bold tracking-wider">Date</label>
+                      <input id="gift-field-0"
                         type="date"
                         value={eventDate}
                         onChange={(e) => setEventDate(e.target.value)}
@@ -542,8 +542,8 @@ const res = await fetch("/api/generate-gift-ideas", {
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] uppercase text-muted font-bold tracking-wider">Quoi ?</label>
-                      <input
+                      <label htmlFor="gift-field-1" className="text-[10px] uppercase text-muted font-bold tracking-wider">Quoi ?</label>
+                      <input id="gift-field-1"
                         type="text"
                         placeholder="Ex: Départ à la retraite..."
                         value={eventDescription}
@@ -578,7 +578,7 @@ const res = await fetch("/api/generate-gift-ideas", {
               </button>
 
               {error && (
-                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-danger flex items-start gap-2 animate-in fade-in">
+                <div role="alert" className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-xs text-danger flex items-start gap-2 animate-in fade-in">
                   <span>⚠️</span>
                   <span>{error}</span>
                 </div>

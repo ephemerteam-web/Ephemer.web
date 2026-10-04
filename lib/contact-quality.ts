@@ -25,3 +25,26 @@ export function duplicateReason(a: Identity, b: Identity): string | null {
   if (normalized(a.prenom) && normalized(a.nom) && normalized(a.prenom) === normalized(b.prenom) && normalized(a.nom) === normalized(b.nom)) return 'mêmes prénom et nom (homonyme possible)'
   return null
 }
+
+export function validateContactBatch(contacts: Identity[], emailValid: (email: string) => boolean): string[] {
+  return contacts.flatMap((contact, index) => {
+    const errors: string[] = []
+    const label = `Fiche ${index + 1} (${contact.prenom?.trim() || 'sans prénom'})`
+    if (!contact.prenom?.trim()) errors.push(`${label} : renseigne le prénom.`)
+    if (contact.email?.trim() && !emailValid(contact.email.trim())) errors.push(`${label} : adresse email invalide.`)
+    if (contact.date_naissance && (!isCalendarDay(contact.date_naissance) || contact.date_naissance.startsWith('0000-'))) errors.push(`${label} : date de naissance invalide.`)
+    return errors
+  })
+}
+
+export function contactMatches(contacts: Identity[], existing: Identity[]): string[] {
+  const result: string[] = []
+  const name = (contact: Identity) => [contact.prenom, contact.nom].filter(Boolean).join(' ')
+  for (let index = 0; index < contacts.length; index++) {
+    for (const [otherIndex, other] of [...existing, ...contacts.slice(0, index)].entries()) {
+      const reason = duplicateReason(contacts[index], other)
+      if (reason) result.push(`Fiche ${index + 1} « ${name(contacts[index])} » ↔ ${otherIndex < existing.length ? 'contact existant' : 'autre fiche du lot'} « ${name(other)} » : ${reason}.`)
+    }
+  }
+  return result
+}

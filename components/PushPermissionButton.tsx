@@ -81,7 +81,7 @@ export default function PushPermissionButton() {
 
   if (status === "unsupported") {
     return (
-      <div className="mt-2 p-3 bg-gray-700/30 rounded-lg">
+      <div role="status" className="mt-2 p-3 bg-gray-700/30 rounded-lg">
         <p className="text-muted text-xs">
           ⚠️ Ton navigateur ne supporte pas les notifications push
         </p>
@@ -91,7 +91,7 @@ export default function PushPermissionButton() {
 
   if (status === "denied") {
     return (
-      <div className="mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
+      <div role="status" className="mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
         <p className="text-danger text-xs font-medium">❌ Notifications bloquées</p>
         (Chrome : cadenas à gauche de l&apos;adresse • Safari : Préférences {'>'} Sites web)
       </div>
@@ -100,7 +100,7 @@ export default function PushPermissionButton() {
 
   if (status === "loading") {
     return (
-      <div className="mt-2 flex items-center gap-2 text-accent">
+      <div role="status" className="mt-2 flex items-center gap-2 text-accent">
         <div className="w-4 h-4 border-2 border-accent/30 border-t-[#C8A84E] rounded-full animate-spin" />
         <span className="text-xs">Vérification en cours...</span>
       </div>
@@ -109,17 +109,17 @@ export default function PushPermissionButton() {
 
   if (status === "granted") {
     return (
-      <div className="mt-2">
+      <div role="status" className="mt-2">
         <div className="flex items-center gap-2 text-success text-xs mb-2">
           <span>✅</span>
-          <span>Appareil enregistré</span>
+          <span>Appareil préparé — envoi push indisponible actuellement</span>
         </div>
         <button
           onClick={unsubscribeUser}
           className="w-full px-4 py-2 bg-gray-700/50 text-muted rounded-lg text-sm hover:bg-gray-700 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-gray-500/50"
-          aria-label="Désactiver les notifications push"
+          aria-label="Retirer cet appareil"
         >
-          🔕 Désactiver les notifications
+          🔕 Retirer cet appareil
         </button>
       </div>
     )
@@ -127,7 +127,7 @@ export default function PushPermissionButton() {
 
   if (status === "error") {
     return (
-      <div className="mt-2">
+      <div role="status" className="mt-2">
         <div className="p-3 bg-red-500/20 border border-red-500/40 rounded-lg">
           <p className="text-danger text-xs">❌ {errorMsg || "Une erreur est survenue"}</p>
         </div>
@@ -143,13 +143,13 @@ export default function PushPermissionButton() {
 
   // État par défaut : bouton d'activation
   return (
-    <button
+    <div><p role="status" className="text-sm text-muted">Envoi push indisponible actuellement.</p><button
       onClick={subscribeUser}
       className="mt-2 w-full px-4 py-3 bg-action/20 text-accent rounded-lg text-sm font-medium hover:bg-action/30 transition active:scale-95 touch-manipulation focus:outline-none focus:ring-2 focus:ring-accent/50"
-      aria-label="Activer les notifications push"
+      aria-label="Préparer cet appareil"
     >
-      🔔 Activer les rappels push
-    </button>
+      🔔 Préparer cet appareil
+    </button></div>
   )
 }
 

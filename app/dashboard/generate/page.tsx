@@ -1,4 +1,5 @@
 'use client'
+import { readAllResult } from '@/lib/pagination'
 
 import { Suspense, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
@@ -49,10 +50,10 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
         if (!active) return
         if (auth.error || !auth.data.session) throw new Error('Ta session est indisponible. Reconnecte-toi pour continuer.')
         setSession(auth.data.session)
-        const { data, error } = await supabase.from('contacts')
+        const session = auth.data.session
+    const { data, error } = await readAllResult(() => supabase.from('contacts')
           .select('id, prenom, nom, relation, date_naissance, email, est_favori')
-          .eq('user_id', auth.data.session.user.id)
-          .order('prenom')
+          .eq('user_id', session.user.id))
         if (!active) return
         if (error) throw new Error('Impossible de charger tes contacts. Tu peux réessayer ou saisir un prénom.')
         const loaded = (data ?? []) as GeneratorContact[]
