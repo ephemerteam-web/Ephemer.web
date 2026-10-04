@@ -1,4 +1,8 @@
 "use client"
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import { emailJournalRpc } from '@/lib/email-journal'
+import { createRequestScope } from '@/lib/request-scope';
+import LoadFailure from '@/components/LoadFailure';
 import { useContactDraft } from '@/components/ContactDraftProvider';
 import { readAllResult } from '@/lib/pagination';
 
@@ -6,28 +10,17 @@ import { deliveryStatus, deliveryLimit } from '@/lib/delivery-status';
 import { parseLocalDay } from '@/lib/calendar-day';
 import { parisDay, isCalendarDay } from '@/lib/calendar-day';
 import { messageNeedsRescheduling } from '@/lib/reminder-policy';
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import AccordionGroup from "@/components/AccordionGroup";
 
-type MessageProgramme = {
-  id: number;
-  created_at: string;
-  type_evenement: string;
-  date_envoi: string;
-  message: string;
-  statut: string;
-  source: string;
-  ton: string | null;
-  email_destinataire: string | null;
+type MessageProgramme = Pick<import('@/types/database').Rappel,
+  'id' | 'created_at' | 'type_evenement' | 'date_envoi' | 'message' | 'statut' | 'source' | 'ton' | 'email_destinataire'> & {
   email_state?: string;
   resend_id?: string | null;
   delivery_status?: string;
-  contacts:
-    | { prenom: string; nom: string }
-    | { prenom: string; nom: string }[]
-    | null;
+  contacts: { prenom: string | null; nom: string | null } | { prenom: string | null; nom: string | null }[] | null;
 };
 
 const LABELS: Record<string, string> = {
@@ -50,7 +43,7 @@ const STATUT_STYLE: Record<string, string> = {
 function extractContactName(contacts: MessageProgramme["contacts"]): string {
   if (!contacts) return "Contact inconnu";
   const c = Array.isArray(contacts) ? contacts[0] : contacts;
-  return c ? `${c.prenom} ${c.nom}` : "Contact inconnu";
+  return c ? `${c.prenom ?? ''} ${c.nom ?? ''}`.trim() || 'Contact inconnu' : "Contact inconnu";
 }
 
 function getRelativeDate(dateISO: string): string {
@@ -94,11 +87,14 @@ function keyHistorique(type: string) {
 }
 
 export default function MessagesProgrammesPage() {
+  const dashboardUser = useDashboardUser()
   const router = useRouter();
   const { confirm } = useContactDraft();
 
   const [messages, setMessages] = useState<MessageProgramme[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const scopeRef = useRef(createRequestScope());
 
   const [annulationId, setAnnulationId] = useState<number | null>(null);
   const [reactivationId, setReactivationId] = useState<number | null>(null);
@@ -110,15 +106,21 @@ export default function MessagesProgrammesPage() {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    loadMessages();
+    void loadMessages();
+    return () => scopeRef.current.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadMessages() {
+    scopeRef.current.cancel();
+    const scope = createRequestScope();
+    scopeRef.current = scope;
+    setLoadError(false);
+    try {
     setLoading(true);
     setErreur(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = dashboardUser;
     if (!user) {
       router.push("/connexion");
       return;
@@ -132,18 +134,21 @@ export default function MessagesProgrammesPage() {
       `)
       .eq("user_id", user.id));
 
+    if (!scope.current()) return;
     if (error) {
+      setLoadError(true);
       console.error("Erreur Supabase:", error);
       setErreur("Impossible de charger tes messages. Réessaie ou vérifie ta connexion.");
       setLoading(false);
       return;
     }
 
-    const { data: emailStatuses, error: journalError } = await supabase.rpc('my_email_status');
+    const { data: emailStatuses, error: journalError } = await emailJournalRpc(supabase, 'my_email_status', {});
+    if (!scope.current()) return;
     const statuses = new Map<number, { state: string; resend_id: string | null; delivery_status: string }>(
       (emailStatuses || []).map((row: { rappel_id: number; state: string; resend_id: string | null; delivery_status: string }) => [row.rappel_id, row])
     );
-    const list = ((data as MessageProgramme[]) || []).map(m => {
+    const list = (data || []).map(m => {
       const status = statuses.get(m.id);
       return status ? { ...m, email_state: status.state, resend_id: status.resend_id, delivery_status: status.delivery_status } : m;
     });
@@ -164,6 +169,9 @@ export default function MessagesProgrammesPage() {
     }
 
     setLoading(false);
+    } catch {
+      if (scope.current()) { setLoadError(true); setLoading(false); }
+    }
   }
 
   function toggleGroup(groupKey: string) {
@@ -294,6 +302,8 @@ export default function MessagesProgrammesPage() {
   const groupedHistorique = useMemo(() => groupByEventType(historique), [historique]);
 
   const allMessagesCount = messages.length;
+
+  if (loadError) return <LoadFailure message="Impossible de charger tes messages." retry={() => void loadMessages()} />;
 
   return (
     // 🔧 MOBILE FIX : padding réduit sur mobile
@@ -556,7 +566,7 @@ function MessageCard({
 
             <span
               className={`text-[10px] sm:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium shrink-0 ${
-                STATUT_STYLE[m.statut] ?? "bg-ink/10 text-muted"
+                STATUT_STYLE[m.statut ?? ''] ?? "bg-ink/10 text-muted"
               }`}
             >
               {aReprogrammer && !traitementBloque ? 'Suspendu — à reprogrammer' : deliveryStatus(m.statut, m.delivery_status, m.email_state)}

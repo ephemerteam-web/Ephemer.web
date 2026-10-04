@@ -42,7 +42,8 @@ test('programmation : jour courant accepté, date SQL sans heure et passé refus
     inserted.push(...rows)
     return { select: async () => ({ data: rows, error: null }) }
   } }) }
-  const { programmerMessage } = load('lib/rappels.ts', 'programmerMessage', { ...calendar, ...dates, supabase })
+  const ids = load('lib/database-id.ts', 'databaseId')
+  const { programmerMessage } = load('lib/rappels.ts', 'programmerMessage', { ...ids, ...calendar, ...dates, supabase })
   const params = { userId: 'u1', contactId: '12', contact: { prenom: 'Test' },
     typeEvenement: 'jour_special', message: 'Test', destinataire: 'moi',
     emailUtilisateur: 'simulation@example.invalid', dateOverride: new Date() }

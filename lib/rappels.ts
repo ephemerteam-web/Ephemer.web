@@ -1,4 +1,5 @@
 import { readAllResult } from '@/lib/pagination'
+import { databaseId } from './database-id'
 import { parseLocalDay } from './calendar-day'
 import { supabase } from './supabase-browser'
 import { calculerDateEvenement, formatDateLocale, TypeEvenement } from './date-utils'
@@ -36,7 +37,7 @@ export async function programmerRappels(
   const rappels = [
     {
       user_id: userId,
-      contact_id: contactId,
+      contact_id: databaseId(contactId),
       type_evenement: typeEvenement,
       type_rappel: 'j30' as TypeRappel,
       date_envoi: formatDateLocale(calculerDateEnvoi(dateBase, 'j30')),
@@ -44,13 +45,15 @@ export async function programmerRappels(
         ? `📅 Dans 30 jours, c'est ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `📅 Dans 30 jours, c'est l'anniversaire de ${contactNom}!`,
       statut: 'programme',
+      destinataire: 'moi',
+      sujet_email: 'Rappel pour ' + contactNom,
       // 👇 NOUVEAU : Champs pour les dates spéciales
       event_date: eventDate || null,
       event_description: eventDescription || null,
     },
     {
       user_id: userId,
-      contact_id: contactId,
+      contact_id: databaseId(contactId),
       type_evenement: typeEvenement,
       type_rappel: 'j7' as TypeRappel,
       date_envoi: formatDateLocale(calculerDateEnvoi(dateBase, 'j7')),
@@ -58,12 +61,14 @@ export async function programmerRappels(
         ? `⏰ Plus que 7 jours avant ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `⏰ Plus que 7 jours avant l'anniversaire de ${contactNom}!`,
       statut: 'programme',
+      destinataire: 'moi',
+      sujet_email: 'Rappel pour ' + contactNom,
       event_date: eventDate || null,
       event_description: eventDescription || null,
     },
     {
       user_id: userId,
-      contact_id: contactId,
+      contact_id: databaseId(contactId),
       type_evenement: typeEvenement,
       type_rappel: 'jourj' as TypeRappel,
       date_envoi: formatDateLocale(dateBase),
@@ -71,6 +76,8 @@ export async function programmerRappels(
         ? `🎉 C'est aujourd'hui ${eventDescription || "cet événement spécial"} pour ${contactNom}!`
         : `🎉 C'est aujourd'hui l'anniversaire de ${contactNom}!`,
       statut: 'programme',
+      destinataire: 'moi',
+      sujet_email: 'Rappel pour ' + contactNom,
       event_date: eventDate || null,
       event_description: eventDescription || null,
     }
@@ -94,7 +101,7 @@ export async function getRappelsContact(userId: string, contactId: string) {
     .from('rappels')
     .select('*')
     .eq('user_id', userId)
-    .eq('contact_id', contactId)
+    .eq('contact_id', databaseId(contactId))
     .eq('statut', 'programme'))
 
   if (error) {
@@ -110,7 +117,7 @@ export async function annulerRappelsContact(userId: string, contactId: string) {
     .from('rappels')
     .update({ statut: 'annule' })
     .eq('user_id', userId)
-    .eq('contact_id', contactId)
+    .eq('contact_id', databaseId(contactId))
     .eq('statut', 'programme')
 
   if (error) {
@@ -200,7 +207,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
   if (destinataire === 'moi' || destinataire === 'les_deux') {
     entrees.push({
       user_id: userId,
-      contact_id: contactId,
+      contact_id: databaseId(contactId),
       type_evenement: typeEvenement,
       type_rappel: 'jourj',
       source: 'message_programme',
@@ -227,7 +234,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
 
     entrees.push({
       user_id: userId,
-      contact_id: contactId,
+      contact_id: Number(contactId),
       type_evenement: typeEvenement,
       type_rappel: 'jourj',
       source: 'message_programme',

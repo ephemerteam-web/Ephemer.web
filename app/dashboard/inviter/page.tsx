@@ -1,25 +1,22 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useRequestLifetime } from '@/lib/hooks/useRequestLifetime'
+import LoadFailure from '@/components/LoadFailure'
+import { createRequestScope } from '@/lib/request-scope'
 import { readAllResult } from '@/lib/pagination'
 
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
-import Link from 'next/link'
 import CarteInvitation from './CarteInvitation'
 
-type Invitation = {
-  id: string
-  token: string
-  label: string | null
-  max_utilisations: number
-  nb_utilisations: number
-  expires_at: string
-  actif: boolean
-  created_at: string
-}
+type Invitation = Omit<import('@/types/database').Invitation, 'user_id'>
 
 export default function InviterPage() {
-  const router = useRouter()
+  const user = useDashboardUser()
+  const lifetime = useRequestLifetime()
+  const [listError, setListError] = useState('')
+  const [attempt, setAttempt] = useState(0)
+  const retry = () => { setLoading(true); setListError(''); setAttempt(value => value + 1) }
 
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [loading, setLoading] = useState(true)
@@ -32,33 +29,17 @@ export default function InviterPage() {
   // 📥 CHARGEMENT INITIAL
   // ============================================
   useEffect(() => {
-    const init = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
-
-      const { data, error } = await readAllResult(() => supabase
-        .from('invitations')
-        .select('*')
-        .eq('user_id', session.user.id))
-
-      if (error) {
-        console.error('Erreur chargement invitations :', error)
-        setInvitations([]); setMessage('Chargement incomplet. Recharge la page pour retrouver tous tes liens.')
-      } else {
-        setInvitations(((data ?? []) as Invitation[]).sort((a,b) => b.created_at.localeCompare(a.created_at)))
-      }
-
-      setLoading(false)
-    }
-
-    init()
-  }, [router])
+    const scope = createRequestScope()
+    readAllResult(() => supabase.from('invitations').select('*').eq('user_id', user.id))
+      .then(({ data, error }) => {
+        if (!scope.current()) return
+        if (error) { setListError('Impossible de charger tes invitations. Réessaie.'); return }
+        setInvitations((data ?? []).sort((a,b) => b.created_at.localeCompare(a.created_at)))
+      })
+      .catch(() => { if (scope.current()) setListError('Impossible de charger tes invitations. Réessaie.') })
+      .finally(() => { if (scope.current()) setLoading(false) })
+    return scope.cancel
+  }, [user.id, attempt])
 
   // Petit helper : message qui disparaît tout seul
   const flash = (txt: string) => {
@@ -70,18 +51,21 @@ export default function InviterPage() {
   // ✨ CRÉER UN LIEN
   // ============================================
   const creerLien = async () => {
+    const scope = lifetime.current
     setCreating(true)
 
     // .rpc() = on appelle la fonction SQL créée dans Supabase
     const { data, error } = await supabase.rpc('creer_invitation', {
-      p_label: label.trim() || null,
+      p_label: label.trim() || undefined,
     })
 
+    if (!scope.current()) return
     if (error) {
       console.error('Erreur création invitation :', error)
       flash('❌ Erreur : ' + error.message)
     } else {
-      const nouvelle = (Array.isArray(data) ? data[0] : data) as Invitation
+      const nouvelle = data?.[0]
+      if (!nouvelle) { flash('Création du lien non confirmée. Réessaie.'); setCreating(false); return }
       setInvitations((prev) => [{ ...nouvelle, actif: true }, ...prev])
       setLabel('')
       flash('✨ Ton lien est prêt ! Copie-le et partage-le.')
@@ -136,7 +120,9 @@ export default function InviterPage() {
   // 🚫 DÉSACTIVER
   // ============================================
   const desactiver = async (id: string) => {
+    const scope = lifetime.current
     const { error } = await supabase.rpc('desactiver_invitation', { p_id: id })
+    if (!scope.current()) return
 
     if (error) {
       console.error('Erreur désactivation :', error)
@@ -152,6 +138,7 @@ export default function InviterPage() {
   // ============================================
   // ⏳ ÉCRAN DE CHARGEMENT
   // ============================================
+  if (listError) return <LoadFailure message={listError} retry={retry} />
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-4">

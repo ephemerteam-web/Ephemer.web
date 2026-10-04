@@ -1,3 +1,4 @@
+import type { Database } from '@/types/database.generated'
 import { createClient } from '@supabase/supabase-js'
 import FormulaireInvitation from './FormulaireInvitation'
 import LienInvalide from './LienInvalide'
@@ -18,7 +19,7 @@ export default async function PageInvitation({
   const { token } = await params
 
   // Client public (clé "anon") : suffisant, la fonction SQL fait les contrôles
-  const supabase = createClient(
+  const supabase = createClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
@@ -27,14 +28,10 @@ export default async function PageInvitation({
     .rpc('verifier_invitation', { p_token: token })
     .single()
 
-  const info = data as {
-    valide: boolean
-    raison: string
-    prenom_hote: string | null
-    places_restantes: number
-  } | null
-
-  if (error || !info || !info.valide) {
+  // Une panne doit permettre un réessai ; elle ne rend pas le lien invalide.
+  if (error) throw new Error('Invitation indisponible')
+  const info = data
+  if (!info || !info.valide) {
     return <LienInvalide raison={info?.raison ?? 'introuvable'} />
   }
 

@@ -1,19 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { sansFontFamily, monoFontFamily } from './local-fonts';
+import './fonts/fallback.css';
 import "./globals.css";
 import PWARegistration from '@/components/PWARegistration';
 import InvitationDraftCleanup from '@/components/InvitationDraftCleanup';
 import ThemeRuntime from '@/components/ThemeRuntime';
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 // ─── Meta tags classiques (SEO + réseaux sociaux) ───
 export const metadata: Metadata = {
@@ -100,7 +92,8 @@ export default function RootLayout({
   return (
     <html
       lang="fr"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className="h-full antialiased"
+      style={{ "--font-geist-sans": sansFontFamily, "--font-geist-mono": monoFontFamily } as React.CSSProperties}
       suppressHydrationWarning
     >
       <head>

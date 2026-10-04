@@ -1,9 +1,9 @@
 'use client'
-import { readAllResult } from '@/lib/pagination'
+import { useContacts } from '@/lib/hooks/useContacts'
+import LoadFailure from '@/components/LoadFailure'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
 import { TYPES_RELATION } from '@/lib/constants'
 import { useDrawer } from '@/components/DrawerContext'
@@ -11,14 +11,7 @@ import ProgressRing from '@/components/ProgressRing' // 👈 AJOUT : import de l
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Contact = {
-  id: string
-  nom: string
-  prenom: string
-  date_naissance: string | null
-  relation: string
-  email: string | null
-}
+type Contact = Pick<import('@/types/database').Contact, 'id' | 'nom' | 'prenom' | 'date_naissance' | 'relation' | 'email'>
 
 type FeteAvecContact = {
   nomSaint: string
@@ -89,9 +82,7 @@ function SkeletonCard() {
 
 export default function CalendrierSaintsPage() {
   const router = useRouter()
-  const [listError, setListError] = useState('')
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
+  const { contacts, loading, error: listError, retry } = useContacts()
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
@@ -99,27 +90,7 @@ export default function CalendrierSaintsPage() {
   const { ouvrirDrawer } = useDrawer()
 
   // ── Chargement des contacts ──
-  useEffect(() => {
-    async function loadContacts() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
 
-      const { data, error } = await readAllResult(() => supabase
-        .from('contacts')
-        .select('id, nom, prenom, date_naissance, relation, email')
-        .eq('user_id', session.user.id))
-
-      if (error) setListError(error.message)
-      if (!error && data) {
-        setContacts(data as Contact[])
-      }
-      setLoading(false)
-    }
-    loadContacts()
-  }, [router])
 
   // ── Calcul des fêtes (avec gestion prénom vide) ──
   const { fetelist, contactsSansFete } = useMemo(() => {
@@ -172,9 +143,9 @@ export default function CalendrierSaintsPage() {
     if (sortMode === 'date') {
       copie.sort((a, b) => a.joursRestants - b.joursRestants)
     } else if (sortMode === 'alpha') {
-      copie.sort((a, b) => a.contact.prenom.localeCompare(b.contact.prenom))
+      copie.sort((a, b) => (a.contact.prenom ?? '').localeCompare(b.contact.prenom ?? ''))
     } else if (sortMode === 'relation') {
-      copie.sort((a, b) => a.contact.relation.localeCompare(b.contact.relation))
+      copie.sort((a, b) => (a.contact.relation ?? '').localeCompare(b.contact.relation ?? ''))
     }
     return copie
   }, [fetelistFiltree, sortMode])
@@ -186,7 +157,7 @@ export default function CalendrierSaintsPage() {
   }), [fetelist])
 
   // ── Actions ──
-  const handleMessage = useCallback((contactId: string) => {
+  const handleMessage = useCallback((contactId: string | number) => {
     router.push(`/dashboard/generate?contactId=${contactId}&eventType=fete_prenomale`)
   }, [router])
 
@@ -197,9 +168,10 @@ export default function CalendrierSaintsPage() {
   }, [])
 
   // ── Rendu ──
+  if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
-      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
+
       <main className="max-w-5xl mx-auto space-y-6">
 
         {/* En-tête */}
@@ -341,7 +313,7 @@ function CardSaint({
   copied,
 }: {
   fete: FeteAvecContact
-  onMessage: (id: string) => void
+  onMessage: (id: string | number) => void
   onCopySaint: (nom: string) => void
   copied: boolean
 }) {
@@ -405,7 +377,7 @@ function RowSaint({
   onMessage,
 }: {
   fete: FeteAvecContact
-  onMessage: (id: string) => void
+  onMessage: (id: string | number) => void
 }) {
   const { ouvrirDrawer } = useDrawer()
 

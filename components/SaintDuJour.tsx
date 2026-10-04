@@ -2,13 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase-browser'
+import LoadFailure from '@/components/LoadFailure'
 
-type Fete = {
-  saint: string
-  prenom: string | null
-  image_url: string
-  caption: string | null
-}
+type Fete = Pick<import('@/types/database').Tables<'saint_du_jour'>, 'saint' | 'prenom' | 'image_url' | 'caption'>
 
 // La date doit être la même que celle envoyée par Make, même près de minuit.
 function dateDuJourParis() {
@@ -31,6 +27,8 @@ function texteSansPromotion(caption: string | null) {
 export default function SaintDuJour() {
   const [fete, setFete] = useState<Fete | null>(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [texteOuvert, setTexteOuvert] = useState(false)
   const [imageAPartager, setImageAPartager] = useState<File | null>(null)
   const [messagePartage, setMessagePartage] = useState('')
@@ -46,14 +44,14 @@ export default function SaintDuJour() {
       .maybeSingle()
 
       if (!actif) return
-      if (error) console.error('Impossible de charger la fête du jour.', error)
+      if (error) { setLoadError(true); setLoading(false); return }
       setFete(data)
       setLoading(false)
     }
 
-    void charger()
+    void charger().catch(() => { if (actif) { setLoadError(true); setLoading(false) } })
     return () => { actif = false }
-  }, [])
+  }, [attempt])
 
   useEffect(() => {
     if (!fete?.image_url) return
@@ -99,6 +97,7 @@ export default function SaintDuJour() {
     }
   }
 
+  if (loadError) return <LoadFailure message="Impossible de charger la fête du jour." retry={() => { setLoadError(false); setLoading(true); setAttempt(value => value + 1) }} />
   if (loading) {
     return (
       <div className="mx-auto my-8 h-64 w-full max-w-5xl animate-pulse rounded-3xl bg-ink/5" aria-hidden="true" />

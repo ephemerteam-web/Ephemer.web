@@ -1,31 +1,31 @@
 'use client'
 
+import LoadFailure from '@/components/LoadFailure'
+import { createRequestScope } from '@/lib/request-scope'
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase-browser'
 import StarryBackground from '@/components/StarryBackground'
 
-interface PatchNote {
-  id: number
-  version: string
-  title: string
-  changes: string[]
-  release_date: string
-  is_major: boolean
-}
+type PatchNote = import('@/types/database').PatchNote
 
 export default function PatchNotePage() {
   const [patchNotes, setPatchNotes] = useState<PatchNote[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
+    const scope = createRequestScope()
     const fetchPatchNotes = async () => {
       const { data, error } = await supabase
         .from('patch_notes')
         .select('*')
         .order('release_date', { ascending: false })
 
+      if (!scope.current()) return
       if (error) {
+        setLoadError(true)
         console.error('Erreur Supabase:', error)
       } else {
         setPatchNotes(data || [])
@@ -33,8 +33,9 @@ export default function PatchNotePage() {
       setLoading(false)
     }
 
-    fetchPatchNotes()
-  }, [])
+    void fetchPatchNotes().catch(() => { if (scope.current()) { setLoadError(true); setLoading(false) } })
+    return scope.cancel
+  }, [attempt])
 
   return (
     <StarryBackground>
@@ -91,7 +92,7 @@ export default function PatchNotePage() {
         </header>
 
         {/* État de chargement */}
-        {loading ? (
+        {loadError ? <LoadFailure message="Impossible de charger les mises à jour." retry={() => { setLoadError(false); setLoading(true); setAttempt(value => value + 1) }} /> : loading ? (
           <p className="text-center text-muted py-12">
             Chargement des mises à jour...
           </p>

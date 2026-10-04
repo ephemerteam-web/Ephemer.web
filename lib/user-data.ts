@@ -3,12 +3,11 @@ import { supabase } from './supabase-browser'
 
 export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations', userId: string) {
   const rows: Record<string, unknown>[] = []
-  const owner = table === 'profiles' ? 'id' : 'user_id'
   const order = table === 'notification_preferences' ? 'user_id' : 'id'
   // Les liens d'invitation sont des capacités d'accès : ne pas exporter leurs tokens.
   const columns = table === 'invitations' ? 'id,user_id,actif,expires_at,nb_utilisations,max_utilisations' : '*'
   try {
-    for await (const page of readPages(() => supabase.from(table).select<string, Record<string, unknown>>(columns).eq(owner, userId), order)) {
+    for await (const page of readPages(() => (table === 'profiles' ? supabase.from('profiles').select('*').eq('id', userId) : supabase.from(table).select<string, Record<string, unknown>>(columns).eq('user_id', userId)), order)) {
       rows.push(...page)
       if (rows.length > 100000) throw new Error('Export trop volumineux')
     }

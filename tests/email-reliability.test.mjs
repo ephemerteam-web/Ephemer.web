@@ -245,7 +245,7 @@ test('webhook : corps brut signé, rejet des faux événements, reprise sur erre
     process: { env: { RESEND_WEBHOOK_SECRET: 'simulation' } },
     NextResponse: { json: (body,opts) => ({ body,status: opts?.status ?? 200 }) },
     resend: { webhooks: { verify: args => { verified.push(args); if (invalid) throw new Error('Signature'); return event } } },
-    supabaseAdmin: { rpc: async (...args) => { writes.push(args); return { error: dbError ? new Error() : null } } },
+    supabaseAdmin: { rpc: async (...args) => { writes.push(args); return { data: null, error: dbError ? new Error() : null } } },
   })
   const request = () => ({ headers: new Headers({ 'svix-id':'evt-1','svix-timestamp':'simulation','svix-signature':'simulation' }), text: async () => raw })
   assert.equal((await POST(request())).status,200)

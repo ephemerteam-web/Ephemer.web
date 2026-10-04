@@ -1,8 +1,10 @@
 'use client'
+import { DashboardUserContext, type DashboardUser } from '@/components/DashboardUserContext'
+import LoadFailure from '@/components/LoadFailure'
 
 import ContactDraftProvider from '@/components/ContactDraftProvider'
 import CelestialBackdrop from '@/components/CelestialBackdrop'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase-browser'
@@ -10,7 +12,6 @@ import { DrawerProvider } from '@/components/DrawerContext'
 import DrawerGlobal from '@/components/DrawerGlobal'
 import NotificationBell from '@/components/NotificationBell'
 import MenuLateral from '@/components/MenuLateral'
-import { Analytics } from "@vercel/analytics/next"
 import MenuNavigation from '@/components/MenuNavigation'
 import OfflineBanner from '@/components/OfflineBanner';
 
@@ -20,63 +21,65 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const router = useRouter()
-  const pathname = usePathname()
-  const estPageAccueilDashboard = pathname === '/dashboard'
   const [navOuverte, setNavOuverte] = useState(false)
   const [menuOuvert, setMenuOuvert] = useState(false)
 
   // On remonte le user ici pour le partager avec MenuLateral ET le bouton
-  const [user, setUser] = useState<{ id: string; email: string; prenom?: string } | null>(null)
+  const [user, setUser] = useState<DashboardUser | null>(null)
+  const [retryAuth, setRetryAuth] = useState(0)
   const [authError, setAuthError] = useState(false)
   const accountId = useRef<string | null>(null)
 
   useEffect(() => {
     let active = true
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT') {
-        active = false
-        setUser(null)
-        router.replace('/connexion')
-      } else if (session && accountId.current !== session.user.id) {
-        // La clé du provider change : aucun brouillon n'est partagé entre deux comptes.
-        accountId.current = session.user.id
-        setUser({ id: session.user.id, email: session.user.email || '' })
-      }
-    })
-    const chargerUser = async () => {
-      const { data: { user: supabaseUser }, error } = await supabase.auth.getUser()
-      if (!active) return
-      if (error || !supabaseUser) { setAuthError(true); return }
-      if (supabaseUser) {
-        if (accountId.current && accountId.current !== supabaseUser.id) return
-        accountId.current = supabaseUser.id
-        const { data: profil } = await supabase
-          .from('profiles') // ⚠️ adapte si besoin
-          .select('prenom')
-          .eq('id', supabaseUser.id)
-          .single()
-
-        if (!active || accountId.current !== supabaseUser.id) return
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          prenom: profil?.prenom,
-        })
+    let generation = 0
+    const timers = new Set<ReturnType<typeof setTimeout>>()
+    async function verify(expectedId?: string) {
+      const requestId = ++generation
+      try {
+        const { data: { user: verified }, error } = await supabase.auth.getUser()
+        if (!active || requestId !== generation) return
+        if (error || !verified || (expectedId && expectedId !== verified.id)) throw new Error('Session indisponible')
+        const { data: profil, error: profileError } = await supabase.from('profiles').select('prenom').eq('id', verified.id).maybeSingle()
+        if (!active || requestId !== generation) return
+        if (profileError) throw new Error('Profil indisponible')
+        accountId.current = verified.id
+        setAuthError(false)
+        setUser({ id: verified.id, email: verified.email || '', prenom: profil?.prenom ?? undefined })
+      } catch {
+        if (active && requestId === generation) { setUser(null); setAuthError(true) }
       }
     }
-    void chargerUser().catch(() => { if (active) setAuthError(true) })
-    return () => { active = false; subscription.unsubscribe() }
-  }, [router])
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') {
+        generation++
+        accountId.current = null
+        setUser(null)
+        router.replace('/connexion')
+      } else if (event === 'SIGNED_IN' && session && accountId.current !== session.user.id) {
+        generation++
+        accountId.current = session.user.id
+        setUser(null)
+        // Auth interdit ses propres appels synchrones dans ce callback.
+        const timer = setTimeout(() => { timers.delete(timer); if (active) void verify(session.user.id) }, 0)
+        timers.add(timer)
+      }
+    })
+    void verify()
+    return () => { active = false; generation++; subscription.unsubscribe(); timers.forEach(clearTimeout) }
+  }, [router, retryAuth])
 
   // Calcule l'initiale à afficher dans le bouton
   const initiale = user?.prenom
     ? user.prenom.charAt(0).toUpperCase()
     : null
 
-  if (!user) return <main className="p-8 text-ink" role="status">{authError ? 'Session indisponible. Recharge la page ou reconnecte-toi.' : 'Vérification de la session…'}<Link href="/connexion"> Connexion</Link></main>
+  if (!user) return authError
+    ? <LoadFailure message="Session indisponible. Réessaie ou reconnecte-toi." retry={() => { setAuthError(false); setRetryAuth(value => value + 1) }} />
+    : <main className="p-8 text-ink" role="status">Vérification de la session…</main>
 
   return (
-    <ContactDraftProvider key={user.id}><DrawerProvider>
+    <DashboardUserContext.Provider key={user.id} value={user}><ContactDraftProvider><DrawerProvider>
       <div className="min-h-screen bg-canvas relative isolate">
 
         <CelestialBackdrop />
@@ -152,6 +155,6 @@ export default function DashboardLayout({
         <DrawerGlobal />
 
       </div>
-    </DrawerProvider></ContactDraftProvider>
+    </DrawerProvider></ContactDraftProvider></DashboardUserContext.Provider>
   )
 }

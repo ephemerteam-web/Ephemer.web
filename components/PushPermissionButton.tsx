@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useContext } from 'react'
+import { DashboardUserContext } from '@/components/DashboardUserContext'
 import { supabase } from '@/lib/supabase-browser'
 import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
 import { findPushDevice, savePushDevice, removePushDevice } from '@/lib/push-device'
@@ -9,6 +10,7 @@ const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
 type PushStatus = 'idle' | 'loading' | 'granted' | 'denied' | 'unsupported' | 'error'
 
 export default function PushPermissionButton() {
+  const dashboardUser = useContext(DashboardUserContext)
   const [savedStatus, setStatus] = useState<PushStatus>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const supported = useBrowserValue(() => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window, false)
@@ -21,14 +23,18 @@ export default function PushPermissionButton() {
     const check = async () => {
       const reg = await navigator.serviceWorker.getRegistration('/')
       const sub = await reg?.pushManager.getSubscription()
-      const { data: { user }, error } = await supabase.auth.getUser()
-      if (error) throw error
-      const rows = user && sub ? await findPushDevice(user.id, sub.endpoint) : []
+      let ownerId = dashboardUser?.id
+      if (sub && !ownerId) {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) throw error
+        ownerId = user?.id
+      }
+      const rows = ownerId && sub ? await findPushDevice(ownerId, sub.endpoint) : []
       if (active) setStatus(Notification.permission === 'denied' ? 'denied' : sub && rows.length ? 'granted' : 'idle')
     }
     void check().catch(() => { if (active) { setStatus('error'); setErrorMsg('Impossible de vérifier cet appareil.') } })
     return () => { active = false }
-  }, [supported])
+  }, [supported, dashboardUser?.id])
 
   async function subscribeUser() {
     if (!supported) return

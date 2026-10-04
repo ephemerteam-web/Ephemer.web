@@ -10,7 +10,7 @@ export async function findPushDevice(userId: string, endpoint: string) {
 
 export async function savePushDevice(userId: string, subscription: PushSubscription) {
   const rows = await findPushDevice(userId, subscription.endpoint)
-  const value = { user_id: userId, subscription: subscription.toJSON() }
+  const value = { user_id: userId, subscription: { ...subscription.toJSON(), keys: { ...subscription.toJSON().keys } } }
   const { error } = rows.length
     ? await supabase.from('user_push_subscriptions').update(value).eq('user_id', userId).in('id', rows.map(row => row.id))
     : await supabase.from('user_push_subscriptions').insert(value)

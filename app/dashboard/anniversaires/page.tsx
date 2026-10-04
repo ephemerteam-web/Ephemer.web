@@ -1,23 +1,16 @@
 'use client'
-import { readAllResult } from '@/lib/pagination'
+import { useContacts } from '@/lib/hooks/useContacts'
+import LoadFailure from '@/components/LoadFailure'
 
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/date-utils'
 import { useDrawer } from '@/components/DrawerContext'
 import ProgressRing from '@/components/ProgressRing'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Contact = {
-  id: string
-  nom: string
-  prenom: string
-  date_naissance: string | null
-  relation: string
-  email: string | null
-}
+type Contact = Pick<import('@/types/database').Contact, 'id' | 'nom' | 'prenom' | 'date_naissance' | 'relation' | 'email'>
 
 type ContactAvecAnniv = {
   contact: Contact
@@ -58,36 +51,14 @@ function SkeletonCard() {
 
 export default function AnniversairesPage() {
   const router = useRouter()
-  const [listError, setListError] = useState('')
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [loading, setLoading] = useState(true)
+  const { contacts, loading, error: listError, retry } = useContacts()
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const { ouvrirDrawer } = useDrawer()
 
   // ── Chargement des contacts ──
-  useEffect(() => {
-    async function loadContacts() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
 
-      const { data, error } = await readAllResult(() => supabase
-        .from('contacts')
-        .select('id, nom, prenom, date_naissance, relation, email')
-        .eq('user_id', session.user.id))
-      if (error) setListError('Chargement incomplet. Recharge la page pour obtenir tous tes contacts.')
-
-      if (!error && data) {
-        setContacts(data as Contact[])
-      }
-      setLoading(false)
-    }
-    loadContacts()
-  }, [router])
 
   // ── Calcul des anniversaires (avec gestion date manquante) ──
   const { annivList, contactsSansDate } = useMemo(() => {
@@ -130,9 +101,9 @@ export default function AnniversairesPage() {
     if (sortMode === 'date') {
       copie.sort((a, b) => a.joursRestants - b.joursRestants)
     } else if (sortMode === 'alpha') {
-      copie.sort((a, b) => a.contact.prenom.localeCompare(b.contact.prenom))
+      copie.sort((a, b) => (a.contact.prenom ?? '').localeCompare(b.contact.prenom ?? ''))
     } else if (sortMode === 'relation') {
-      copie.sort((a, b) => a.contact.relation.localeCompare(b.contact.relation))
+      copie.sort((a, b) => (a.contact.relation ?? '').localeCompare(b.contact.relation ?? ''))
     }
     return copie
   }, [annivListFiltree, sortMode])
@@ -144,14 +115,15 @@ export default function AnniversairesPage() {
   }), [annivList])
 
   // ── Actions ──
-  const handleMessage = useCallback((contactId: string) => {
+  const handleMessage = useCallback((contactId: string | number) => {
     router.push(`/dashboard/generate?contactId=${contactId}&eventType=anniversaire`)
   }, [router])
 
   // ── Rendu ──
+  if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
-      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
+
       <main className="max-w-5xl mx-auto space-y-6">
 
         {/* En-tête */}
@@ -289,7 +261,7 @@ function CardAnniv({
   onMessage,
 }: {
   anniv: ContactAvecAnniv
-  onMessage: (id: string) => void
+  onMessage: (id: string | number) => void
 }) {
   const { ouvrirDrawer } = useDrawer()
 
@@ -348,7 +320,7 @@ function RowAnniv({
   onMessage,
 }: {
   anniv: ContactAvecAnniv
-  onMessage: (id: string) => void
+  onMessage: (id: string | number) => void
 }) {
   const { ouvrirDrawer } = useDrawer()
 

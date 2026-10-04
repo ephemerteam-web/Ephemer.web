@@ -4,7 +4,7 @@ import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
 
 export default function ConfidentialitePage() {
-  const currentDate = new Date().toLocaleDateString('fr-FR')
+  const currentDate = '4 octobre 2026'
   const currentYear = new Date().getFullYear()
 
   return (
@@ -147,6 +147,8 @@ export default function ConfidentialitePage() {
             <li><strong className="text-muted">Données supprimées :</strong> conservées temporairement dans les sauvegardes avant suppression définitive.</li>
           </Liste>
           <p>Vous pouvez demander la suppression de votre compte et de vos données à tout moment.</p>
+          <p>Les brouillons de contacts restent uniquement en mémoire pendant la session de navigation et disparaissent lorsque l’espace connecté est fermé ou le compte change.</p>
+          <p>Les brouillons d’invitation sont conservés dans ce navigateur. Ils expirent après sept jours sans modification ; leur suppression intervient lors d’une utilisation ultérieure du formulaire.</p>
         </Section>
 
         {/* 10 */}

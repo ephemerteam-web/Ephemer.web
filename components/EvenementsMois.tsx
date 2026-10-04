@@ -1,7 +1,10 @@
 // components/EvenementsMois.tsx
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import LoadFailure from '@/components/LoadFailure'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import { createRequestScope } from '@/lib/request-scope'
 import { supabase } from '@/lib/supabase-browser'
 import { useDrawer } from '@/components/DrawerContext'
 
@@ -41,6 +44,8 @@ const NavButton = ({
 )
 
 export default function EvenementsMois() {
+  const user = useDashboardUser()
+  const scopeRef = useRef(createRequestScope())
   // 📅 État
   const [evenements, setEvenements] = useState<EvenementContact[]>([])
   const [loading, setLoading] = useState(true)
@@ -54,11 +59,15 @@ export default function EvenementsMois() {
 
   // 🔄 Charger les événements
   const chargerEvenements = useCallback(async () => {
+    scopeRef.current.cancel()
+    const scope = createRequestScope()
+    scopeRef.current = scope
+    setLoading(true)
+    setError(null)
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      setLoading(true)
-      setError(null)
-      if (!session?.user?.id) throw new Error('Non connecté')
+      if (!scope.current()) return
+      if (session?.user.id !== user.id) throw new Error('Non connecté')
 
       const response = await fetch(`/api/evenements-mois?mois=${mois}&annee=${annee}`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` },
@@ -66,18 +75,21 @@ export default function EvenementsMois() {
 
       if (!response.ok) throw new Error(`Erreur API: ${response.status}`)
       const data = await response.json()
-      setEvenements(data.evenements || [])
-    } catch (err: unknown) {
-      setError((err instanceof Error ? err.message : 'Erreur inconnue') || 'Impossible de charger les événements')
+      if (!scope.current()) return
+      if (!Array.isArray(data.evenements)) throw new Error()
+      setEvenements(data.evenements)
+    } catch {
+      if (scope.current()) setError('Impossible de charger les événements. Réessaie.')
     } finally {
-      setLoading(false)
+      if (scope.current()) setLoading(false)
     }
-  }, [mois, annee])
+  }, [mois, annee, user.id])
 
   useEffect(() => {
     // Chargement réseau initial et lors d'un changement de mois.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    chargerEvenements()
+    void chargerEvenements()
+    return () => scopeRef.current.cancel()
   }, [chargerEvenements])
 
   // 🎨 Couleurs selon le type
@@ -96,6 +108,8 @@ export default function EvenementsMois() {
     setMois(new Date().getMonth())
     setAnnee(new Date().getFullYear())
   }
+
+  if (error) return <LoadFailure message={error} retry={() => void chargerEvenements()} />
 
   return (
     <div className="space-y-4">

@@ -13,7 +13,7 @@ export default function OfflineBanner() {
 
   return (
     <div className="fixed top-0 left-0 right-0 bg-yellow-500 text-black text-center py-2 text-sm z-50">
-      📡 Mode hors ligne – certaines données peuvent ne pas être à jour
+      📡 Hors ligne : une page de secours publique est disponible. Tes contacts nécessitent une connexion.
     </div>
   );
 }

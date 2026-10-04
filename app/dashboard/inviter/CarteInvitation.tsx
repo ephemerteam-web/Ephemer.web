@@ -2,16 +2,7 @@
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useClock } from '@/lib/hooks/useClock'
 
-type Invitation = {
-  id: string
-  token: string
-  label: string | null
-  max_utilisations: number
-  nb_utilisations: number
-  expires_at: string
-  actif: boolean
-  created_at: string
-}
+type Invitation = Omit<import('@/types/database').Invitation, 'user_id'>
 
 type Props = {
   invitation: Invitation

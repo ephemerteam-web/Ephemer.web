@@ -1,18 +1,21 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import LoadFailure from '@/components/LoadFailure'
+import DiagnosticPreview from '@/components/DiagnosticPreview'
+import { parseDiagnostic, type Diagnostic } from '@/lib/diagnostic'
+import { createRequestScope } from '@/lib/request-scope'
+import { markAllNotificationsRead, compareNotificationDates } from '@/lib/notifications'
+import { notifyNotificationsChanged, subscribeNotificationChanges } from '@/lib/notification-changes'
 import Modal from '@/components/Modal'
 import { DEFAULT_PREFERENCES, resolvePreferences } from '@/lib/notification-preferences'
 import type { NotificationPreferences } from '@/lib/notification-preferences'
 import { readAllResult } from '@/lib/pagination'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useClock } from '@/lib/hooks/useClock'
-import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase-browser'
 
-type Notification = {
-  id: string; user_id: string; contact_id: number; type: string; message: string
-  lue: boolean; event_date: string; created_at: string; event_description: string | null
-}
+type Notification = import('@/types/database').Notification
 type Preferences = NotificationPreferences
 const PREFS_DEFAUT = DEFAULT_PREFERENCES
 
@@ -28,7 +31,9 @@ function Toggle({ actif, onChange, titre, description, emoji, desactive = false 
 }
 
 export default function CentreNotifications() {
-  const router = useRouter()
+  const user = useDashboardUser()
+  const userId = user.id
+  const scopeRef = useRef(createRequestScope())
   const now = useClock()
   const [prefsUnavailable, setPrefsUnavailable] = useState(false)
   const [listUnavailable, setListUnavailable] = useState(false)
@@ -36,20 +41,21 @@ export default function CentreNotifications() {
   const [prefs, setPrefs] = useState<Preferences>(PREFS_DEFAUT)
   const [chargement, setChargement] = useState(true)
   const [sauvegardePrefs, setSauvegardePrefs] = useState(false)
-  const [userId, setUserId] = useState<string | null>(null)
   const [testLoading, setTestLoading] = useState(false)
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
+  const [testResult, setTestResult] = useState<({ success: boolean; message: string } & Partial<Diagnostic>) | null>(null)
   const [erreur, setErreur] = useState<string | null>(null)
   const [succes, setSucces] = useState<string | null>(null)
   const [modaleSuppression, setModaleSuppression] = useState(false)
   const [onglet, setOnglet] = useState<'liste' | 'parametres'>('liste')
 
   async function testerMaintenant() {
+  const scope = scopeRef.current
   setTestLoading(true); setTestResult(null)
   try {
     // Récupérer le token de session
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    if (!scope.current()) return
+    if (!session || session.user.id !== user.id) {
       setTestResult({ success: false, message: '❌ Tu dois être connecté' })
       return
     }
@@ -62,11 +68,10 @@ export default function CentreNotifications() {
       }
     })
     const data = await res.json()
-    setTestResult(data.success
-      ? { success: true, message: `✅ Simulation terminée ! ${data.notifs} notification(s) prévue(s), ${data.emails} email(s) prévu(s).` }
-      : { success: false, message: `❌ Erreur : ${data.error || 'Erreur inconnue'}` })
-  } catch { setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
-  finally { setTestLoading(false) }
+    if (!res.ok || !data.success) throw new Error('Diagnostic indisponible')
+    if (scope.current()) setTestResult({ success: true, message: 'Simulation terminée', ...parseDiagnostic(data) })
+  } catch { if (scope.current()) setTestResult({ success: false, message: '❌ Erreur de connexion au serveur' }) }
+  finally { if (scope.current()) setTestLoading(false) }
 }
   function flash(type: 'erreur' | 'succes', texte: string) {
     if (type === 'erreur') { setErreur(texte); setTimeout(() => setErreur(null), 5000) }
@@ -74,46 +79,67 @@ export default function CentreNotifications() {
   }
 
   const chargerTout = useCallback(async () => {
-    const { data: { user }, error: errUser } = await supabase.auth.getUser()
-    if (errUser || !user) { router.push('/connexion'); return }
-    setChargement(true); setErreur(null)
-    setUserId(user.id)
-    const { data: notifs, error: errNotifs } = await readAllResult(() => supabase.from('notifications').select('*').eq('user_id', user.id))
-    if (errNotifs) { setListUnavailable(true); console.error('❌ Erreur chargement notifications :', errNotifs.message); flash('erreur', `Impossible de charger tes notifications : ${errNotifs.message}`) }
-    else setNotifications((notifs || []).sort((a, b) => b.created_at.localeCompare(a.created_at) || a.id.localeCompare(b.id)))
-    const { data: pref, error: errPref } = await supabase.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle()
-    if (errPref) { setPrefsUnavailable(true); console.error('❌ Erreur chargement préférences :', errPref.message); flash('erreur', `Impossible de charger tes préférences : ${errPref.message}`) }
-    else setPrefs(resolvePreferences(pref))
-    setChargement(false)
-  }, [router])
+    scopeRef.current.cancel()
+    const scope = createRequestScope()
+    scopeRef.current = scope
+    setChargement(true)
+    setErreur(null)
+    try {
+      const [list, preferences] = await Promise.all([
+        readAllResult(() => supabase.from('notifications').select('*').eq('user_id', user.id)),
+        supabase.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle()
+      ])
+      if (!scope.current()) return
+      setListUnavailable(!!list.error)
+      setPrefsUnavailable(!!preferences.error)
+      if (list.error || preferences.error) { setErreur('Impossible de charger les notifications et préférences. Réessaie.'); return }
+      setNotifications((list.data ?? []).sort(compareNotificationDates))
+      setPrefs(resolvePreferences(preferences.data))
+    } catch {
+      if (scope.current()) { setListUnavailable(true); setErreur('Impossible de charger les notifications. Réessaie.') }
+    } finally {
+      if (scope.current()) setChargement(false)
+    }
+  }, [user.id])
   useEffect(() => {
     // Chargement réseau initial : aucun état dérivé des props ici.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    chargerTout()
+    void chargerTout()
+    return () => scopeRef.current.cancel()
   }, [chargerTout])
+  useEffect(() => subscribeNotificationChanges((ownerId, source) => {
+    if (ownerId === userId && source !== 'centre') void chargerTout()
+  }), [userId, chargerTout])
 
   async function marquerLue(id: string) {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: true } : n))
-    const { error } = await supabase.from('notifications').update({ lue: true }).eq('id', id)
-    if (error) { console.error('❌ Erreur marquerLue :', error.message); setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: false } : n)); flash('erreur', 'Impossible de marquer comme lu. Réessaie.') }
+    const scope = scopeRef.current
+    try {
+      const { error } = await supabase.from('notifications').update({ lue: true }).eq('id', id).eq('user_id', userId)
+      if (error) throw error
+      if (scope.current()) { await chargerTout(); notifyNotificationsChanged(userId, 'centre') }
+    } catch { if (scope.current()) setErreur('Impossible de marquer comme lu. Réessaie.') }
   }
   async function toutMarquerLu() {
-    if (!userId) return
-    const avant = notifications; setNotifications(prev => prev.map(n => ({ ...n, lue: true })))
-    const { error } = await supabase.from('notifications').update({ lue: true }).eq('user_id', userId).eq('lue', false)
-    if (error) { console.error('❌ Erreur toutMarquerLu :', error.message); setNotifications(avant); flash('erreur', 'Impossible de tout marquer comme lu.') }
+    const scope = scopeRef.current
+    try { await markAllNotificationsRead(supabase, userId); if (scope.current()) { await chargerTout(); notifyNotificationsChanged(userId, 'centre') } }
+    catch { if (scope.current()) setErreur('Impossible de tout marquer comme lu. Réessaie.') }
   }
   async function supprimer(id: string) {
-    const avant = notifications; setNotifications(prev => prev.filter(n => n.id !== id))
-    const { error } = await supabase.from('notifications').delete().eq('id', id)
-    if (error) { console.error('❌ Erreur suppression :', error.message); setNotifications(avant); flash('erreur', 'Impossible de supprimer cette notification.') }
+    const scope = scopeRef.current
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('id', id).eq('user_id', userId)
+      if (error) throw error
+      if (scope.current()) { await chargerTout(); notifyNotificationsChanged(userId, 'centre') }
+    } catch { if (scope.current()) setErreur('Impossible de supprimer cette notification. Réessaie.') }
   }
   async function toutSupprimer() {
     if (!userId) return
-    const avant = notifications; setNotifications([]); setModaleSuppression(false)
-    const { error } = await supabase.from('notifications').delete().eq('user_id', userId)
-    if (error) { console.error('❌ Erreur suppression globale :', error.message); setNotifications(avant); flash('erreur', 'La suppression a échoué. Tes notifications sont toujours là.') }
-    else flash('succes', 'Toutes les notifications ont été supprimées.')
+    const scope = scopeRef.current
+    try {
+      const { error } = await supabase.from('notifications').delete().eq('user_id', userId)
+      if (error) throw error
+      if (scope.current()) { setModaleSuppression(false); await chargerTout(); notifyNotificationsChanged(userId, 'centre'); flash('succes', 'Toutes les notifications ont été supprimées.') }
+    } catch { if (scope.current()) setErreur('La suppression a échoué. Tes notifications sont toujours là. Réessaie.') }
   }
   async function changerPref(cle: keyof Preferences, valeur: boolean) {
     if (!userId || prefsUnavailable || sauvegardePrefs) return
@@ -124,8 +150,9 @@ export default function CentreNotifications() {
     if (error) { console.error('❌ Erreur sauvegarde préférence :', error.message); setPrefs(ancienesPrefs); flash('erreur', `Préférence non enregistrée : ${error.message}`) }
     else flash('succes', 'Préférence enregistrée ✓')
   }
-  function formaterDate(dateStr: string) { return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }
-  function depuisQuand(dateStr: string) {
+  function formaterDate(dateStr: string | null) { if (!dateStr) return 'Date inconnue'; return new Date(dateStr).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) }
+  function depuisQuand(dateStr: string | null) {
+    if (!dateStr) return 'à une date inconnue'
     if (!now) return formaterDate(dateStr)
     const minutes = Math.floor((now - new Date(dateStr).getTime()) / 60000)
     if (minutes < 1) return "à l'instant"; if (minutes < 60) return `il y a ${minutes} min`
@@ -135,6 +162,7 @@ export default function CentreNotifications() {
   }
   const nonLues = notifications.filter(n => !n.lue).length
 
+  if (listUnavailable || prefsUnavailable) return <LoadFailure message={erreur || 'Chargement indisponible'} retry={() => { void chargerTout() }} />
   return <div className="p-4 md:p-8"><div className="max-w-3xl mx-auto">
     <div className="mb-6"><h1 className="text-2xl sm:text-3xl font-bold text-ink">🔔 Centre de notifications</h1><p className="text-muted mt-1 text-sm sm:text-base">Consulte tes alertes et règle tes préférences.</p></div>
     {erreur && <div role="alert" className="mb-4 p-3 rounded-xl bg-rose-500/15 border border-rose-500/40 text-danger text-sm flex items-start gap-2"><span>⚠️</span><span className="min-w-0 break-words">{erreur}</span></div>}
@@ -154,7 +182,7 @@ export default function CentreNotifications() {
         <div><h2 className="text-ink font-bold text-lg mb-3">📡 Comment être prévenu ?</h2><div className="space-y-3"><Toggle emoji="📧" titre="Par email" description="Recevoir les alertes dans ta boîte mail." actif={prefs.canal_email} onChange={v => changerPref('canal_email', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="🔔" titre="Préparer cet appareil" description="Préférence enregistrée. Envoi push indisponible actuellement." actif={prefs.canal_push} onChange={v => changerPref('canal_push', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div></div>
         <div><h2 className="text-ink font-bold text-lg mb-3">⏰ Quand être prévenu ?</h2><div className="space-y-3"><Toggle emoji="7️⃣" titre="7 jours avant" description="Un rappel une semaine à l'avance." actif={prefs.rappel_j7} onChange={v => changerPref('rappel_j7', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="3️⃣" titre="3 jours avant" description="Un rappel trois jours avant l’événement." actif={prefs.rappel_j3} onChange={v => changerPref('rappel_j3', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="1️⃣" titre="1 jour avant" description="Un rappel la veille de l'événement." actif={prefs.rappel_j1} onChange={v => changerPref('rappel_j1', v)} desactive={sauvegardePrefs || prefsUnavailable} /><Toggle emoji="🎯" titre="Le jour J" description="Un rappel le jour même." actif={prefs.rappel_jourj} onChange={v => changerPref('rappel_jourj', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div></div>
         <div><h2 className="text-ink font-bold text-lg mb-3">📰 Résumé mensuel</h2><Toggle emoji="🗓" titre="Newsletter du mois" description="Recevoir la liste des événements du mois à venir." actif={prefs.newsletter_mensuelle} onChange={v => changerPref('newsletter_mensuelle', v)} desactive={sauvegardePrefs || prefsUnavailable} /></div>
-        <div className="mt-8 p-6 bg-ink/[0.03] rounded-xl border border-line"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-ink"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-muted mb-4">Simule les rappels de votre compte sans créer de notification ni envoyer d&apos;email.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-ink/10 text-ink font-semibold rounded-lg hover:bg-ink/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-line border-t-line rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-ink/[0.06] border border-line text-muted' : 'bg-ink/[0.06] border border-line text-muted'}`}>{testResult.message}</div>}</div>
+        <div className="mt-8 p-6 bg-ink/[0.03] rounded-xl border border-line"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-ink"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-muted mb-4">Simule les rappels de votre compte sans créer de notification ni envoyer d&apos;email.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-ink/10 text-ink font-semibold rounded-lg hover:bg-ink/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-line border-t-line rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-ink/[0.06] border border-line text-muted' : 'bg-ink/[0.06] border border-line text-muted'}`}>{testResult.success && testResult.preview ? <DiagnosticPreview preview={testResult.preview} recipient={testResult.recipient ?? null} /> : testResult.message}</div>}</div>
       </div>}
     </>}
     {modaleSuppression && <Modal open={modaleSuppression} onClose={() => setModaleSuppression(false)} title="Supprimer toutes les notifications ?"><div className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-ink font-bold text-lg sm:text-xl mt-4">Supprimer toutes les notifications ?</h3><p className="text-muted text-sm mt-2">Cette action est <strong className="text-danger">irréversible</strong>.<br />Tu as actuellement <strong className="text-ink">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink bg-ink/5 hover:bg-ink/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Oui, tout supprimer</button></div></div></Modal>}

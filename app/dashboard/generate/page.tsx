@@ -1,8 +1,8 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
 import { readAllResult } from '@/lib/pagination'
 
 import { Suspense, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react'
-import type { Session } from '@supabase/supabase-js'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase-browser'
@@ -22,7 +22,8 @@ const otherOccasions = TYPES_EVENEMENT.filter(event => event.value !== 'annivers
 function GenerateForm({ contactId, initialOccasion }: { contactId: string | null; initialOccasion: string | null }) {
   const [state, dispatch] = useReducer(generatorReducer, initialOccasion, initialGeneratorState)
   const [contacts, setContacts] = useState<GeneratorContact[]>([])
-  const [session, setSession] = useState<Session | null>(null)
+  const user = useDashboardUser()
+  const session = { user }
   const [contactsLoading, setContactsLoading] = useState(true)
   const [contactsError, setContactsError] = useState('')
   const [prefillWarning, setPrefillWarning] = useState('')
@@ -46,17 +47,12 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
     let active = true
     async function loadContacts() {
       try {
-        const auth = await supabase.auth.getSession()
-        if (!active) return
-        if (auth.error || !auth.data.session) throw new Error('Ta session est indisponible. Reconnecte-toi pour continuer.')
-        setSession(auth.data.session)
-        const session = auth.data.session
     const { data, error } = await readAllResult(() => supabase.from('contacts')
           .select('id, prenom, nom, relation, date_naissance, email, est_favori')
-          .eq('user_id', session.user.id))
+          .eq('user_id', user.id))
         if (!active) return
         if (error) throw new Error('Impossible de charger tes contacts. Tu peux réessayer ou saisir un prénom.')
-        const loaded = (data ?? []) as GeneratorContact[]
+        const loaded = data ?? []
         setContacts(loaded)
         if (contactId && !recipientTouchedRef.current) {
           const contact = loaded.find(item => String(item.id) === contactId)
@@ -71,7 +67,7 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
     }
     void loadContacts()
     return () => { active = false }
-  }, [contactId, retry])
+  }, [contactId, retry, user.id])
 
   useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current) }, [])
 

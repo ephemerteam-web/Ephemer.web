@@ -1,24 +1,22 @@
 "use client"
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useRequestLifetime } from '@/lib/hooks/useRequestLifetime'
+import LoadFailure from '@/components/LoadFailure'
+import { createRequestScope } from '@/lib/request-scope'
 import { readAllResult } from '@/lib/pagination';
 import { AI_NOTICE, minimalAIInput } from "@/lib/ai-privacy";
 import { usableGiftIdeas } from '@/lib/gift-ideas';
 import { normalizeOccasion } from '@/lib/constants';
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import type { Session } from '@supabase/supabase-js';
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase-browser";
 import AppSelect from "@/components/AppSelect";
-import { TypeEvenement, calculerDateEvenement, formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/date-utils";
 import {
-  TYPES_RELATION,
   TYPES_EVENEMENT,
-  EVENT_TYPE_MAP,
-  necessiteDateManuelle,
 } from "@/lib/constants";
 import { useDrawer } from "@/components/DrawerContext";
 import {
-  CATEGORIES_CADEAU,
   marchandsPourCategorie,
   getCategorieById,
   type CategorieCadeau,
@@ -27,24 +25,8 @@ import {
 // ============================================================
 // 📌 TYPES
 // ============================================================
-type Contact = {
-  id: number;
-  prenom: string;
-  nom: string;
-  relation: string;
-  date_naissance: string | null;
-  email?: string | null;
-  note?: string | null;
-  est_favori?: boolean;
-  telephone_indicatif?: string | null;
-  telephone_numero?: string | null;
-};
+type Contact = Pick<import('@/types/database').Contact, 'id' | 'prenom' | 'nom' | 'relation' | 'date_naissance' | 'email' | 'note' | 'est_favori' | 'telephone_indicatif' | 'telephone_numero'>;
 
-type DatesPossibles = {
-  jourJ: Date;
-  j1: Date;
-  j7: Date;
-};
 
 type Idea = {
   idee: string;
@@ -80,7 +62,7 @@ const CATEGORIE_STYLES: Record<CategorieCadeau, { borderColor: string; gradient:
 // ============================================================
 // 🎴 COMPOSANT FLIP CARD (Le cœur du design)
 // ============================================================
-function FlipCard({ idea, index }: { idea: Idea; index: number }) {
+function FlipCard({ idea }: { idea: Idea; index: number }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const changed = useRef(false);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -215,35 +197,32 @@ function GiftIdeasForm() {
   // ---------------------------
   // HOOKS & STATES
   // ---------------------------
+  const lifetime = useRequestLifetime();
   const searchParams = useSearchParams();
   const { ouvrirDrawer } = useDrawer();
 
-  const [selectedContactId, setSelectedContactId] = useState("");
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [session, setSession] = useState<Session | null>(null);
+  const user = useDashboardUser();
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [contactsError, setContactsError] = useState('');
+  const [attempt, setAttempt] = useState(0);
   const [contactListOpen, setContactListOpen] = useState(false);
   const [searchContact, setSearchContact] = useState("");
 
   const [eventType, setEventType] = useState("anniversaire");
-  const [eventDate, setEventDate] = useState<string>("");
-  const [eventDescription, setEventDescription] = useState<string>("");
 
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const needsManualDate = necessiteDateManuelle(eventType);
 
   // ---------------------------
   // FONCTIONS
   // ---------------------------
   function appliquerContact(contact: Contact) {
-    setSelectedContactId(String(contact.id));
     setSelectedContact(contact);
     setEventType("anniversaire");
-    setEventDate("");
-    setEventDescription("");
   }
 
   const handleEditContact = () => {
@@ -263,23 +242,10 @@ function GiftIdeasForm() {
     }
   };
 
-  const refreshContacts = async () => {
-    if (!session) return;
-    const { data, error } = await readAllResult(() => supabase
-      .from("contacts")
-      .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-      .eq("user_id", session.user.id));
-
-    if (!error && data) {
-      setContacts((data as Contact[]).sort((a,b) => (a.prenom || "").localeCompare(b.prenom || "", "fr")));
-      if (selectedContactId) {
-        const updated = data.find((c) => String(c.id) === selectedContactId);
-        if (updated) appliquerContact(updated as Contact);
-      }
-    }
-  };
 
   async function handleGenerate() {
+    const scope = lifetime.current;
+    if (loading) return;
     if (!selectedContact) {
       setError("Merci de sélectionner un contact.");
       return;
@@ -295,7 +261,8 @@ function GiftIdeasForm() {
       // 👇 Récupérer le token de session AVANT l'appel
 const { data: { session } } = await supabase.auth.getSession();
 
-if (!session) {
+if (!scope.current()) return;
+if (!session || session.user.id !== user.id) {
   setError("Ta session a expiré. Reconnecte-toi pour continuer.");
   setLoading(false);
   return;
@@ -312,6 +279,7 @@ const res = await fetch("/api/generate-gift-ideas", {
       });
 
       const data = await res.json();
+      if (!scope.current()) return;
 
       if (!res.ok) {
         console.error("=== RÉPONSE API EN ERREUR ===");
@@ -328,13 +296,14 @@ const res = await fetch("/api/generate-gift-ideas", {
       if (!usable.length) throw new Error('Aucune idée utilisable reçue. Réessaie.');
       setIdeas(usable as Idea[]);
     } catch (err) {
+      if (!scope.current()) return;
       const errorMessage = err instanceof Error ? err.message : "Impossible de générer les idées.";
       setError(errorMessage);
       console.error("=== ERREUR handleGenerate ===");
       console.error("Message :", errorMessage);
       console.error("Erreur complète :", err);
     } finally {
-      setLoading(false);
+      if (scope.current()) setLoading(false);
     }
   }
 
@@ -342,37 +311,38 @@ const res = await fetch("/api/generate-gift-ideas", {
   // EFFETS
   // ---------------------------
   useEffect(() => {
+    const scope = createRequestScope();
     async function loadContactsAndPrefill() {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (!session) return;
 
       const { data, error } = await readAllResult(() => supabase
         .from("contacts")
         .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-        .eq("user_id", session.user.id));
+        .eq("user_id", user.id));
 
+      if (!scope.current()) return;
       if (error) {
+        setContactsError("Impossible de charger tes contacts. Réessaie.");
         console.warn("Erreur chargement contacts:", error);
-        setError('Chargement incomplet. Recharge la page pour retrouver tous tes contacts.');
         return;
       }
 
-      setContacts((data as Contact[]).sort((a,b) => (a.prenom || "").localeCompare(b.prenom || "", "fr")));
+      setContacts((data ?? []).sort((a,b) => (a.prenom || "").localeCompare(b.prenom || "", "fr")));
 
       const contactIdFromUrl = searchParams.get("contactId");
       const eventTypeFromUrl = searchParams.get("eventType");
-
-      if (eventTypeFromUrl) setEventType(normalizeOccasion(eventTypeFromUrl));
 
       if (contactIdFromUrl && data) {
         const contactTrouve = data.find((c) => String(c.id) === contactIdFromUrl);
         if (contactTrouve) appliquerContact(contactTrouve);
       }
+      if (eventTypeFromUrl) setEventType(normalizeOccasion(eventTypeFromUrl));
     }
 
-    loadContactsAndPrefill();
-  }, [searchParams]);
+    void loadContactsAndPrefill().catch(() => {
+      if (scope.current()) setContactsError('Impossible de charger tes contacts. Réessaie.');
+    }).finally(() => { if (scope.current()) setContactsLoading(false); });
+    return scope.cancel;
+  }, [searchParams, user.id, attempt]);
 
   const contactsFiltres = contacts.filter((contact) =>
     `${contact.prenom} ${contact.nom} ${contact.relation}`
@@ -383,6 +353,8 @@ const res = await fetch("/api/generate-gift-ideas", {
   // ---------------------------
   // RENDU
   // ---------------------------
+  if (contactsError) return <LoadFailure message={contactsError} retry={() => { setContactsError(''); setContactsLoading(true); setAttempt(value => value + 1); }} />;
+  if (contactsLoading) return <p className="p-6" role="status">Chargement des contacts…</p>;
   return (
     <div className="min-h-screen bg-canvas text-ink relative overflow-hidden font-sans selection:bg-action selection:text-on-action">
       {/* ── Arrière-plan décoratif ── */}
@@ -521,45 +493,17 @@ const res = await fetch("/api/generate-gift-ideas", {
                 <AppSelect
                   options={TYPES_EVENEMENT.map((t) => ({ value: t.value, label: t.label }))}
                   value={eventType}
-                  onChange={(val) => {
-                    setEventType(val);
-                    if (!necessiteDateManuelle(val)) {
-                      setEventDate("");
-                      setEventDescription("");
-                    }
-                  }}
+                  onChange={setEventType}
                 />
 
-                {needsManualDate && (
-                  <div className="mt-4 space-y-3 p-4 bg-ink/5 rounded-xl border border-line animate-in fade-in">
-                    <div>
-                      <label htmlFor="gift-field-0" className="text-[10px] uppercase text-muted font-bold tracking-wider">Date</label>
-                      <input id="gift-field-0"
-                        type="date"
-                        value={eventDate}
-                        onChange={(e) => setEventDate(e.target.value)}
-                        className="mt-1 w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50 outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="gift-field-1" className="text-[10px] uppercase text-muted font-bold tracking-wider">Quoi ?</label>
-                      <input id="gift-field-1"
-                        type="text"
-                        placeholder="Ex: Départ à la retraite..."
-                        value={eventDescription}
-                        onChange={(e) => setEventDescription(e.target.value)}
-                        className="mt-1 w-full bg-canvas border border-line rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-accent/50 outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
+
               </div>
 
               {/* Bouton Générer */}
               <p className="text-sm text-muted mb-3">{AI_NOTICE}</p>
               <button
                 onClick={handleGenerate}
-                disabled={loading || !selectedContact || (needsManualDate && (!eventDate || !eventDescription))}
+                disabled={loading || !selectedContact}
                 className="w-full mt-6 relative group overflow-hidden bg-gradient-to-r from-action to-action text-on-action font-bold py-3.5 rounded-xl shadow-lg shadow-[#C8A84E]/20 hover:shadow-[#C8A84E]/40 active:scale-[0.98] transition-all disabled:opacity-50 disabled:shadow-none"
               >
                 <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-ink/30 to-transparent" />

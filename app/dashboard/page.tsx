@@ -1,83 +1,34 @@
 'use client'
-import { readAllResult } from '@/lib/pagination'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useContacts } from '@/lib/hooks/useContacts'
+import LoadFailure from '@/components/LoadFailure'
 import { birthdayInYear, isCalendarDay, nextBirthdayDay, parseLocalDay, daysBetween } from '@/lib/calendar-day'
 import { formatDateLocale } from '@/lib/date-utils'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import { SAINTS } from '@/lib/saints'
 import Link from 'next/link'
-import { useUserProfile } from '@/lib/hooks/useUserProfile'
 import IconeLuneIA from '@/components/IconeLuneIA'
 import FavorisRow from '@/components/FavorisRow'
 import SaintDuJour from '@/components/SaintDuJour'
 
 
 
-type Contact = {
-  id: string
-  nom: string
-  prenom: string
-  date_naissance: string | null
-  est_favori?: boolean 
-}
-type Profile = {
-  prenom: string
-}
+type Contact = import('@/types/database').Contact
 
 export default function Dashboard() {
   const router = useRouter()
-  const [userName, setUserName] = useState<string | null>(null)
-  const [prenom, setPrenom] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [listError, setListError] = useState('')
-  const [contacts, setContacts] = useState<Contact[]>([])
-  const [profile, setProfile] = useState<Profile | null>(null)
-  const [authDrawerOpen, setAuthDrawerOpen] = useState(false)
+  const user = useDashboardUser()
+  const userName = user.email.split('@')[0] || null
+  const { contacts: allContacts, loading, error: listError, retry } = useContacts()
+  const contacts = useMemo(() => allContacts.filter(contact => contact.est_favori), [allContacts])
+  const profile = user.prenom ? { prenom: user.prenom } : null
   const [aideOuverte, setAideOuverte] = useState(false)
-  const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | null>(null)
+  const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | number | null>(null)
 
 
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
 
-      setUserName(session.user.email?.split('@')[0] ?? null)
-
-      const { data, error } = await readAllResult(() => supabase
-        .from('contacts')
-        .select('*')
-        .eq('user_id', session.user.id)
-        .eq('est_favori', true))
-
-      if (error) setListError('Chargement incomplet. Recharge la page pour retrouver tous tes contacts.')
-      if (data) setContacts(data as Contact[])
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('prenom')
-        .eq('id', session.user.id)
-
-      if (!profileError && profileData && profileData.length > 0) {
-        const fetchedPrenom = String(profileData[0].prenom || '')
-        if (fetchedPrenom.trim() !== '') {
-          setProfile({ prenom: fetchedPrenom })
-        } else {
-          setProfile(null)
-        }
-      } else {
-        setProfile(null)
-      }
-
-      setLoading(false)
-    }
-    init()
-  }, [router])
 
   const feteDuJour = useMemo(() => {
     const today = new Date()
@@ -158,7 +109,7 @@ export default function Dashboard() {
       .filter((c) => c.est_favori)
       .map((c) => {
         const dateAnniv = c.date_naissance && isCalendarDay(c.date_naissance) ? prochainAnniv(c.date_naissance) : null
-        const dateFete = prochaineFetePrenom(c.prenom)
+        const dateFete = prochaineFetePrenom(c.prenom ?? '')
 
         let prochainEvent: { type: 'anniversaire' | 'fete_prenom'; date: Date; jours: number } | null = null
 
@@ -172,7 +123,7 @@ export default function Dashboard() {
           }
         }
 
-        return { email: null, telephone_indicatif: null, telephone_numero: null, relation: null, note: null, ...c, prochainEvent }
+        return { ...c, prochainEvent }
       })
       .sort((a, b) => {
         if (!a.prochainEvent) return 1
@@ -243,9 +194,10 @@ export default function Dashboard() {
     { id: 2, icon: '📨', titre: 'Messages programmés', sous: 'Tes envois en attente', path: '/dashboard/messages-programmes' },
   ]
 
+  if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
+
 
       {/* ============ EN-TÊTE ============ */}
       <div className="mb-6">

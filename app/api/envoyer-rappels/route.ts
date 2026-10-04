@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
     // 2️⃣ Récupération des profils expéditeurs (optimisé)
     const userIds = [...new Set(rappels.map(r => r.user_id).filter(Boolean))];
     const alertUserIds = [...new Set(rappels.filter(r => r.source !== 'message_programme').map(r => r.user_id).filter(Boolean))];
-    const profilsMap: Record<string, { prenom?: string; nom?: string; email?: string }> = {};
+    const profilsMap: Record<string, { prenom?: string | null; nom?: string | null; email?: string | null }> = {};
 
     // ✅ SÉCURITÉ 2 : PostgreSQL n'accepte pas .in([]) vide
     if (userIds.length > 0) {

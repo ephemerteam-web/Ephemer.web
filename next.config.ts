@@ -92,6 +92,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: '/dashboard/contacts/rapide',
+        destination: '/dashboard/contacts/nouveau',
+        permanent: true,
+      },
+      {
         source: "/install",
         destination: "/#install",
         permanent: false,

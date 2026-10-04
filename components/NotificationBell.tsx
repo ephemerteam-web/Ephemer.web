@@ -1,4 +1,9 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import LoadFailure from '@/components/LoadFailure'
+import { createRequestScope } from '@/lib/request-scope'
+import { markAllNotificationsRead, compareNotificationDates } from '@/lib/notifications'
+import { notifyNotificationsChanged, subscribeNotificationChanges } from '@/lib/notification-changes'
 import { readAllResult } from '@/lib/pagination'
 // "use client" veut dire : ce composant tourne dans le NAVIGATEUR (pas sur le serveur)
 // Il a besoin de React, des clics utilisateur, etc.
@@ -9,19 +14,13 @@ import { useDrawer } from '@/components/DrawerContext'
 import { useRouter } from 'next/navigation'
 
 // ── Types (définitions de la forme de nos données) ────────────────
-type Notification = {
-  id: string
-  message: string
-  lue: boolean
-  created_at: string
-  contact_id: string
-  jours_restants?: number | null
-  type?: string | null            // 👈 pour distinguer les invitations
-}
+type Notification = Pick<import('@/types/database').Notification, 'id' | 'message' | 'lue' | 'created_at' | 'contact_id' | 'jours_restants' | 'type'>
 
 // ── Composant principal ───────────────────────────────────────────
 export default function NotificationBell() {
   const router = useRouter()
+  const user = useDashboardUser()
+  const scopeRef = useRef(createRequestScope())
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [ouvert, setOuvert] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -45,89 +44,61 @@ export default function NotificationBell() {
 
   // ── Charger les notifications déjà existantes ────────────────
   const chargerNotifications = useCallback(async () => {
+    scopeRef.current.cancel()
+    const scope = createRequestScope()
+    scopeRef.current = scope
+    setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user?.id) { setLoading(false); return }
 
       const { data, error: fetchError } = await readAllResult(() => supabase
         .from('notifications')
         .select('id, message, lue, created_at, contact_id, jours_restants, type')
-        .eq('user_id', session.user.id))
+        .eq('user_id', user.id))
+      if (!scope.current()) return
 
       if (fetchError) {
         console.error('Erreur chargement notifs:', fetchError.message)
         setError('Impossible de charger les notifications')
       } else if (data) {
-        setNotifications(data.sort((a,b) => b.created_at.localeCompare(a.created_at)))
+        setNotifications(data.sort(compareNotificationDates))
         setError(null)
       }
     } catch (err) {
       console.error('Erreur chargement notifications:', err)
-      setError('Erreur de connexion')
+      if (scope.current()) setError('Erreur de connexion')
     }
-    setLoading(false)
-  }, [])
+    if (scope.current()) setLoading(false)
+  }, [user.id])
 
   // ── Tout marquer comme lu ────────────────────────────────────
   const marquerToutCommeLu = useCallback(async () => {
+    const scope = scopeRef.current
     try {
-      const nonLuesIds = notifications.filter(n => !n.lue).map(n => n.id)
-      if (nonLuesIds.length === 0) return
-
-      const { error } = await supabase
-        .from('notifications')
-        .update({ lue: true })
-        .in('id', nonLuesIds)
-
-      if (error) throw error
-      setNotifications(prev => prev.map(n => ({ ...n, lue: true })))
-    } catch (err) {
-      console.error('Erreur marquer tout lu:', err)
+      await markAllNotificationsRead(supabase, user.id)
+      if (scope.current()) { await chargerNotifications(); notifyNotificationsChanged(user.id, 'bell') }
+    } catch {
+      if (scope.current()) setError('Impossible de tout marquer comme lu. Réessaie.')
     }
-  }, [notifications])
+  }, [user.id, chargerNotifications])
 
   // ── Realtime : écouter les nouvelles notifs en direct ⚡ ──────
+  useEffect(() => subscribeNotificationChanges((ownerId, source) => {
+    if (ownerId === user.id && source !== 'bell') void chargerNotifications()
+  }), [user.id, chargerNotifications])
+
   useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null
-
-    const setupRealtime = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.user?.id) return
-
-      channel = supabase
-        .channel('notifications-listen')
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${session.user.id}`,
-          },
-          (payload) => {
-            const newNotif = payload.new as Notification
-            setNotifications(prev => {
-              const existeDeja = prev.some(n => n.id === newNotif.id)
-              if (existeDeja) return prev
-              return [newNotif, ...prev]
-            })
-          }
-        )
-        .subscribe()
-    }
-
-    setupRealtime()
-
-    return () => {
-      if (channel) supabase.removeChannel(channel)
-    }
-  }, [])
+    const channel = supabase.channel('notifications-listen-' + user.id)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: 'user_id=eq.' + user.id },
+        () => { void chargerNotifications() }).subscribe()
+    return () => { void supabase.removeChannel(channel) }
+  }, [user.id, chargerNotifications])
 
   // ── Initialisation au chargement ────────────────────────────
   useEffect(() => {
     // Chargement réseau initial : les mises à jour suivent la réponse Supabase.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    chargerNotifications()
+    void chargerNotifications()
+    return () => scopeRef.current.cancel()
   }, [chargerNotifications])
 
   // ── Fermeture avec Échap (accessibilité) ────────────────────
@@ -143,10 +114,14 @@ export default function NotificationBell() {
   // ── Marquer une notification comme lue ──────────────────────
   async function marquerLue(id: string) {
     try {
-      await supabase.from('notifications').update({ lue: true }).eq('id', id)
+      const { error } = await supabase.from('notifications').update({ lue: true }).eq('id', id).eq('user_id', user.id)
+      if (error) throw error
+      if (!scopeRef.current.current()) return
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: true } : n))
+      notifyNotificationsChanged(user.id, 'bell')
     } catch (err) {
       console.error('Erreur marquer lue:', err)
+      if (scopeRef.current.current()) setError('Impossible de marquer cette notification comme lue. Réessaie.')
     }
   }
 
@@ -155,17 +130,19 @@ export default function NotificationBell() {
     marquerLue(notif.id)
     setOuvert(false)
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
 
-    const { data: contact } = await supabase
+    const scope = scopeRef.current
+    const { data: contact, error: contactError } = await supabase
       .from('contacts')
       .select('*')
       .eq('id', notif.contact_id)
-      .eq('user_id', session.user.id)
+      .eq('user_id', user.id)
       .single()
 
-    if (!contact) return
+    if (!scope.current()) return
+    if (contactError || !contact) {
+      setError('Impossible de charger ce contact. Réessaie.'); setOuvert(true); return
+    }
 
     // 👈 un contact venu d'une invitation est un contact "lié"
     const estLie = notif.type === 'invitation_remplie'
@@ -185,10 +162,10 @@ export default function NotificationBell() {
         onClick={() => setOuvert(!ouvert)}
         className="relative p-3 rounded-full hover:bg-ink/10 transition focus:outline-none focus:ring-2 focus:ring-accent/50"
         title="Notifications"
-        aria-label={`${nbNonLues} notification${nbNonLues > 1 ? 's' : ''} non lue${nbNonLues > 1 ? 's' : ''}`}
+        aria-label={error || loading ? 'Notifications : compteur indisponible' : `${nbNonLues} notification${nbNonLues > 1 ? 's' : ''} non lue${nbNonLues > 1 ? 's' : ''}`}
       >
         <span className="text-2xl">🔔</span>
-        {nbNonLues > 0 && (
+        {!error && !loading && nbNonLues > 0 && (
           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
             {nbNonLues > 99 ? '99+' : nbNonLues}
           </span>
@@ -238,15 +215,8 @@ export default function NotificationBell() {
               </div>
             </div>
 
-            {/* Bannière d'erreur */}
-            {error && (
-              <div className="p-3 bg-red-500/20 border-b border-red-500/40 text-danger text-sm">
-                ⚠️ {error}
-              </div>
-            )}
-
             {/* Contenu */}
-            {loading ? (
+            {error ? <LoadFailure message={error} retry={() => void chargerNotifications()} /> : loading ? (
               <div className="p-8 flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-4 border-accent/30 border-t-[#C8A84E] rounded-full animate-spin" />
                 <p className="text-muted text-sm">Chargement...</p>
@@ -273,12 +243,12 @@ export default function NotificationBell() {
                   >
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
                     <p className="text-xs text-muted mt-2">
-                      {new Date(notif.created_at).toLocaleString('fr-FR', {
+                      {notif.created_at ? new Date(notif.created_at).toLocaleString('fr-FR', {
                         day: 'numeric',
                         month: 'long',
                         hour: '2-digit',
                         minute: '2-digit',
-                      })}
+                      }) : 'Date inconnue'}
                     </p>
                   </div>
                 ))}

@@ -7,11 +7,11 @@ import { useDrawer } from '@/components/DrawerContext'
 
 // Type complet correspondant à un favori (doit refléter la table contacts)
 type Favori = {
-  id: string
+  id: string | number
   nom: string | null
   prenom: string | null
   date_naissance: string | null
-  est_favori?: boolean
+  est_favori?: boolean | null
   email: string | null
   telephone_indicatif: string | null
   telephone_numero: string | null
@@ -26,8 +26,8 @@ type Favori = {
 
 type Props = {
   favoris: Favori[]
-  favoriMenuOuvert: string | null
-  setFavoriMenuOuvert: (id: string | null) => void
+  favoriMenuOuvert: string | number | null
+  setFavoriMenuOuvert: (id: string | number | null) => void
   couleurAvatar: (texte: string | null | undefined) => string
 }
 

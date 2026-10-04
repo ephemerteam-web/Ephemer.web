@@ -5,7 +5,7 @@ import { compareContactNames } from '@/lib/contact-alphabet'
 export type TriContact = 'nom' | 'prenom'
 
 export type ContactFiltrable = {
-  id: string
+  id: string | number
   nom: string | null
   prenom: string | null
   relation: string | null

@@ -4,19 +4,11 @@ import { createContext, useContext, useState, ReactNode } from 'react'
 
 // Type correspondant à une ligne de la table "contacts"
 // On rend optionnelles les colonnes non affichées pour faciliter l'usage
-export type ContactDrawer = {
-  id: string
-  created_at?: string          // rendu optionnel
-  user_id?: string | null      // rendu optionnel
-  prenom: string | null
-  nom: string | null
-  date_naissance: string | null
-  relation: string | null
-  email: string | null
-  est_favori: boolean | null
-  telephone_indicatif: string | null
-  telephone_numero: string | null
-  note: string | null
+export type ContactDrawer = Omit<import('@/types/database').Contact, 'id' | 'created_at' | 'user_id' | 'invitation_id'> & {
+  id: string | number
+  created_at?: string
+  user_id?: string | null
+  estLie?: boolean
 }
 
 

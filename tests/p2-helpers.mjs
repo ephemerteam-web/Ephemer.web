@@ -13,7 +13,9 @@ const pagination = loadPure('lib/pagination.ts','readPages,readAllRows,readAllRe
 const gifts = loadPure('lib/gift-ideas.ts','giftOccasion,usableGiftIdeas',constants)
 const saints = loadPure('lib/saints.ts','trouverSaintParPrenom')
 const months = loadPure('lib/month-events.ts','monthEvents,requestedMonth',{ ...calendar, ...saints })
-export const p2Helpers = { ...constants, ...calendar, ...preferences, ...pagination, ...gifts, ...months }
+const journal = loadPure('lib/email-journal.ts','validateJournalResponse,emailJournalRpc')
+const ids = loadPure('lib/database-id.ts','databaseId')
+export const p2Helpers = { ...ids, ...journal, ...constants, ...calendar, ...preferences, ...pagination, ...gifts, ...months }
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {
@@ -26,6 +28,10 @@ export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = ()
       limit: size => { limit = Math.min(size, cap); return query },
       gt: (k,v) => { filters.push(row => row[k] > v); return query },
       eq: (k,v) => { filters.push(row => row[k] === v); return query },
+      or: expression => {
+        if (expression !== 'lue.eq.false,lue.is.null') throw new Error('Filtre inattendu')
+        filters.push(row => row.lue === false || row.lue === null); return query
+      },
       in: (k,v) => { filters.push(row => v.includes(row[k])); return query },
       lte: (k,v) => { filters.push(row => row[k] <= v); return query },
       gte: (k,v) => { filters.push(row => row[k] >= v); return query },

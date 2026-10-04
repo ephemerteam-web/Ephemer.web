@@ -1,21 +1,14 @@
 'use client'
+import { useContacts } from '@/lib/hooks/useContacts'
+import LoadFailure from '@/components/LoadFailure'
 import Modal from '@/components/Modal'
 import { birthdayInYear, isCalendarDay, parseLocalDay } from '@/lib/calendar-day'
-import { readAllResult } from '@/lib/pagination'
 
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useMemo, useCallback, useRef } from 'react'
 import { SAINTS, SAINTS_PAR_DATE } from '@/lib/saints'
-import { supabase } from '@/lib/supabase-browser'
 
 // ── Types ────────────────────────────────────────────────────────────────────
-type Contact = {
-  id: string
-  nom: string
-  prenom: string
-  date_naissance: string | null
-  relation: string
-}
+type Contact = import('@/types/database').Contact
 
 type JourSelectionne = {
   jour: number
@@ -31,33 +24,16 @@ type Saint = {
 
 // ── Composant principal ──────────────────────────────────────────────────────
 export default function CalendrierPage() {
-  const router = useRouter()
+  const { contacts, loading, error: listError, retry } = useContacts()
   const [moisActuel, setMoisActuel] = useState(new Date())
   const [recherche, setRecherche] = useState('')
   const [resultatsRecherche, setResultatsRecherche] = useState<Saint[]>([])
-  const [listError, setListError] = useState('')
-  const [contacts, setContacts] = useState<Contact[]>([])
   const [jourSelectionne, setJourSelectionne] = useState<JourSelectionne>(null)
   const [showBottomSheet, setShowBottomSheet] = useState(false) // ✅ Pour mobile
   const calendrierRef = useRef<HTMLDivElement>(null)
 
   // ── Chargement initial ─────────────────────────────────────────────────────
-  useEffect(() => {
-    const init = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
-      const { data, error } = await readAllResult(() => supabase
-        .from('contacts')
-        .select('*')
-        .eq('user_id', session.user.id))
-      if (error) setListError('Chargement incomplet. Recharge la page pour obtenir tous tes contacts.')
-      if (!error && data) setContacts(data as Contact[])
-    }
-    init()
-  }, [router])
+
 
   // ── Utilitaires ────────────────────────────────────────────────────────────
   const normaliser = useCallback((texte: string) =>
@@ -67,7 +43,7 @@ export default function CalendrierPage() {
 
   // ✅ Mémoïsation des prénoms des contacts
   const prenomContacts = useMemo(
-    () => new Set(contacts.map((c) => normaliser(c.prenom))),
+    () => new Set(contacts.map((c) => normaliser(c.prenom ?? ''))),
     [contacts, normaliser]
   )
 
@@ -212,9 +188,11 @@ export default function CalendrierPage() {
     return map
   }, [jours, anniversairesParJour, obtenirSaintsDuJour, moisActuel, saintConcerneUnContact])
 
+  if (listError) return <LoadFailure message={listError} retry={retry} />
+  if (loading) return <p role="status" className="p-6">Chargement des contacts…</p>
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6">
-      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
         {/* ========== CALENDRIER ========== */}
@@ -526,7 +504,7 @@ function PanelDetailsJour({
                 <p className="text-muted text-sm font-medium">
                   {contact.prenom} {contact.nom}
                 </p>
-                <p className={`text-xs mt-0.5 capitalize ${couleurRelation[contact.relation] || 'text-muted'}`}>
+                <p className={`text-xs mt-0.5 capitalize ${couleurRelation[contact.relation ?? ''] || 'text-muted'}`}>
                   {contact.relation}
                 </p>
               </div>

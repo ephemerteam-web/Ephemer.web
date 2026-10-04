@@ -1,9 +1,9 @@
 'use client'
-import { readAllResult } from '@/lib/pagination'
+import { useContacts } from '@/lib/hooks/useContacts'
+import LoadFailure from '@/components/LoadFailure'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase-browser'
 import Link from 'next/link'
 import { TYPES_RELATION } from '@/lib/constants'
 import { useDrawer } from '@/components/DrawerContext'
@@ -12,18 +12,7 @@ import AlphabetScrollbar from '@/components/AlphabetScrollbar'
 import { contactsScrollOffset, useAlphabetLetters } from '@/lib/hooks/useAlphabetLetters'
 import { contactLetter } from '@/lib/contact-alphabet'
 
-type Contact = {
-  id: string
-  nom: string | null
-  prenom: string | null
-  date_naissance: string | null
-  relation: string | null
-  email: string | null
-  telephone_indicatif: string | null
-  telephone_numero: string | null
-  note: string | null
-  est_favori: boolean | null
-}
+type Contact = import('@/types/database').Contact
 
 type ContactAvecLien = Contact & {
   estLie: boolean
@@ -31,10 +20,9 @@ type ContactAvecLien = Contact & {
 
 export default function ContactsPage() {
   const router = useRouter()
+  const { contacts: rows, loading, error: listError, retry } = useContacts()
+  const contacts = useMemo(() => rows.map(contact => ({ ...contact, estLie: false })), [rows])
   const { ouvrirDrawer } = useDrawer()
-  const [listError, setListError] = useState('')
-  const [contacts, setContacts] = useState<ContactAvecLien[]>([])
-  const [loading, setLoading] = useState(true)
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
 
   const {
@@ -91,48 +79,7 @@ export default function ContactsPage() {
   }, [contactsFiltres, loading, triPar])
 
   // Charger les contacts
-  useEffect(() => {
-    const init = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
 
-      if (!session) {
-        router.push('/connexion')
-        return
-      }
-
-      const { data, error } = await readAllResult(() => supabase
-        .from('contacts')
-        .select('*')
-        .eq('user_id', session.user.id))
-
-      if (error) {
-        console.error('Erreur chargement contacts :', error)
-        setListError(error.message); setContacts([])
-        setLoading(false)
-        return
-      }
-
-      if (data) {
-        const liste = data as Contact[]
-
-        // Pour l'instant, on desactive la verification des contacts lies
-        // car la RPC est_contact_lie n'est pas disponible
-        // Tous les contacts sont marques comme non lies
-        const avecLiens = liste.map(contact => ({
-          ...contact,
-          estLie: false
-        }))
-
-        setContacts(avecLiens)
-      }
-
-      setLoading(false)
-    }
-
-    init()
-  }, [router])
 
   // Fonction pour obtenir la couleur d'un type de relation
   const couleurRelation = (relation: string | null) => {
@@ -171,6 +118,8 @@ export default function ContactsPage() {
     return relationSecurisee || 'non classée'
   }
 
+  if (listError) return <LoadFailure message={listError} retry={retry} />
+
   // Etat de chargement
   if (loading) {
     return (
@@ -187,7 +136,7 @@ export default function ContactsPage() {
 
   return (
     <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip px-3 pt-4 pb-28 sm:px-4 md:px-8 md:pt-8">
-      {listError && <p role="alert" className="p-4 text-danger">{listError}</p>}
+
       <div className={`mx-auto w-full min-w-0 max-w-2xl ${letters.length > 1 ? 'pr-11' : ''}`}>
         {/* EN-TETE */}
         <div className="mb-4">
@@ -268,7 +217,7 @@ export default function ContactsPage() {
 
             <div className="flex gap-2">
               <Link
-                href="/dashboard/contacts/rapide"
+                href="/dashboard/contacts/nouveau"
                 className="flex min-h-11 min-w-11 items-center justify-center bg-gradient-to-r from-action to-action/80 text-on-action font-bold text-xs px-3 py-2 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
                 title="Ajout rapide"
                 aria-label="Ajouter rapidement des contacts"
@@ -293,7 +242,7 @@ export default function ContactsPage() {
             
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               <Link
-                href="/dashboard/contacts/rapide"
+                href="/dashboard/contacts/nouveau"
                 className="bg-gradient-to-r from-action to-action/80 text-on-action font-bold px-6 py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
               >
                 ⚡ Ajout rapide

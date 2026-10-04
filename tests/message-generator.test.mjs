@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, existsSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import test from 'node:test'
@@ -63,6 +63,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
 
   const overrides = {
     react: hooks,
+    '@/components/DashboardUserContext': { useDashboardUser: () => session.user },
     'next/navigation': { useSearchParams: () => new URLSearchParams({ ...(contactId ? { contactId } : {}), ...(occasion ? { eventType: occasion } : {}) }) },
     'next/link': { default: ({ href, children, ...props }) => React.createElement('a', { href, ...props }, children) },
     '@/lib/supabase-browser': { supabase },
@@ -71,7 +72,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
   function load(path) {
     if (overrides[`@/${path}`]) return overrides[`@/${path}`]
     if (modules.has(path)) return modules.get(path)
-    const file = path.endsWith('.tsx') || path.endsWith('.ts') ? path : `${path}.ts`
+    const file = path.endsWith('.tsx') || path.endsWith('.ts') ? path : existsSync(new URL(`../${path}.tsx`, import.meta.url)) ? `${path}.tsx` : `${path}.ts`
     let source = readFileSync(new URL(`../${file}`, import.meta.url), 'utf8')
     if (file === 'app/dashboard/generate/page.tsx') source += '\nexport { GenerateForm, GenerateFromUrl };'
     const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText

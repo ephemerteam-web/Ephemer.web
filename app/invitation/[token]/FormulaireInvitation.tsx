@@ -132,13 +132,13 @@ function InvitationForm({
     const { data, error } = await supabase.rpc('soumettre_invitation', {
       p_token: token,
       p_prenom: prenom.trim(),
-      p_nom: nom.trim() || null,
-      p_date_naissance: birth,
+      p_nom: nom.trim() || undefined,
+      p_date_naissance: birth ?? undefined,
       p_relation: normalizeRelation(relation),
-      p_email: email.trim() || null,
-      p_telephone_indicatif: tel.trim() ? indicatif : null,
-      p_telephone_numero: tel.trim() || null,
-      p_note: note,
+      p_email: email.trim() || undefined,
+      p_telephone_indicatif: tel.trim() ? indicatif : undefined,
+      p_telephone_numero: tel.trim() || undefined,
+      p_note: note ?? undefined,
     })
 
     setEnvoi(false)

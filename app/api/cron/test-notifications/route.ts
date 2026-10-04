@@ -1,3 +1,4 @@
+import type { Database } from '@/types/database.generated'
 import { parisDay, nextBirthdayDay, daysBetween, isCalendarDay } from '@/lib/calendar-day';
 // app/api/cron/test-notifications/route.ts
 import { createServerClient } from '@supabase/ssr'
@@ -22,7 +23,7 @@ export async function POST(request: Request) {
     const token = authHeader.substring(7)
 
     // 2️⃣ Créer le client Supabase avec le token
-    const supabase = createServerClient(
+    const supabase = createServerClient<Database>(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
 // ⚙️ LOGIQUE INTERNE (Traitement d'un utilisateur)
 // ============================================================
 
-async function processUser(user: { id: string; email: string; prenom?: string; nom?: string }) {
+async function processUser(user: { id: string; email: string | null; prenom?: string | null; nom?: string | null }) {
 
   try {
     // Récupérer les contacts

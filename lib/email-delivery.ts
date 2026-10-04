@@ -2,6 +2,7 @@
 import { supabaseAdmin } from './supabase-admin'
 import { resend } from './resend'
 import type { CreateEmailOptions } from 'resend'
+import { emailJournalRpc } from './email-journal'
 
 export type EmailJob = {
   key: string
@@ -15,8 +16,8 @@ export type EmailJob = {
   payload: CreateEmailOptions
 }
 
-async function rpc(name: string, args: Record<string, unknown>) {
-  const { data, error } = await supabaseAdmin.rpc(name, args)
+async function rpc<N extends Parameters<typeof emailJournalRpc>[1]>(name: N, args: Parameters<typeof emailJournalRpc<N>>[2]) {
+  const { data, error } = await emailJournalRpc(supabaseAdmin, name, args)
   if (error) throw new Error(`Journal email indisponible (${name})`)
   return data
 }
@@ -28,8 +29,11 @@ export async function deliverEmail(job: EmailJob): Promise<{ state: string; emai
     p_event_keys: job.eventKeys ?? [], p_source: job.source ?? {},
     p_expires_on: job.expiresOn, p_payload: job.payload,
   })
+  if (!claim) throw new Error('Journal email indisponible')
   if (claim.state !== 'reserved') return { state: claim.state, emailId: claim.resend_id ?? undefined }
+  if (!claim.id || !claim.token || !claim.payload) throw new Error('Journal email : réservation invalide')
   const started = await rpc('begin_email_job', { p_job_id: claim.id, p_token: claim.token })
+  if (!started) throw new Error('Journal email : autorisation invalide')
   if (!started.ready) return { state: started.state }
   // Le contenu et la clé sont ceux enregistrés à la première réservation.
   let response

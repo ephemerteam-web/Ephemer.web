@@ -1,4 +1,8 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+import LoadFailure from '@/components/LoadFailure'
+import Link from 'next/link'
+import { createRequestScope } from '@/lib/request-scope'
 
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useState, useEffect } from 'react'
@@ -9,9 +13,13 @@ import { INDICATIFS_PAYS, TYPES_RELATION, MESSAGES_UI, normalizeRelation } from 
 
 export default function ModifierContact() {
   const router = useRouter()
+  const user = useDashboardUser()
+  const [loadError, setLoadError] = useState('')
+  const [missing, setMissing] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const { confirm } = useContactDraft()
   const params = useParams()
-  const contactId = params.id as string
+  const contactId = Number(params.id)
 
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
@@ -27,28 +35,20 @@ export default function ModifierContact() {
   const [erreur, setErreur] = useState('')
 
   useEffect(() => {
+    const scope = createRequestScope()
     async function chargerContact() {
-      const { data: userData } = await supabase.auth.getUser()
-
-      if (!userData.user) {
-        router.push('/connexion')
-        return
-      }
-
+      if (!Number.isSafeInteger(contactId) || contactId <= 0) { if (scope.current()) { setMissing(true); setChargement(false) }; return }
       const { data, error } = await supabase
         .from('contacts')
         .select('*')
-        .eq('id', contactId)
-        .eq('user_id', userData.user.id)
-        .single()
+        .eq('id', contactId).eq('user_id', user.id)
+        .maybeSingle()
 
-      if (error || !data) {
-        setErreur('Contact introuvable.')
-        setChargement(false)
-        return
-      }
+      if (!scope.current()) return
+      if (error) { setLoadError('Impossible de charger ce contact. Réessaie.'); setChargement(false); return }
+      if (!data) { setMissing(true); setChargement(false); return }
 
-      setPrenom(data.prenom)
+      setPrenom(data.prenom ?? '')
       setNom(data.nom || '')
       setDateNaissance(data.date_naissance || '')
       setRelation(normalizeRelation(data.relation || TYPES_RELATION[0].value))
@@ -61,8 +61,9 @@ export default function ModifierContact() {
       setChargement(false)
     }
 
-    chargerContact()
-  }, [contactId, router])
+    void chargerContact().catch(() => { if (scope.current()) { setLoadError('Impossible de charger ce contact. Réessaie.'); setChargement(false) } })
+    return scope.cancel
+  }, [contactId, user.id, attempt])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,7 +83,7 @@ export default function ModifierContact() {
         note: note || null,
         est_favori: estFavori,
       })
-      .eq('id', contactId)
+      .eq('id', contactId).eq('user_id', user.id)
 
     if (error) {
       setErreur('Erreur lors de la sauvegarde. Réessaie !')
@@ -100,7 +101,7 @@ export default function ModifierContact() {
     const { error } = await supabase
       .from('contacts')
       .delete()
-      .eq('id', contactId)
+      .eq('id', contactId).eq('user_id', user.id)
 
     if (error) {
       setErreur('Erreur lors de la suppression.')
@@ -110,6 +111,8 @@ export default function ModifierContact() {
     }
   }
 
+    if (loadError) return <LoadFailure message={loadError} retry={() => { setLoadError(''); setChargement(true); setAttempt(value => value + 1) }} />
+    if (missing) return <div className="p-6"><p>Contact introuvable.</p><Link href="/dashboard/contacts">Retour aux contacts</Link></div>
     if (chargement) {
     return (
       <div className="flex items-center justify-center min-h-[50vh] px-4">
@@ -260,7 +263,7 @@ export default function ModifierContact() {
               className="mt-1.5 w-full min-w-0 bg-ink/5 border border-line text-ink rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent/40 resize-none placeholder:text-muted"
             />
             <p className="text-xs text-muted mt-1.5 leading-relaxed">
-              💡 Plus tu en mets, plus les suggestions de cadeaux seront pertinentes.
+              💡 Ces notes restent privées. Les suggestions de cadeaux utilisent surtout l’occasion et la relation.
             </p>
           </div>
 

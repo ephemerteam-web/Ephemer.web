@@ -1,4 +1,5 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
 
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { TYPES_RELATION, normalizeRelation } from '@/lib/constants'
@@ -62,21 +63,10 @@ export default function AjoutRapideContacts() {
   const [contactSelectionneId, setContactSelectionneId] = useState<string | null>(null)
   
   // Charger le user
-  const [userId, setUserId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { id: userId } = useDashboardUser()
+  const loading = false
 
-  useEffect(() => {
-    const chargerUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.push('/connexion')
-        return
-      }
-      setUserId(user.id)
-      setLoading(false)
-    }
-    chargerUser()
-  }, [router])
+
 
   // Rechercher la fête quand le prénom change
   const feteInfo = useMemo(() => {

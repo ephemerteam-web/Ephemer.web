@@ -1,4 +1,8 @@
 'use client'
+import { useDashboardUser } from '@/components/DashboardUserContext'
+
+import LoadFailure from '@/components/LoadFailure'
+import { createRequestScope } from '@/lib/request-scope'
 
 import Modal from '@/components/Modal'
 import { useEffect, useState } from 'react'
@@ -9,6 +13,7 @@ import AppLayout from '@/components/AppLayout'
 import { INDICATIFS_PAYS, MESSAGES_UI } from '@/lib/constants'
 
 export default function DashboardProfil() {
+  const dashboardUser = useDashboardUser()
   const router = useRouter()
 
   const [prenom, setPrenom] = useState('')
@@ -19,6 +24,8 @@ export default function DashboardProfil() {
   const [telephoneNumero, setTelephoneNumero] = useState('')
 
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
@@ -28,41 +35,27 @@ export default function DashboardProfil() {
   // 1. CHARGER LE PROFIL
   // ========================
   useEffect(() => {
+    const scope = createRequestScope()
     async function loadProfile() {
-      setLoading(true)
-      setMessage(null)
-
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        router.push('/connexion')
-        return
+      try {
+        const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', dashboardUser.id).maybeSingle()
+        if (!scope.current()) return
+        if (error) throw error
+        setEmail(dashboardUser.email)
+        setPrenom(profile?.prenom ?? '')
+        setNom(profile?.nom ?? '')
+        setTelephoneIndicatif(profile?.telephone_indicatif ?? '+33')
+        setTelephoneNumero(profile?.telephone_numero ?? '')
+        setDateNaissance(profile?.date_naissance ?? '')
+        // Un profil absent est un nouvel utilisateur, pas une lecture en panne.
+        setLoading(false)
+      } catch {
+        if (scope.current()) { setLoadError(true); setLoading(false) }
       }
-
-      setEmail(user.email || '')
-
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
-      if (error && error.code !== 'PGRST116') {
-        console.error('Erreur chargement profil:', error)
-        setMessage({ text: MESSAGES_UI.erreur_genérique, type: 'error' })
-      } else if (profile) {
-        setPrenom(profile.prenom || '')
-        setNom(profile.nom || '')
-        setTelephoneIndicatif(profile.telephone_indicatif || '+33')
-        setTelephoneNumero(profile.telephone_numero || '')
-        if (profile.date_naissance) setDateNaissance(profile.date_naissance)
-      }
-
-      setLoading(false)
     }
-
-    loadProfile()
-  }, [router])
+    void loadProfile()
+    return scope.cancel
+  }, [dashboardUser.id, dashboardUser.email, attempt])
 
   // ========================
   // 2. SAUVEGARDER
@@ -71,7 +64,7 @@ export default function DashboardProfil() {
     setSaving(true)
     setMessage(null)
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = dashboardUser;
     if (!user) return
 
     const { error } = await supabase
@@ -100,7 +93,7 @@ export default function DashboardProfil() {
   const handleChangePassword = async () => {
     setMessage(null)
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const user = dashboardUser;
 
     if (!user?.email) {
       setMessage({ text: 'Impossible de récupérer ton email', type: 'error' })
@@ -166,6 +159,7 @@ export default function DashboardProfil() {
   // ========================
   // ÉTAT CHARGEMENT
   // ========================
+  if (loadError) return <LoadFailure message="Impossible de charger ton profil. Réessaie." retry={() => { setLoadError(false); setLoading(true); setAttempt(value => value + 1) }} />
   if (loading) {
     return (
       <AppLayout>

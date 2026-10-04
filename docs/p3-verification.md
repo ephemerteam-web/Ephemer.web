@@ -1,0 +1,19 @@
+# Livraison P3 — contrôle du 4 octobre 2026
+
+Résultats sur le dépôt modifié, et non reprise des chiffres d’un audit précédent : `npm run verify` passe successivement ESLint, la génération des types des routes, TypeScript, **116 tests** et le build Next 16.2.6. Le contrôle complet utilise une exécution hors sandbox Windows (les processus de tests y sont autrement refusés). Les polices viennent maintenant des fichiers locaux ; le build n’a plus besoin du téléchargement Google.
+
+ESLint : **0 erreur, 12 avertissements**, laissés visibles. Dix concernent des imports/variables non utilisés : diagnostic cron (1), onboarding (1), anniversaires (2), calendrier (1), calendrier des saints (3), templates email (2). Les deux autres sont la dépendance `router` de l’effet de l’accueil public et l’image HTML de SaintDuJour. Node signale aussi le caractère expérimental de `stripTypeScriptTypes` ; cet avertissement n’est pas masqué.
+
+Les régressions P3 portent sur l’échec d’une deuxième page puis le réessai, 250 anciennes non-lues dont des valeurs `null`, l’échec du marquage, la synchronisation locale et Realtime, les valeurs nullable, les lectures après fermeture/changement de compte, les diagnostics sans opération, le journal email absent/invalide, les cadeaux sans date ni description et les polices conservées. La suite précédente conserve notamment les vérifications de simulation sans écriture/envoi, d’exclusion des champs personnels de l’IA et de cache hors ligne sans données privées.
+
+Le contrôle HTTP du serveur de production local réussit : **11 références d’assets**, dont les préchargements des polices, répondent ; image sociale **1200 × 630**, Safari, PWA et secours public vérifiés. 404 française, redirection **308** de `rapide` vers `nouveau`, absence des anciennes routes dans le manifeste, redirection des pages privées vers la connexion et refus **401** des API testées sans autorisation. Les composants d’erreur sont vérifiés par les tests ; aucune panne réelle n’a été provoquée en production.
+
+Les copies des anciennes pages ont été comparées avant retrait ; leurs SHA-256 sont dans `archives/p3/README.md`. Les onze binaires Geist/Geist Mono gardent leurs empreintes de référence. La carte sociale a été inspectée comme image ; ses couleurs et sa lune reprennent l’identité existante.
+
+Les types Supabase ont été régénérés une seconde fois en fin de vérification et comparés : identiques à `types/database.generated.ts` pour le schéma public réel, comprenant dix tables. Aucun SQL n’a été changé ni appliqué. Les RPC du journal email restent absentes ; leur contrat futur est séparé et refuse les envois si une réponse est absente/invalide. Les tests utilisent uniquement des services simulés : aucun email réel envoyé, aucune intégration déployée. Les expressions cron restent celles de `vercel.json` ; le fonctionnement des crons de production n’a pas été attesté par ces tests locaux.
+
+La mesure Auth avant/après est documentée dans `p3-exploitation.md` avec ses limites : appels de composants simulés, pas trace réseau d’un utilisateur connecté. Le proxy et les API gardent les vérifications serveur.
+
+Validation humaine restante : aucun navigateur utilisable n’est connecté à cet environnement. Avec `npm run dev`, vérifier accueil, Contacts, cadeaux et notifications à **390 px et 1440 px**, thèmes clair et sombre, ainsi que les polices/assets. Ouvrir aussi `p3-polices-comparaison.html` pour la comparaison des familles et métriques. La vérification hors ligne repose ici sur les tests du véritable worker et le secours HTTP, sans essai dans un navigateur réel.
+
+L’identité de l’exploitant, le contact commun vérifié, les durées des logs et sauvegardes restent à confirmer dans `p3-confidentialite-a-confirmer.md`. Ce travail ne constitue pas une validation juridique. Aucun commit, aucune publication, aucune dépendance ajoutée.
