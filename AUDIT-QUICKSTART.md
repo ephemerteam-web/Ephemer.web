@@ -3,6 +3,10 @@
 > Guide pas-à-pas pour lancer des **audits de code assistés par IA** sur le projet **Ephemer.name** (Next.js / Supabase / Resend).
 > Ce document est fait pour un utilisateur **non-développeur** qui utilise l'**extension Codex dans VS Code** (interface graphique), pas le terminal.
 
+## Rappel : règle de travail avec les assistants IA
+
+> **Ne jamais créer de commit.** Après les modifications, l’assistant exécute les vérifications adaptées et communique leurs résultats. L’utilisateur vérifie ensuite l’application avec `npm run dev` et effectue lui-même le commit.
+
 ---
 
 ## 1. C'est quoi un « audit » ici ?

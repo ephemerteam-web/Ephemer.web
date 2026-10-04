@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { compareContactNames } from '@/lib/contact-alphabet'
 
 export type TriContact = 'nom' | 'prenom'
 
@@ -33,41 +34,7 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
 
         return matchRecherche && matchRelation
       })
-      .sort((a, b) => {
-        if (a.est_favori && !b.est_favori) return -1
-        if (!a.est_favori && b.est_favori) return 1
-
-        const prenomA = a.prenom ?? ''
-        const prenomB = b.prenom ?? ''
-        const nomA = a.nom ?? ''
-        const nomB = b.nom ?? ''
-
-        if (triPar === 'nom') {
-          const comparaisonNom = nomA.localeCompare(nomB, 'fr', {
-            sensitivity: 'base',
-          })
-
-          if (comparaisonNom !== 0) {
-            return comparaisonNom
-          }
-
-          return prenomA.localeCompare(prenomB, 'fr', {
-            sensitivity: 'base',
-          })
-        }
-
-        const comparaisonPrenom = prenomA.localeCompare(prenomB, 'fr', {
-          sensitivity: 'base',
-        })
-
-        if (comparaisonPrenom !== 0) {
-          return comparaisonPrenom
-        }
-
-        return nomA.localeCompare(nomB, 'fr', {
-          sensitivity: 'base',
-        })
-      })
+      .sort((a, b) => compareContactNames(a, b, triPar))
   }, [contacts, recherche, triPar, filtreRelation])
 
   return {

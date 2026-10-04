@@ -1,686 +1,369 @@
-"use client";
-import { AI_NOTICE } from '@/lib/ai-privacy';
-import { ageKnown } from '@/lib/contact-quality';
-import { nameDays, chosenNameDay } from '@/lib/name-days';
+'use client'
 
-import { useState, useEffect, Suspense } from "react";
-import type { Session } from '@supabase/supabase-js';
-import { useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabase-browser";
-import AppSelect from "@/components/AppSelect";
-import { TypeEvenement, calculerDateEvenement, formaterDateFR, calculerDatesJ7J1JourJ } from "@/lib/date-utils";
-import {
-  TYPES_RELATION,
-  TONS_MESSAGE,
-  TYPES_EVENEMENT,
-  EVENT_TYPE_MAP,
-  necessiteDateManuelle,
-} from "@/lib/constants";
-import { genererMessage } from "@/lib/api-messages";
-import { parseLocalDay, isCalendarDay } from '@/lib/calendar-day';
-import { formatDateLocale } from '@/lib/date-utils';
-import ProgrammerRappel from "@/components/ProgrammerRappel";
-import { useDrawer } from "@/components/DrawerContext"; // ← On importe le contexte !
+import { Suspense, useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from 'react'
+import type { Session } from '@supabase/supabase-js'
+import { useSearchParams } from 'next/navigation'
+import Link from 'next/link'
+import { supabase } from '@/lib/supabase-browser'
+import { AI_NOTICE } from '@/lib/ai-privacy'
+import { genererMessage } from '@/lib/api-messages'
+import { TYPES_EVENEMENT, TYPES_RELATION, TONS_MESSAGE } from '@/lib/constants'
+import { calculerDateEvenement, calculerDatesJ7J1JourJ, formatDateLocale, formaterDateFR } from '@/lib/date-utils'
+import { isCalendarDay, parseLocalDay } from '@/lib/calendar-day'
+import { chosenNameDay, nameDays } from '@/lib/name-days'
+import { canGenerate, contactDisplayName, generatorReducer, initialGeneratorState, searchGeneratorContacts, type GeneratorContact } from '@/lib/message-generator'
+import ProgrammerRappel from '@/components/ProgrammerRappel'
 
-// ============================================================
-// 📌 TYPES
-// ============================================================
-type Contact = {
-  id: number;
-  prenom: string;
-  nom: string;
-  relation: string;
-  date_naissance: string | null;
-  email?: string | null;
-  note?: string | null;
-  est_favori?: boolean;
-  telephone_indicatif?: string | null;
-  telephone_numero?: string | null;
-};
+const fieldClass = 'min-h-11 w-full min-w-0 max-w-full rounded-xl border border-line bg-canvas px-3 py-2 text-base text-ink focus-visible:outline-2 focus-visible:outline-accent'
+const secondaryButtonClass = 'min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-ink/10 disabled:opacity-50'
+const otherOccasions = TYPES_EVENEMENT.filter(event => event.value !== 'anniversaire' && event.value !== 'fete_prenomale')
 
-type DatesPossibles = {
-  jourJ: Date;
-  j1: Date;
-  j7: Date;
-};
+function GenerateForm({ contactId, initialOccasion }: { contactId: string | null; initialOccasion: string | null }) {
+  const [state, dispatch] = useReducer(generatorReducer, initialOccasion, initialGeneratorState)
+  const [contacts, setContacts] = useState<GeneratorContact[]>([])
+  const [session, setSession] = useState<Session | null>(null)
+  const [contactsLoading, setContactsLoading] = useState(true)
+  const [contactsError, setContactsError] = useState('')
+  const [prefillWarning, setPrefillWarning] = useState('')
+  const [retry, setRetry] = useState(0)
+  const [search, setSearch] = useState('')
+  const [listOpen, setListOpen] = useState(false)
+  const [preferredFeast, setPreferredFeast] = useState('')
+  const [eventDate, setEventDate] = useState('')
+  const [copied, setCopied] = useState(false)
+  const [actionError, setActionError] = useState('')
+  const searchRef = useRef<HTMLInputElement>(null)
+  const freeNameRef = useRef<HTMLInputElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
+  const resultRef = useRef<HTMLElement>(null)
+  const pendingRef = useRef(false)
+  const recipientTouchedRef = useRef(false)
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-type ChoixDateEnvoi = "jourJ" | "j1" | "j7" | "custom";
-
-// ============================================================
-// 🔧 HELPER (hors composant)
-// ============================================================
-function prochaineOccurrenceAnnuelle(dateOriginale: Date): Date {
-  const aujourdhui = new Date();
-  aujourdhui.setHours(0, 0, 0, 0);
-
-  const prochaine = new Date(
-    aujourdhui.getFullYear(),
-    dateOriginale.getMonth(),
-    dateOriginale.getDate()
-  );
-
-  if (prochaine < aujourdhui) {
-    prochaine.setFullYear(prochaine.getFullYear() + 1);
-  }
-
-  return prochaine;
-}
-
-// ============================================================
-// 🎨 COMPOSANT PRINCIPAL
-// ============================================================
-function GenerateForm() {
-  // ---------------------------
-  // 2. HOOKS
-  // ---------------------------
-  const searchParams = useSearchParams();
-  const { ouvrirDrawer } = useDrawer(); // ← Récupère la fonction du contexte
-
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [age, setAge] = useState("");
-  const [relation, setRelation] = useState("ami");
-  const [tone, setTone] = useState("familier");
-  const [preferredFeast, setPreferredFeast] = useState('');
-  const [eventType, setEventType] = useState("anniversaire");
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
-
-  // States pour les contacts
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [selectedContactId, setSelectedContactId] = useState("");
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [choixDate, setChoixDate] = useState<ChoixDateEnvoi>("jourJ");
-  const [dateCustom, setDateCustom] = useState<string>("");
-  const [eventDate, setEventDate] = useState<string>("");
-  const [eventDescription, setEventDescription] = useState<string>("");
-  const [searchContact, setSearchContact] = useState("");
-  const [contactListOpen, setContactListOpen] = useState(false); // ← ICI, pas dans useEffect
-
-  const needsManualDate = necessiteDateManuelle(eventType);
-
-  // ---------------------------
-  // 3. FONCTIONS
-  // ---------------------------
-  function appliquerContact(contact: Contact) {
-    setSelectedContactId(String(contact.id));
-    setSelectedContact(contact);
-    setFirstName(contact.prenom);
-    setLastName(contact.nom);
-    setRelation(contact.relation || "ami");
-
-    const knownAge = ageKnown(contact.date_naissance);
-    setAge(knownAge === null ? '' : String(knownAge));
-    setPreferredFeast('');
-  }
-
-  // Fonction pour ouvrir le drawer d'édition avec le contact actuel
-  const handleEditContact = () => {
-    if (selectedContact) {
-      ouvrirDrawer({
-        id: String(selectedContact.id),
-        prenom: selectedContact.prenom,
-        nom: selectedContact.nom,
-        date_naissance: selectedContact.date_naissance,
-        relation: selectedContact.relation,
-        email: selectedContact.email ?? null,
-        note: selectedContact.note ?? null,
-        est_favori: selectedContact.est_favori ?? null,
-        telephone_indicatif: selectedContact.telephone_indicatif ?? null,
-        telephone_numero: selectedContact.telephone_numero ?? null,
-      });
-    }
-  };
-
-  // Fonction pour rafraîchir les contacts après modification
-  const refreshContacts = async () => {
-    if (!session) return;
-
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-      .eq("user_id", session.user.id)
-      .order("prenom");
-
-    if (!error && data) {
-      setContacts(data as Contact[]);
-
-      // Met à jour le contact sélectionné si l'ID correspond toujours
-      if (selectedContactId) {
-        const updated = data.find((c) => String(c.id) === selectedContactId);
-        if (updated) {
-          appliquerContact(updated as Contact);
+  // Le chargement peut être relancé ; une réponse arrivée après navigation est ignorée.
+  useEffect(() => {
+    let active = true
+    async function loadContacts() {
+      try {
+        const auth = await supabase.auth.getSession()
+        if (!active) return
+        if (auth.error || !auth.data.session) throw new Error('Ta session est indisponible. Reconnecte-toi pour continuer.')
+        setSession(auth.data.session)
+        const { data, error } = await supabase.from('contacts')
+          .select('id, prenom, nom, relation, date_naissance, email, est_favori')
+          .eq('user_id', auth.data.session.user.id)
+          .order('prenom')
+        if (!active) return
+        if (error) throw new Error('Impossible de charger tes contacts. Tu peux réessayer ou saisir un prénom.')
+        const loaded = (data ?? []) as GeneratorContact[]
+        setContacts(loaded)
+        if (contactId && !recipientTouchedRef.current) {
+          const contact = loaded.find(item => String(item.id) === contactId)
+          if (contact) dispatch({ type: 'contact', contact })
+          else setPrefillWarning('Ce contact n’est plus disponible. Choisis un autre destinataire.')
         }
+      } catch (error) {
+        if (active) setContactsError(error instanceof Error ? error.message : 'Impossible de charger tes contacts.')
+      } finally {
+        if (active) setContactsLoading(false)
       }
     }
-  };
+    void loadContacts()
+    return () => { active = false }
+  }, [contactId, retry])
+
+  useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current) }, [])
+
+  const matches = useMemo(() => searchGeneratorContacts(contacts, search), [contacts, search])
+  const selectedContact = state.contact
+  const firstName = state.firstName
+  const recipientName = selectedContact ? contactDisplayName(selectedContact) : firstName.trim()
+  const isOtherOccasion = state.eventType !== 'anniversaire' && state.eventType !== 'fete_prenomale'
+  const relationLabel = TYPES_RELATION.find(item => item.value === state.relation)?.label ?? 'Autre'
+  const toneLabel = state.tone === 'familier' ? 'Chaleureux' : TONS_MESSAGE.find(item => item.value === state.tone)?.label ?? 'Chaleureux'
+  const occasionLabel = TYPES_EVENEMENT.find(item => item.value === state.eventType)?.label.replace(/^\S+\s+/, '') ?? 'Anniversaire'
+
+  // Les dates ne servent qu'au rappel, jamais à autoriser la génération.
+  const feastDates = useMemo(() => nameDays(firstName), [firstName])
+  const datesPossibles = useMemo(() => {
+    if (!selectedContact) return null
+    let day: Date | null = null
+    if (state.eventType === 'anniversaire') {
+      if (selectedContact.date_naissance && isCalendarDay(selectedContact.date_naissance)) {
+        day = calculerDateEvenement('anniversaire', { prenom: firstName, date_naissance: selectedContact.date_naissance })
+      }
+    } else if (state.eventType === 'fete_prenomale') {
+      const chosen = chosenNameDay(firstName, preferredFeast, formatDateLocale(new Date()))
+      if (chosen) day = parseLocalDay(chosen)
+    } else if (isCalendarDay(eventDate)) day = parseLocalDay(eventDate)
+    return day ? calculerDatesJ7J1JourJ(day) : null
+  }, [selectedContact, firstName, state.eventType, preferredFeast, eventDate])
+
+  function resetFeedback() {
+    setCopied(false)
+    setActionError('')
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+  }
+
+  function resetDates() {
+    setPreferredFeast('')
+    setEventDate('')
+    resetFeedback()
+  }
+
+  function chooseContact(contact: GeneratorContact) {
+    recipientTouchedRef.current = true
+    dispatch({ type: 'contact', contact })
+    setSearch('')
+    setListOpen(false)
+    setPrefillWarning('')
+    resetDates()
+  }
+
+  function changeRecipient(manual = false) {
+    recipientTouchedRef.current = true
+    dispatch({ type: manual ? 'manual' : 'clear' })
+    setSearch('')
+    setListOpen(!manual)
+    setPrefillWarning('')
+    resetDates()
+    requestAnimationFrame(() => manual ? freeNameRef.current?.focus() : searchRef.current?.focus())
+  }
+
+  // La liste utilise de vrais boutons : Tab/Entrée, flèches et Échap fonctionnent.
+  function handleListKey(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Escape') {
+      searchRef.current?.focus()
+      setListOpen(false)
+      return
+    }
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+    const buttons = Array.from(listRef.current?.querySelectorAll<HTMLButtonElement>('button') ?? [])
+    const index = buttons.indexOf(document.activeElement as HTMLButtonElement)
+    if (index < 0) return
+    event.preventDefault()
+    const next = index + (event.key === 'ArrowDown' ? 1 : -1)
+    if (next < 0) searchRef.current?.focus()
+    else buttons[Math.min(next, buttons.length - 1)]?.focus()
+  }
 
   async function handleGenerate() {
-    setLoading(true);
-    setError("");
-    setMessage("");
-    setCopied(false);
-
+    if (!session || !canGenerate(state) || pendingRef.current) return
+    pendingRef.current = true
+    resetFeedback()
+    dispatch({ type: 'begin' })
     try {
-      let dateEvenementPourIA: string | null = null;
-
-      if (needsManualDate && eventDate) {
-        dateEvenementPourIA = eventDate;
-      } else if (datesPossibles) {
-        dateEvenementPourIA = formatDateLocale(datesPossibles.jourJ);
+      // Interface existante conservée ; les informations inutilisées restent vides.
+      const text = await genererMessage({ firstName, lastName: '', age: null, relation: state.relation, tone: state.tone,
+        eventType: state.eventType, eventDate: null, eventDescription: null, note: null })
+      dispatch({ type: 'success', value: text })
+      if (window.matchMedia('(max-width: 767px)').matches) {
+        requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }))
       }
-
-      const messageGenere = await genererMessage({
-        firstName,
-        lastName,
-        age: age ? parseInt(age) : null,
-        relation,
-        tone,
-        eventType,
-        eventDate: dateEvenementPourIA,
-        eventDescription: needsManualDate ? eventDescription : null,
-        note: selectedContact?.note || null,
-        eventDateOrigin: selectedContact?.date_naissance ?? null,
-      });
-
-      setMessage(messageGenere);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Impossible de générer le message.";
-      setError(errorMessage);
-      console.error("Erreur dans handleGenerate:", err);
+    } catch (error) {
+      dispatch({ type: 'failure', value: error instanceof Error ? error.message : 'Impossible de générer le message. Réessaie.' })
     } finally {
-      setLoading(false);
+      pendingRef.current = false
     }
   }
 
-  // ---------------------------
-  // 4. EFFETS
-  // ---------------------------
-  useEffect(() => {
-    async function loadContactsAndPrefill() {
-      const { data: { session } } = await supabase.auth.getSession();
-      setSession(session);
-      if (!session) return;
-
-      const { data, error } = await supabase
-        .from("contacts")
-        .select("id, prenom, nom, relation, date_naissance, email, note, est_favori, telephone_indicatif, telephone_numero")
-        .eq("user_id", session.user.id)
-        .order("prenom");
-
-      if (error) {
-        console.warn("Erreur chargement contacts :", error);
-        return;
-      }
-
-      setContacts(data as Contact[]);
-
-      const contactIdFromUrl = searchParams.get("contactId");
-      const eventTypeFromUrl = searchParams.get("eventType");
-
-      if (eventTypeFromUrl) {
-        setEventType(eventTypeFromUrl);
-      }
-
-      if (contactIdFromUrl && data) {
-        const contactTrouve = data.find(
-          (c) => String(c.id) === contactIdFromUrl
-        );
-        if (contactTrouve) {
-          appliquerContact(contactTrouve);
-        }
-      }
-    }
-
-    loadContactsAndPrefill();
-  }, [searchParams]);
-
-  // ---------------------------
-  // VARIABLES DÉRIVÉES
-  // ---------------------------
-  const datesPossibles: DatesPossibles | null = (() => {
-    if (!selectedContact) return null;
-
-    if (needsManualDate && eventDate) {
-      if (!isCalendarDay(eventDate)) return null;
-      return calculerDatesJ7J1JourJ(parseLocalDay(eventDate));
-    }
-
-    if (eventType === 'fete_prenomale') {
-      const chosen = chosenNameDay(firstName, preferredFeast, formatDateLocale(new Date()));
-      return chosen ? calculerDatesJ7J1JourJ(parseLocalDay(chosen)) : null;
-    }
-    const typeEvt = EVENT_TYPE_MAP[eventType];
-    if (!typeEvt) return null;
-
-    const dateEvenement = calculerDateEvenement(typeEvt, {
-      prenom: firstName || selectedContact.prenom,
-      date_naissance: selectedContact.date_naissance,
-    });
-    if (!dateEvenement) return null;
-
-    return calculerDatesJ7J1JourJ(dateEvenement);
-  })();
-
-  const contactsFiltres = contacts.filter((contact) =>
-    `${contact.prenom} ${contact.nom} ${contact.relation}`
-      .toLowerCase()
-      .includes(searchContact.toLowerCase())
-  );
-
-  function getDateEnvoiChoisie(): Date | null {
-    if (!datesPossibles) return null;
-    if (choixDate === "custom") return dateCustom ? new Date(dateCustom) : null;
-    if (choixDate === "jourJ") return datesPossibles.jourJ;
-    if (choixDate === "j1") return datesPossibles.j1;
-    if (choixDate === "j7") return datesPossibles.j7;
-    return null;
+  function showCopied() {
+    setCopied(true)
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
+    copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }
 
-  function handleCopy() {
-    if (!message) return;
-    navigator.clipboard.writeText(message);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  async function handleCopy() {
+    setActionError('')
+    try {
+      await navigator.clipboard.writeText(state.message)
+      showCopied()
+    } catch {
+      setActionError('La copie automatique est indisponible. Tu peux sélectionner le texte du message et le copier.')
+    }
   }
 
   async function handleShare() {
-    if (!message) return;
+    setActionError('')
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: "Message Ephemer",
-          text: message,
-        });
-        return;
-      }
-      await navigator.clipboard.writeText(message);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-      alert("Le partage direct n'est pas disponible ici. Le message a été copié.");
-    } catch (err) {
-      console.error("Erreur lors du partage :", err);
+      if (navigator.share) await navigator.share({ title: 'Message Ephemer', text: state.message })
+      else await handleCopy()
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) setActionError('Le partage a échoué. Tu peux copier le message.')
     }
   }
 
-  // ---------------------------
-  // 5. RENDU
-  // ---------------------------
   return (
-    <div className="min-h-screen bg-canvas text-ink p-4 md:p-8">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl md:text-3xl font-bold text-center mb-8 bg-gradient-to-r from-action to-action bg-clip-text text-transparent">
-          Générateur de messages personnalisés
-        </h1>
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip bg-canvas px-3 py-5 text-ink sm:px-4 md:px-8 md:py-8">
+      <div className="mx-auto w-full min-w-0 max-w-xl space-y-5">
+        <header className="space-y-1">
+          <h1 className="text-xl font-bold sm:text-2xl">Un message pour tes proches</h1>
+          <p className="text-sm text-muted">Choisis à qui l’adresser, puis laisse-toi inspirer.</p>
+        </header>
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* COLONNE GAUCHE : FORMULAIRE */}
-          <div className="space-y-6">
-            {/* Sélection de contact */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-2">
-                👤 Contact <span className="text-danger">*</span>
-              </label>
-
-              {/* Barre de recherche */}
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  placeholder="Tape le prénom, nom ou relation..."
-                  value={searchContact}
-                  onChange={(e) => {
-                    setSearchContact(e.target.value);
-                    if (e.target.value.trim() !== "") {
-                      setContactListOpen(true);
-                    }
-                  }}
-                  className="w-full border border-line rounded-2xl px-5 py-3 text-sm bg-ink/5 text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50"
-                />
-                {searchContact && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchContact("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-muted hover:text-muted"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              {/* Liste déroulante des contacts */}
-              {!selectedContact && (
+        <form className="min-w-0 space-y-4" onSubmit={event => { event.preventDefault(); void handleGenerate() }}>
+          <fieldset disabled={state.loading} className="min-w-0 space-y-4 disabled:opacity-70">
+            <legend className="sr-only">Destinataire et occasion</legend>
+            <section aria-labelledby="recipient-label" className="min-w-0 space-y-2">
+              <h2 id="recipient-label" className="text-sm font-semibold">Pour qui ?</h2>
+              {selectedContact ? (
+                <div className="flex min-w-0 items-center gap-2 rounded-xl border border-line bg-ink/5 p-3">
+                  <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-action/15 text-sm font-bold text-accent">{recipientName.charAt(0).toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold" title={recipientName}>{recipientName}</p>
+                    <p className="truncate text-xs text-muted">{relationLabel}</p>
+                  </div>
+                  <button type="button" className={secondaryButtonClass} onClick={() => changeRecipient()}>Changer</button>
+                </div>
+              ) : state.manual ? (
                 <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setContactListOpen((ouvert) => !ouvert)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-line bg-ink/5 text-ink hover:bg-ink/10 active:bg-ink/15 transition"
-                  >
-                    <span className="font-medium">
-                      {contactListOpen ? "Masquer mes contacts" : "📇 Choisir un contact existant"}
-                    </span>
-                    <span
-                      className={`text-accent transition-transform duration-200 ${
-                        contactListOpen ? "rotate-180" : ""
-                      }`}
-                    >
-                      ▾
-                    </span>
-                  </button>
-
-                  {contactListOpen && (
-                    <div className="max-h-[280px] overflow-y-auto rounded-2xl border border-line bg-ink/5 divide-y divide-line">
-                      {contactsFiltres.length > 0 ? (
-                        contactsFiltres.map((contact) => (
-                          <button
-                            key={contact.id}
-                            type="button"
-                            onClick={() => {
-                              appliquerContact(contact);
-                              setSearchContact("");
-                              setContactListOpen(false);
-                            }}
-                            className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-ink/10 active:bg-ink/15 transition"
-                          >
-                            <div>
-                              <div className="font-medium text-ink">
-                                {contact.prenom} {contact.nom}
-                              </div>
-                              <div className="text-xs text-muted capitalize">{contact.relation}</div>
-                            </div>
-                            <div className="text-accent text-sm">→</div>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="px-4 py-6 text-center text-sm text-muted">
-                          Aucun contact trouvé
-                        </div>
-                      )}
+                  <label htmlFor="free-firstname" className="sr-only">Prénom du destinataire</label>
+                  <input ref={freeNameRef} id="free-firstname" autoComplete="off" maxLength={80} value={firstName} placeholder="Son prénom" className={fieldClass}
+                    onChange={event => { dispatch({ type: 'name', value: event.target.value }); resetFeedback() }} />
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs text-muted">Sans créer de fiche contact.</span>
+                    <button type="button" className="min-h-11 text-sm text-accent underline underline-offset-4" onClick={() => changeRecipient()}>Choisir un contact</button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <label htmlFor="contact-search" className="sr-only">Rechercher un contact</label>
+                    <input ref={searchRef} id="contact-search" type="search" autoComplete="off" value={search} placeholder="Rechercher un contact…"
+                      className={`${fieldClass} pr-12`} aria-controls="contact-results"
+                      onFocus={() => setListOpen(true)}
+                      onChange={event => { setSearch(event.target.value); setListOpen(true) }}
+                      onKeyDown={event => {
+                        if (event.key === 'Escape') setListOpen(false)
+                        if (event.key === 'ArrowDown') { event.preventDefault(); setListOpen(true); requestAnimationFrame(() => listRef.current?.querySelector('button')?.focus()) }
+                      }} />
+                    <button type="button" aria-label={listOpen ? 'Masquer les contacts' : 'Afficher les contacts'} aria-expanded={listOpen} aria-controls="contact-results"
+                      className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-lg text-muted"
+                      onClick={() => setListOpen(open => !open)}>
+                      <svg aria-hidden="true" className={`h-4 w-4 ${listOpen ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                  </div>
+                  {contactsLoading && <p role="status" className="text-sm text-muted">Chargement de tes contacts…</p>}
+                  {contactsError && <div role="alert" className="space-y-1 text-sm text-danger">
+                    <p>{contactsError}</p>
+                    <button type="button" className={secondaryButtonClass} onClick={() => { setContactsLoading(true); setContactsError(''); setRetry(value => value + 1) }}>Réessayer</button>
+                    {!session && <Link href="/connexion" className="ml-3 inline-flex min-h-11 items-center underline">Se reconnecter</Link>}
+                  </div>}
+                  {!contactsLoading && !contactsError && contacts.length === 0 && <p className="text-sm text-muted">Tu n’as pas encore de contact. Saisis un prénom pour commencer.</p>}
+                  {listOpen && !contactsLoading && !contactsError && contacts.length > 0 && (
+                    <div id="contact-results" ref={listRef} onKeyDown={handleListKey} className="max-h-64 min-w-0 overflow-y-auto rounded-xl border border-line bg-surface">
+                      {matches.length === 0 ? <p role="status" className="p-3 text-sm text-muted">Aucun contact trouvé. Essaie un autre nom ou saisis un prénom.</p> : matches.map(contact => (
+                        <button key={contact.id} type="button" onClick={() => chooseContact(contact)} className="flex min-h-11 w-full min-w-0 items-center gap-2 border-b border-line px-3 py-2 text-left last:border-0 hover:bg-ink/5 focus-visible:outline-2 focus-visible:outline-accent">
+                          <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink/5 text-xs font-semibold">{contactDisplayName(contact).charAt(0).toUpperCase()}</span>
+                          <span className="min-w-0 flex-1"><span className="block truncate text-sm font-medium" title={contactDisplayName(contact)}>{contactDisplayName(contact)}</span><span className="block truncate text-xs text-muted">{TYPES_RELATION.find(item => item.value === contact.relation)?.label ?? 'Autre'}</span></span>
+                          {contact.est_favori && <span role="img" aria-label="Favori" className="shrink-0 text-accent">★</span>}
+                        </button>
+                      ))}
                     </div>
                   )}
+                  <button type="button" className="min-h-11 text-sm text-accent underline underline-offset-4" onClick={() => changeRecipient(true)}>Saisir un prénom</button>
                 </div>
               )}
+              {prefillWarning && <p role="status" className="text-sm text-warning">{prefillWarning}</p>}
+            </section>
 
-              {/* Badge du contact sélectionné */}
-              {selectedContact && (
-                <div className="flex items-center justify-between bg-ink/5 border border-line rounded-2xl px-4 py-3">
-                  <div>
-                    <div className="font-semibold text-ink">
-                      {selectedContact.prenom} {selectedContact.nom}
-                    </div>
-                    <div className="text-xs text-muted capitalize">{selectedContact.relation}</div>
-                    {!selectedContact.email && (
-                      <div className="text-xs text-warning mt-1">
-                        ⚠️ Email manquant
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {/* ✅ Bouton Modifier qui utilise le contexte DrawerContext */}
-                    <button
-                      type="button"
-                      onClick={handleEditContact}
-                      className="text-xs px-3 py-1.5 rounded-full bg-ink/10 text-muted hover:bg-ink/20 active:bg-ink/30 transition"
-                    >
-                      ✏️ Détails du contact
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedContact(null);
-                        setSelectedContactId("");
-                        setFirstName("");
-                        setLastName("");
-                        setAge("");
-                        setRelation("ami");
-                        setSearchContact("");
-                      }}
-                      className="text-xs px-4 py-1.5 rounded-full bg-red-500/10 text-danger hover:bg-red-500/20 active:bg-red-500/30 transition"
-                    >
-                      ❌
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Prénom et Nom */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-muted mb-1">
-                  Prénom <span className="text-danger">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
-                  placeholder="Jean"
-                />
+            <section aria-labelledby="occasion-label" className="space-y-2">
+              <h2 id="occasion-label" className="text-sm font-semibold">Pour quelle occasion ?</h2>
+              <div className="flex flex-wrap gap-2">
+                {[{ value: 'anniversaire', label: 'Anniversaire' }, { value: 'fete_prenomale', label: 'Fête' }, { value: 'autre', label: 'Autre occasion' }].map(item => {
+                  const active = item.value === 'autre' ? isOtherOccasion : state.eventType === item.value
+                  return <button key={item.value} type="button" aria-pressed={active}
+                    className={`min-h-11 rounded-full border px-3 py-2 text-sm transition-colors ${active ? 'border-action bg-action text-on-action' : 'border-line text-muted hover:bg-ink/5'}`}
+                    onClick={() => { if (!active) { dispatch({ type: 'occasion', value: item.value }); resetDates() } }}>{item.label}</button>
+                })}
               </div>
-              <div>
-                <label className="block text-sm font-medium text-muted mb-1">Nom</label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
-                  placeholder="Dupont"
-                />
-              </div>
-            </div>
+              {isOtherOccasion && <div>
+                <label htmlFor="other-occasion" className="sr-only">Choisir une autre occasion</label>
+                <select id="other-occasion" value={state.eventType} className={fieldClass} onChange={event => { dispatch({ type: 'occasion', value: event.target.value }); resetDates() }}>
+                  {otherOccasions.map(event => <option key={event.value} value={event.value}>{event.label}</option>)}
+                </select>
+              </div>}
+            </section>
 
-            {/* Âge */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">Âge</label>
-              <input
-                type="number"
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                min="0"
-                max="120"
-                className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
-                placeholder="30"
-              />
-            </div>
-
-            {/* Relation */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Relation <span className="text-danger">*</span>
-              </label>
-              <AppSelect
-                options={TYPES_RELATION.map((type) => ({ value: type.value, label: type.label }))}
-                value={relation}
-                onChange={setRelation}
-              />
-            </div>
-
-            {/* Type d'événement */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Type d&apos;événement <span className="text-danger">*</span>
-              </label>
-              <AppSelect
-                options={TYPES_EVENEMENT.map((type) => ({ value: type.value, label: type.label }))}
-                value={eventType}
-                onChange={(value) => {
-                  setEventType(value);
-                  if (!necessiteDateManuelle(value)) {
-                    setEventDate("");
-                    setEventDescription("");
-                  }
-                }}
-              />
-            </div>
-
-            {/* Champs pour date manuelle */}
-            {needsManualDate && (
-              <div className="space-y-4 pt-4 border-t border-line">
-                <div>
-                  <label className="block text-sm font-medium text-muted mb-1">
-                    📅 Date de l&apos;événement <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="date"
-                    value={eventDate}
-                    onChange={(e) => setEventDate(e.target.value)}
-                    className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink"
-                    required
-                  />
+            <details className="min-w-0 rounded-xl border border-line px-3">
+              <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">Personnaliser <span className="font-normal text-muted">· {toneLabel}</span></summary>
+              <div className="grid min-w-0 gap-3 pb-3 sm:grid-cols-2">
+                <div className="min-w-0"><label htmlFor="message-tone" className="mb-1 block text-sm text-muted">Ton du message</label>
+                  <select id="message-tone" value={state.tone} className={fieldClass} onChange={event => { dispatch({ type: 'tone', value: event.target.value }); resetFeedback() }}>
+                    {TONS_MESSAGE.map(tone => <option key={tone.value} value={tone.value}>{tone.value === 'familier' ? 'Chaleureux' : tone.label}</option>)}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-muted mb-1">
-                    📝 Description <span className="text-danger">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={eventDescription}
-                    onChange={(e) => setEventDescription(e.target.value)}
-                    placeholder="Ex: Rencontre au café"
-                    className="w-full border border-line rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-accent/50 bg-ink/5 text-ink placeholder-muted"
-                    required
-                  />
+                <div className="min-w-0"><label htmlFor="message-relation" className="mb-1 block text-sm text-muted">Votre relation</label>
+                  <select id="message-relation" value={state.relation} className={fieldClass} onChange={event => { dispatch({ type: 'relation', value: event.target.value }); resetFeedback() }}>
+                    {TYPES_RELATION.map(relation => <option key={relation.value} value={relation.value}>{relation.label}</option>)}
+                  </select>
                 </div>
+                <p className="text-xs text-muted sm:col-span-2">Ces choix concernent ce message et ne modifient pas le contact.</p>
               </div>
-            )}
+            </details>
+          </fieldset>
 
-            <p className="text-sm text-muted">{AI_NOTICE}</p>
-            <p className="text-sm text-muted">Chaque message programmé correspond à un envoi unique. Les anniversaires proposent la prochaine occurrence annuelle ; une date personnalisée reste ponctuelle et ne se renouvelle pas automatiquement.</p>
-            {eventType === 'fete_prenomale' && <label className="block text-sm text-muted">Fête retenue pour ce message
-              <select value={preferredFeast} onChange={e => setPreferredFeast(e.target.value)} className="mt-2 w-full bg-surface border border-line rounded-xl p-3">
+          <p className="break-words text-xs text-muted">{occasionLabel} · {relationLabel} · {toneLabel}</p>
+          {state.manual && !session && !contactsLoading && contactsError && <p role="alert" className="text-sm text-danger">Ta session est indisponible. <Link href="/connexion" className="underline">Reconnecte-toi</Link> pour générer un message.</p>}
+          <button type="submit" disabled={!session || !canGenerate(state)} aria-busy={state.loading} className="min-h-11 w-full rounded-xl bg-action px-4 py-3 font-semibold text-on-action transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50">
+            {state.loading ? 'Génération en cours…' : state.hasResult ? 'Nouvelle version' : 'Générer le message'}
+          </button>
+          {state.loading && <p role="status" className="text-sm text-muted">Création de ton message…</p>}
+          {state.error && <p role="alert" className="rounded-lg bg-danger/10 p-3 text-sm text-danger">{state.error}{state.message && ' Ton message précédent est conservé.'}</p>}
+          <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-2">Confidentialité de la génération</summary><p className="pb-2 leading-relaxed">{AI_NOTICE}</p></details>
+        </form>
+
+        {state.hasResult && <section ref={resultRef} aria-labelledby="result-title" className="min-w-0 scroll-mt-24 space-y-3 rounded-xl border border-line bg-ink/5 p-3 sm:p-4">
+          <h2 id="result-title" className="text-sm font-semibold">Ton message pour {recipientName}</h2>
+          <label htmlFor="generated-message" className="sr-only">Modifier le message généré</label>
+          <textarea id="generated-message" value={state.message} disabled={state.loading} onChange={event => { dispatch({ type: 'edit', value: event.target.value }); resetFeedback() }} className={`${fieldClass} min-h-36 resize-y leading-relaxed`} />
+          <div className="flex flex-wrap gap-2">
+            <button type="button" disabled={!state.message.trim()} onClick={() => void handleCopy()} className={secondaryButtonClass}>{copied ? 'Copié !' : 'Copier'}</button>
+            <button type="button" disabled={!state.message.trim()} onClick={() => void handleShare()} className={secondaryButtonClass}>Partager</button>
+          </div>
+          <span className="sr-only" role="status">{copied ? 'Message copié.' : ''}</span>
+          {actionError && <p role="alert" className="text-sm text-danger">{actionError}</p>}
+        </section>}
+
+        {state.message.trim() && selectedContact && session && <details className="min-w-0 rounded-xl border border-line px-3">
+          <summary className="min-h-11 cursor-pointer py-3 text-sm font-semibold">Programmer un rappel</summary>
+          <fieldset disabled={state.loading} className="min-w-0 space-y-3 pb-3">
+            <legend className="sr-only">Options de programmation</legend>
+            {state.eventType === 'fete_prenomale' && <div>
+              <label htmlFor="preferred-feast" className="mb-1 block text-sm text-muted">Date de la fête</label>
+              <select id="preferred-feast" value={preferredFeast} onChange={event => setPreferredFeast(event.target.value)} className={fieldClass}>
                 <option value="">Choisir une date</option>
-                {nameDays(firstName).map(day => <option key={day} value={day}>{day.split('-').reverse().join('/')}</option>)}
+                {feastDates.map(day => <option key={day} value={day}>{day.split('-').reverse().join('/')}</option>)}
               </select>
-              <span className="block mt-2">Ce choix est propre au message en cours ; il ne change pas le calendrier du contact. Si aucune date ne convient, utilise un jour spécial.</span>
-            </label>}
-            {/* Ton du message */}
-            <div>
-              <label className="block text-sm font-medium text-muted mb-1">
-                Ton du message <span className="text-danger">*</span>
-              </label>
-              <AppSelect
-                options={TONS_MESSAGE.map((ton) => ({ value: ton.value, label: ton.label }))}
-                value={tone}
-                onChange={setTone}
-              />
-            </div>
-
-            {/* Bouton Générer */}
-            <button
-              onClick={handleGenerate}
-              disabled={
-                loading ||
-                !firstName ||
-                (needsManualDate && (!eventDate || !eventDescription))
-              }
-              className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? "⏳ Génération en cours..." : "✨ Générer le message"}
-            </button>
-
-            {error && (
-              <p className="text-sm text-danger bg-red-500/10 rounded-lg px-3 py-2">❌ {error}</p>
-            )}
-          </div>
-
-          {/* COLONNE DROITE : RÉSULTAT */}
-          <div className="space-y-6">
-            {message && (
-              <div className="bg-ink/5 rounded-xl p-4 border border-line">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-accent">💌 Message généré (modifiable)</h3>
-                </div>
-
-                <textarea
-                  value={message}
-                  onChange={(e) => setMessage(e.target.value)}
-                  className="w-full min-h-[140px] bg-ink/5 border border-line rounded-xl p-4 text-muted resize-y focus:outline-none focus:ring-2 focus:ring-accent/50 text-sm leading-relaxed"
-                  placeholder="Votre message personnalisé..."
-                />
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
-                  <button
-                    onClick={handleCopy}
-                    className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-                  >
-                    {copied ? "✅ Copié !" : "Copier"}
-                  </button>
-                  <button
-                    onClick={handleShare}
-                    disabled={!message}
-                    className="w-full bg-gradient-to-r from-action to-action text-on-action font-bold py-3 rounded-xl hover:shadow-[0_0_30px_rgba(200,168,78,0.3)] transition disabled:opacity-50"
-                  >
-                    📤 Partager
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {message && selectedContact && session && (
-              <>
-                <ProgrammerRappel
-                  key={String(selectedContact.id) + eventType + eventDate + preferredFeast + message}
-                  session={session}
-                  selectedContact={selectedContact}
-                  message={message}
-                  tone={tone}
-                  eventType={eventType}
-                  datesPossibles={datesPossibles ?? undefined}
-                />
-
-                {/* Avertissements */}
-                {!datesPossibles && (
-                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-warning">
-                    ℹ️ Pas de date automatique pour cet événement.
-                    {eventType === "fete_prenomale" && (
-                      <p className="mt-1">
-                        Le prénom <strong>{selectedContact.prenom}</strong> n&apos;a pas été trouvé
-                        dans notre calendrier des saints.
-                      </p>
-                    )}
-                    {eventType === "anniversaire" && !selectedContact.date_naissance && (
-                      <p className="mt-1">
-                        Ce contact n&apos;a pas de <strong>date de naissance</strong> renseignée.
-                      </p>
-                    )}
-                    <p className="mt-2">
-                      👉 Utilise <strong>📆 Date personnalisée</strong> ci-dessus pour choisir manuellement.
-                    </p>
-                  </div>
-                )}
-
-                {/* ✅ Avertissement email manquant */}
-                {!selectedContact.email && (
-                  <div className="bg-orange-500/10 border border-orange-500/40 rounded-lg p-3 text-xs text-warning">
-                    ℹ️ Ce contact n&apos;a pas d&apos;<strong>adresse email</strong> renseignée.
-                    <p className="mt-2">
-                      👉 Clique sur <strong>✏️ Modifier</strong> pour ajouter un email 
-                      et pouvoir envoyer des messages par email.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
+              <p className="mt-1 text-xs text-muted">{feastDates.length ? 'Choisis la fête retenue pour ce rappel. Le calendrier du contact reste inchangé.' : 'Aucune fête trouvée pour ce prénom. Tu peux choisir une date d’envoi personnalisée ci-dessous.'}</p>
+            </div>}
+            {isOtherOccasion && <div>
+              <label htmlFor="event-date" className="mb-1 block text-sm text-muted">Date de l’occasion (facultative)</label>
+              <input id="event-date" type="date" value={eventDate} onChange={event => setEventDate(event.target.value)} className={fieldClass} />
+              <p className="mt-1 text-xs text-muted">Pour proposer des rappels avant l’occasion. Tu peux aussi choisir directement une date d’envoi ci-dessous.</p>
+            </div>}
+            {datesPossibles && <p className="text-sm text-muted">{occasionLabel} : {formaterDateFR(datesPossibles.jourJ)}</p>}
+            {!datesPossibles && state.eventType === 'anniversaire' && <p className="text-sm text-muted">Aucune date d’anniversaire disponible. Choisis une date d’envoi personnalisée ci-dessous.</p>}
+            {!selectedContact.email && <p className="text-sm text-warning">Ce contact n’a pas d’adresse e-mail. Tu peux te programmer un rappel ou <Link href={`/dashboard/contacts/${selectedContact.id}/edit`} className="underline">compléter sa fiche</Link> pour lui envoyer un e-mail.</p>}
+            <ProgrammerRappel key={`${selectedContact.id}:${state.eventType}:${preferredFeast}:${eventDate}:${state.message}`} session={session}
+              selectedContact={{ ...selectedContact, prenom: selectedContact.prenom ?? '', nom: selectedContact.nom ?? '' }} message={state.message} tone={state.tone} eventType={state.eventType} datesPossibles={datesPossibles} />
+            <p className="text-xs leading-relaxed text-muted">Chaque rappel correspond à un envoi unique. Les anniversaires proposent leur prochaine occurrence ; les dates personnalisées ne se renouvellent pas automatiquement.</p>
+          </fieldset>
+        </details>}
+        {state.hasResult && state.manual && <p className="text-xs text-muted">Pour programmer un rappel, choisis un contact enregistré.</p>}
       </div>
     </div>
-  );
+  )
+}
+
+function GenerateFromUrl() {
+  const searchParams = useSearchParams()
+  const contactId = searchParams.get('contactId')
+  const initialOccasion = searchParams.get('eventType')
+  // Une nouvelle URL ouvre un nouveau formulaire, sans réutiliser un ancien message.
+  return <GenerateForm key={JSON.stringify([contactId, initialOccasion])} contactId={contactId} initialOccasion={initialOccasion} />
 }
 
 export default function GeneratePage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <p className="text-muted">Chargement...</p>
-        </div>
-      }
-    >
-      <GenerateForm />
-    </Suspense>
-  );
+  return <Suspense fallback={<div className="min-h-[60vh] p-4 text-muted" role="status">Chargement…</div>}><GenerateFromUrl /></Suspense>
 }

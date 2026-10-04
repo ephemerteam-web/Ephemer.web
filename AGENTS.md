@@ -3,6 +3,10 @@
 > Document de contexte destiné à un assistant IA (Codex CLI) travaillant sur le dépôt **Ephemer.name**.
 > Le ton est **vulgarisé pour un non-développeur**, mais reste **techniquement exact** : chaque information est tirée du code source réel du projet.
 
+## Règle de travail avec les assistants IA
+
+> **Ne jamais créer de commit.** Après les modifications, l’assistant exécute les vérifications adaptées et communique leurs résultats. L’utilisateur vérifie ensuite l’application avec `npm run dev` et effectue lui-même le commit.
+
 ---
 
 ## 1. Présentation du projet

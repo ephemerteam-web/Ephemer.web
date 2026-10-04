@@ -136,18 +136,24 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
       />
 
       {/* DRAWER */}
+      {/* Le panneau reste dans un cadre de la taille de l'écran pendant son animation. */}
+      <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
       <aside
         inert={!ouvert}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{
+          // Masquer le panneau à la fin de l'animation de fermeture.
+          visibility: ouvert ? 'visible' : 'hidden',
           transform: ouvert
             ? `translateX(${translateX}px)`
             : 'translateX(100%)',
-          transition: translateX === 0 ? 'transform 0.3s ease-out' : 'none',
+          transition: translateX === 0
+            ? `transform 0.3s ease-out, visibility 0s ${ouvert ? '0s' : '0.3s'}`
+            : 'none',
         }}
-        className="fixed top-0 right-0 z-50 h-dvh w-full sm:w-80
+        className="pointer-events-auto absolute top-0 right-0 h-dvh w-full sm:w-80
         bg-canvas/95 backdrop-blur-xl border-l border-line
         shadow-2xl flex flex-col"
       >
@@ -236,6 +242,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
           <p className="text-muted text-xs">Ephemer • v1.0</p>
         </div>
       </aside>
+      </div>
     </>
   )
 }

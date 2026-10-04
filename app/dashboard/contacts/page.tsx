@@ -8,7 +8,8 @@ import { TYPES_RELATION } from '@/lib/constants'
 import { useDrawer } from '@/components/DrawerContext'
 import { useContactFilters } from '@/lib/hooks/useContactFilters'
 import AlphabetScrollbar from '@/components/AlphabetScrollbar'
-import { useAlphabetLetters } from '@/lib/hooks/useAlphabetLetters'
+import { contactsScrollOffset, useAlphabetLetters } from '@/lib/hooks/useAlphabetLetters'
+import { contactLetter } from '@/lib/contact-alphabet'
 
 type Contact = {
   id: string
@@ -50,13 +51,42 @@ export default function ContactsPage() {
   // Calcul des lettres pour la reglette alphabetique
   const { letters, scrollToLetter } = useAlphabetLetters(contactsFiltres, triPar)
 
-  // Handler pour le clic sur une lettre de la reglette
-  const handleLetterClick = useCallback((letter: string) => {
+  // Appui ou glissement sur la réglette.
+  const handleLetterClick = useCallback((letter: string, behavior: ScrollBehavior = 'smooth') => {
     setActiveLetter(letter)
-    scrollToLetter(letter, listRef)
-    // Reinitialiser apres un court delai
-    setTimeout(() => setActiveLetter(null), 1500)
+    scrollToLetter(letter, listRef, behavior)
   }, [scrollToLetter])
+
+  // Garder la lettre active en phase avec le défilement manuel et les filtres.
+  useEffect(() => {
+    if (loading) return
+    const elements = Array.from(listRef.current?.querySelectorAll<HTMLElement>('[data-letter]') ?? [])
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const offset = contactsScrollOffset()
+      let current: string | null = null
+      for (const element of elements) {
+        if (element.getBoundingClientRect().top > offset + 1) break
+        current = element.dataset.letter || null
+      }
+      if (!current) current = elements[0]?.dataset.letter || null
+      // En bas de page, la dernière carte ne peut pas toujours atteindre l'en-tête.
+      if (window.scrollY > 0 && window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2) {
+        current = elements.at(-1)?.dataset.letter || null
+      }
+      setActiveLetter(current)
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update) }
+    schedule()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [contactsFiltres, loading, triPar])
 
   // Charger les contacts
   useEffect(() => {
@@ -140,15 +170,6 @@ export default function ContactsPage() {
     return relationSecurisee || 'non classée'
   }
 
-  // Obtenir la premiere lettre pour la reglette (selon le tri)
-  const getFirstLetter = (contact: ContactAvecLien) => {
-    const text = triPar === 'nom' 
-      ? (contact.nom ?? contact.prenom ?? '')
-      : (contact.prenom ?? contact.nom ?? '')
-    if (!text.trim()) return ''
-    return text.trim().charAt(0).toUpperCase()
-  }
-
   // Etat de chargement
   if (loading) {
     return (
@@ -164,8 +185,8 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className="p-4 md:p-8 min-h-screen">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip px-3 pt-4 pb-28 sm:px-4 md:px-8 md:pt-8">
+      <div className={`mx-auto w-full min-w-0 max-w-2xl ${letters.length > 1 ? 'pr-11' : ''}`}>
         {/* EN-TETE */}
         <div className="mb-4">
           {/* Titre + compteur */}
@@ -173,20 +194,26 @@ export default function ContactsPage() {
             📒 Mes contacts <span className="text-sm font-normal text-info">({contacts.length})</span>
           </h1>
 
-          {/* Recherche */}
-          <input
-            type="text"
-            placeholder="Rechercher un contact..."
-            value={recherche}
-            onChange={(e) => setRecherche(e.target.value)}
-            className="w-full rounded-xl bg-ink/5 border border-line px-4 py-2.5 text-ink placeholder-muted focus:outline-none focus:ring-2 focus:ring-accent/50 mb-3"
-          />
+          {/* Recherche discrète, avec un fond transparent. */}
+          <div className="relative mb-2 w-full max-w-xs">
+            <svg aria-hidden="true" className="pointer-events-none absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+              <circle cx="10.5" cy="10.5" r="6.5" /><path d="m16 16 4 4" />
+            </svg>
+            <input
+              type="search"
+              aria-label="Rechercher un contact"
+              placeholder="Rechercher…"
+              value={recherche}
+              onChange={(e) => setRecherche(e.target.value)}
+              className="h-9 w-full rounded-none border-0 border-b border-line/60 bg-transparent py-1 pl-7 pr-2 text-base text-ink placeholder-muted focus:border-accent focus:outline-none"
+            />
+          </div>
 
           {/* Filtres par relation - boutons horizontaux defilants */}
-          <div className="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-hide mb-3">
+          <div className="flex w-full min-w-0 max-w-full gap-2 overflow-x-auto pb-1 scrollbar-hide mb-3">
             <button
               onClick={() => setFiltreRelation('tous')}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`min-h-11 shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 filtreRelation === 'tous' 
                   ? 'bg-action text-on-action shadow-lg' 
                   : 'bg-ink/5 text-muted hover:bg-ink/10'
@@ -203,7 +230,7 @@ export default function ContactsPage() {
                 <button
                   key={type.value}
                   onClick={() => setFiltreRelation(type.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 ${
+                  className={`min-h-11 shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1 ${
                     filtreRelation === type.value 
                       ? `${couleurFond} text-ink shadow-md` 
                       : 'bg-ink/5 text-muted hover:bg-ink/10'
@@ -217,21 +244,32 @@ export default function ContactsPage() {
           </div>
 
           {/* Tri + Boutons d'action */}
-          <div className="flex items-center justify-between gap-2">
-            <select
-              value={triPar}
-              onChange={(e) => setTriPar(e.target.value as 'nom' | 'prenom')}
-              className="bg-ink/5 border border-line rounded-xl px-3 py-2 text-sm text-ink focus:outline-none focus:ring-1 focus:ring-accent/50"
-            >
-              <option value="nom">Trier : Nom</option>
-              <option value="prenom">Trier : Prénom</option>
-            </select>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="relative min-w-0 max-w-full">
+              <svg aria-hidden="true" className="pointer-events-none absolute left-1 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 5v14m-3-3 3 3 3-3M10 6h11M10 12h8M10 18h5" />
+              </svg>
+              <select
+                value={triPar}
+                onChange={(e) => setTriPar(e.target.value as 'nom' | 'prenom')}
+                aria-label="Trier les contacts"
+                title={`Trier par ${triPar === 'nom' ? 'nom' : 'prénom'}`}
+                className="min-h-11 min-w-0 max-w-full appearance-none rounded-lg border-0 bg-transparent py-1 pl-7 pr-6 text-base text-muted hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
+              >
+                <option value="nom">Nom</option>
+                <option value="prenom">Prénom</option>
+              </select>
+              <svg aria-hidden="true" className="pointer-events-none absolute right-1 top-1/2 h-3 w-3 -translate-y-1/2 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </div>
 
             <div className="flex gap-2">
               <Link
                 href="/dashboard/contacts/rapide"
-                className="bg-gradient-to-r from-action to-action/80 text-on-action font-bold text-xs px-3 py-2 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
+                className="flex min-h-11 min-w-11 items-center justify-center bg-gradient-to-r from-action to-action/80 text-on-action font-bold text-xs px-3 py-2 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
                 title="Ajout rapide"
+                aria-label="Ajouter rapidement des contacts"
               >
                 ⚡
               </Link>
@@ -276,18 +314,18 @@ export default function ContactsPage() {
         ) : (
           <div 
             ref={listRef}
-            className="relative"
+            className="relative w-full min-w-0 max-w-full"
           >
-            <div className="grid gap-2">
-              {contactsFiltres.map((contact, index) => {
-                const firstLetter = getFirstLetter(contact)
+            <div className="grid min-w-0 grid-cols-1 gap-2">
+              {contactsFiltres.map((contact) => {
+                const firstLetter = contactLetter(contact, triPar)
                 
                 return (
                   <div
                     key={contact.id}
                     data-letter={firstLetter}
                     onClick={() => ouvrirDrawer(contact)}
-                    className={`group bg-ink/5 border rounded-xl p-3 flex items-center gap-3 cursor-pointer transition-all ${
+                    className={`group flex w-full min-w-0 max-w-full items-center gap-1.5 rounded-xl border bg-ink/5 px-2 py-1.5 sm:gap-3 sm:px-3 sm:py-2 cursor-pointer transition-colors ${
                       contact.est_favori 
                         ? 'border-accent/40 hover:border-accent/60' 
                         : 'border-line hover:border-line hover:bg-ink/10'
@@ -298,7 +336,7 @@ export default function ContactsPage() {
                       {contact.est_favori && (
                         <div className="absolute -inset-[2px] rounded-full bg-gradient-to-tr from-action via-action to-action border-2 border-canvas" />
                       )}
-                      <div className={`relative w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-colors z-10 ${
+                      <div className={`relative h-8 w-8 sm:h-9 sm:w-9 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-colors z-10 ${
                         contact.est_favori 
                           ? 'bg-canvas text-accent border-canvas' 
                           : 'bg-indigo-500/20 text-ink border-indigo-400/30'
@@ -309,70 +347,61 @@ export default function ContactsPage() {
 
                     {/* Infos principales */}
                     <div className="flex-1 min-w-0">
-                      <p className={`font-semibold truncate ${
+                      <p title={getNomComplet(contact)} className={`truncate text-sm font-semibold leading-5 ${
                         contact.est_favori ? 'text-accent' : 'text-ink'
                       }`}>
                         {getNomComplet(contact)}
                       </p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full capitalize ${couleurRelation(contact.relation)}`}>
+                      <div className="mt-0.5 flex min-w-0 items-center gap-1">
+                        <span title={getRelationLabel(contact.relation)} className={`min-w-0 truncate rounded-full px-1.5 py-0.5 text-[11px] font-medium leading-4 capitalize ${couleurRelation(contact.relation)}`}>
                           {getRelationLabel(contact.relation)}
                         </span>
                         {contact.date_naissance && (
-                          <span className="text-muted text-sm" title="Anniversaire">🎂</span>
+                          <span className="shrink-0 text-info" title="Anniversaire" aria-label="Anniversaire renseigné" role="img">
+                            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                              <path d="M5 21v-9h14v9M3 21h18M5 16c2 2 3-2 5 0s3-2 5 0 3-2 4 0M8 12V8m4 4V8m4 4V8M8 5V3m4 2V3m4 2V3" />
+                            </svg>
+                          </span>
                         )}
                         {contact.estLie && (
-                          <span className="text-xs bg-green-500/15 text-success border border-green-500/25 font-medium px-1.5 py-0.5 rounded-full" title="Lié">
-                            🤝
+                          <span className="shrink-0 text-success" title="Contact lié" aria-label="Contact lié" role="img">
+                            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                              <path d="m10 13 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" />
+                            </svg>
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Actions - Visibles sur desktop, icones sur mobile */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Icônes contrastées ; cibles tactiles de 44 px sur tous les écrans. */}
+                    <div className="flex shrink-0 items-center gap-0.5">
                       <button
                         onClick={(e) => { 
                           e.stopPropagation()
                           router.push(`/dashboard/generate?contactId=${contact.id}`)
                         }}
-                        className="hidden sm:inline-block text-xs text-info hover:text-ink font-medium border border-indigo-400/30 px-2 py-1 rounded-lg hover:bg-indigo-500/10 transition"
+                        type="button"
+                        aria-label={`Générer un message pour ${getNomComplet(contact)}`}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-canvas text-info transition-colors hover:bg-ink/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
                         title="Générer un message"
                       >
-                        ✨
+                        <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5L12 3ZM20 3v4m-2-2h4" />
+                        </svg>
                       </button>
                       <button
                         onClick={(e) => { 
                           e.stopPropagation()
                           router.push(`/dashboard/contacts/${contact.id}/edit`)
                         }}
-                        className="hidden sm:inline-block text-xs text-accent/70 hover:text-ink font-medium border border-accent/30 px-2 py-1 rounded-lg hover:bg-action/10 transition"
+                        type="button"
+                        aria-label={`Modifier ${getNomComplet(contact)}`}
+                        className="flex h-11 w-11 items-center justify-center rounded-lg border border-line bg-canvas text-accent transition-colors hover:bg-ink/10 hover:text-ink focus-visible:outline-2 focus-visible:outline-accent"
                         title="Modifier"
                       >
-                        ✏️
-                      </button>
-                      {/* Boutons mobiles - icones seulement */}
-                      <button
-                        onClick={(e) => { 
-                          e.stopPropagation()
-                          router.push(`/dashboard/generate?contactId=${contact.id}`)
-                        }}
-                        className="sm:hidden p-2 rounded-lg hover:bg-ink/10 transition text-info"
-                        title="Générer"
-                        aria-label="Générer un message"
-                      >
-                        ✨
-                      </button>
-                      <button
-                        onClick={(e) => { 
-                          e.stopPropagation()
-                          router.push(`/dashboard/contacts/${contact.id}/edit`)
-                        }}
-                        className="sm:hidden p-2 rounded-lg hover:bg-ink/10 transition text-accent/70"
-                        title="Modifier"
-                        aria-label="Modifier le contact"
-                      >
-                        ✏️
+                        <svg aria-hidden="true" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15v5Z" />
+                        </svg>
                       </button>
                     </div>
                   </div>
@@ -386,6 +415,8 @@ export default function ContactsPage() {
         {/* Afficher uniquement si tri alphabetique et assez de lettres */}
         {(triPar === 'nom' || triPar === 'prenom') && letters.length > 1 && (
           <AlphabetScrollbar
+            key={`${triPar}:${letters.join('')}`}
+            listRef={listRef}
             letters={letters}
             activeLetter={activeLetter}
             onLetterClick={handleLetterClick}
@@ -397,14 +428,15 @@ export default function ContactsPage() {
       {/* BOUTON FLOTTANT + */}
       <Link
         href="/dashboard/contacts/nouveau"
-        className="fixed bottom-6 left-1/2 -translate-x-1/2 sm:bottom-8 sm:left-auto sm:right-8 sm:translate-x-0 z-30"
+        aria-label="Ajouter un contact"
+        className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 sm:bottom-8 sm:left-auto sm:right-8 sm:translate-x-0 z-30"
       >
-        <button 
+        <span
           className="w-14 h-14 sm:w-12 sm:h-12 rounded-full bg-action text-on-action text-2xl font-bold shadow-2xl hover:shadow-action/50 transition-all active:scale-95 flex items-center justify-center"
-          aria-label="Ajouter un contact"
+          aria-hidden="true"
         >
           +
-        </button>
+        </span>
       </Link>
     </div>
   )
