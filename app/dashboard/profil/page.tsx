@@ -5,6 +5,7 @@ import LoadFailure from '@/components/LoadFailure'
 import { createRequestScope } from '@/lib/request-scope'
 
 import Modal from '@/components/Modal'
+import PersonalDates from '@/components/PersonalDates'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -19,6 +20,7 @@ export default function DashboardProfil() {
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')
+  const [canonicalBirth, setCanonicalBirth] = useState(false)
   const [email, setEmail] = useState('')
   const [telephoneIndicatif, setTelephoneIndicatif] = useState('+33')
   const [telephoneNumero, setTelephoneNumero] = useState('')
@@ -41,6 +43,10 @@ export default function DashboardProfil() {
         const { data: profile, error } = await supabase.from('profiles').select('*').eq('id', dashboardUser.id).maybeSingle()
         if (!scope.current()) return
         if (error) throw error
+        const { data: birthdays, error: birthdayError } = await supabase.from('evenements_personnels').select('id').eq('user_id', dashboardUser.id).is('contact_id', null).eq('type_evenement', 'anniversaire')
+        if (!scope.current()) return
+        if (birthdayError) throw birthdayError
+        setCanonicalBirth(!!birthdays?.length)
         setEmail(dashboardUser.email)
         setPrenom(profile?.prenom ?? '')
         setNom(profile?.nom ?? '')
@@ -73,7 +79,7 @@ export default function DashboardProfil() {
         id: user.id,
         prenom: prenom.trim() || null,
         nom: nom.trim() || null,
-        date_naissance: dateNaissance || null,
+        ...(!canonicalBirth ? { date_naissance: dateNaissance || null } : {}),
         telephone_indicatif: telephoneIndicatif,
         telephone_numero: telephoneNumero.trim() || null,
       }, { onConflict: 'id' })
@@ -290,6 +296,7 @@ export default function DashboardProfil() {
                 Date de naissance
               </label>
               <input id="profile-field-3"
+                disabled={canonicalBirth}
                 type="date"
                 value={dateNaissance}
                 onChange={(e) => setDateNaissance(e.target.value)}
@@ -305,6 +312,7 @@ export default function DashboardProfil() {
               />
             </div>
 
+            <div><PersonalDates contacts={[]} onSaved={() => { setLoading(true); setAttempt(value => value + 1) }} />{canonicalBirth && <p className="text-sm">Modifie l’anniversaire dans les dates personnelles.</p>}</div>
             {/* ── TÉLÉPHONE ── version empilée sur mobile */}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="profile-field-4" className="text-xs font-semibold text-muted uppercase tracking-wide">

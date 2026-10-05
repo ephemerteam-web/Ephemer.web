@@ -1,6 +1,7 @@
 'use client'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
+import MissingContactBanner from '@/components/MissingContactBanner'
 
 import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -190,37 +191,7 @@ export default function CalendrierSaintsPage() {
         </header>
 
        {/* ⚠️ Section contacts sans fête référencée */}
-{contactsSansFete.length > 0 && (
-  <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 text-sm text-warning">
-    <div className="flex items-start gap-4">
-      {/* Texte à gauche */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium">
-          ⚠️ <strong>{contactsSansFete.length}</strong> contact{contactsSansFete.length > 1 ? 's' : ''} sans fête référencée
-        </p>
-        <p className="text-xs text-warning mt-1 break-words">
-          {contactsSansFete
-            .slice(0, 5)
-            .map(c => (c.prenom && c.prenom.trim() !== '' ? c.prenom : '(sans prénom)'))
-            .join(', ')}
-          {contactsSansFete.length > 5 ? `, +${contactsSansFete.length - 5} autre(s)` : ''}
-        </p>
-      </div>
-
-      {/* Bouton à droite */}
-      <button
-        onClick={() => router.push('/dashboard/contacts')}
-        className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl
-                   bg-ink/5 hover:bg-ink/10
-                   border border-orange-500/40 hover:border-orange-400
-                   text-warning text-xs sm:text-sm font-medium
-                   transition"
-      >
-        ✏️ Compléter les prénoms
-      </button>
-    </div>
-  </div>
-)}
+        <MissingContactBanner contacts={contactsSansFete} reason="sans fête référencée" actionLabel="Compléter les prénoms" />
 
         {/* Barre de filtres + tri + vue */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">

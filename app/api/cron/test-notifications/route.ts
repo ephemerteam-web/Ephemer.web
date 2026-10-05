@@ -1,8 +1,10 @@
 import type { Database } from '@/types/database.generated'
-import { parisDay, nextBirthdayDay, daysBetween, isCalendarDay } from '@/lib/calendar-day';
+import { parisDay, daysBetween } from '@/lib/calendar-day';
+import { readEventData } from '@/lib/personal-event-data';
+import { previewEventViews, shiftDay } from '@/lib/personal-events';
+import { enabledMilestones } from '@/lib/reminder-policy';
 // app/api/cron/test-notifications/route.ts
 import { createServerClient } from '@supabase/ssr'
-import { readAllResult } from '@/lib/pagination'
 import { resolvePreferences } from '@/lib/notification-preferences'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin' // On réutilise ton client admin existant
@@ -78,74 +80,18 @@ export async function POST(request: Request) {
 // ============================================================
 
 async function processUser(user: { id: string; email: string | null; prenom?: string | null; nom?: string | null }) {
-
-  try {
-    // Récupérer les contacts
-    const { data: contacts, error } = await readAllResult(() => supabaseAdmin
-      .from('contacts')
-      .select('id, prenom, nom, date_naissance')
-      .eq('user_id', user.id));
-
-    if (error) throw error;
-    if (!contacts?.length) return { notifs: 0, emails: 0, previewNotifs: 0, preview: [], recipient: null };
-
-    // Récupérer les préférences
-    const { data: prefs, error: prefsError } = await supabaseAdmin
-      .from('notification_preferences')
-      .select('*')
-      .eq('user_id', user.id)
-      .maybeSingle();
-    if (prefsError) throw prefsError;
-
-    const today = parisDay();
-
-    const paliers = [
-      { jours: 7, enabled: resolvePreferences(prefs).rappel_j7 },
-      { jours: 3, enabled: resolvePreferences(prefs).rappel_j3 },
-      { jours: 1, enabled: resolvePreferences(prefs).rappel_j1 },
-      { jours: 0, enabled: resolvePreferences(prefs).rappel_jourj }
-    ];
-
-    const notifsToInsert: { user_id: string; contact_id: number; type: string; message: string; event_date: string; event_description: string; jours_restants: number; lue: boolean; email_envoye: boolean }[] = [];
-    const notifsForEmail: { contact: string; date: string; jours: number }[] = [];
-
-    for (const contact of contacts) {
-      if (!contact.date_naissance || !isCalendarDay(contact.date_naissance)) continue;
-
-      const nextBirthday = nextBirthdayDay(contact.date_naissance, today);
-      const daysUntil = daysBetween(today, nextBirthday);
-
-      for (const palier of paliers) {
-        if (!palier.enabled) continue;
-        if (daysUntil !== palier.jours) continue;
-
-        const notif = {
-          user_id: user.id,
-          contact_id: contact.id,
-          type: 'anniversaire',
-          message: `C'est bientôt l'anniversaire de ${contact.prenom || contact.nom || 'quelqu\'un'} !`,
-          event_date: nextBirthday,
-          event_description: `Anniversaire de ${contact.prenom || contact.nom || 'quelqu\'un'}`,
-          jours_restants: palier.jours,
-          lue: false,
-          email_envoye: false
-        };
-
-        notifsToInsert.push(notif);
-        notifsForEmail.push({
-          contact: contact.prenom || contact.nom || 'quelqu\'un',
-          date: new Date(nextBirthday + 'T12:00:00Z').toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }),
-          jours: palier.jours
-        });
-      }
-    }
-
-    // Simulation uniquement : aucune insertion, mise à jour ni email.
-    return { notifs: 0, emails: 0, previewNotifs: notifsToInsert.length, preview: notifsForEmail, recipient: (resolvePreferences(prefs).canal_email) && user.email ? user.email : null };
-  } catch (error) {
-    console.error(`❌ Error processing user ${user.id}:`, error);
-    throw error;
-  }
+  const today = parisDay();
+  // Pas de matérialisation : ce diagnostic reste strictement sans écriture.
+  const dates = await readEventData(supabaseAdmin, user.id, today, shiftDay(today, 7), true, false);
+  const { data: prefs, error } = await supabaseAdmin.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle();
+  if (error) throw error;
+  const preview = previewEventViews(dates, today, shiftDay(today, 7)).filter(view => view.reminder).flatMap(view => {
+    const remaining = daysBetween(today, view.date);
+    return enabledMilestones(prefs).filter(palier => palier.enabled && remaining === palier.jours).map(palier => ({
+      contact: view.title, date: new Date(view.date + 'T12:00:00Z').toLocaleDateString('fr-FR', { timeZone: 'Europe/Paris' }), jours: palier.jours,
+    }));
+  });
+  return { notifs: 0, emails: 0, previewNotifs: preview.length, preview, recipient: resolvePreferences(prefs).canal_email ? user.email : null };
 }
 
 

@@ -1,4 +1,3 @@
-// 📋 Généré depuis le schéma public réel le 4 octobre 2026. Ne pas modifier à la main.
 export type Json =
   | string
   | number
@@ -15,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      appartenances_listes: {
+        Row: {
+          contact_id: number
+          created_at: string
+          id: string
+          liste_id: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: number
+          created_at?: string
+          id?: string
+          liste_id: string
+          user_id?: string
+        }
+        Update: {
+          contact_id?: number
+          created_at?: string
+          id?: string
+          liste_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot03_appartenances_contact"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "lot03_appartenances_liste"
+            columns: ["user_id", "liste_id"]
+            isOneToOne: false
+            referencedRelation: "listes_personnelles"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           created_at: string
@@ -71,6 +109,68 @@ export type Database = {
           },
         ]
       }
+      evenements_personnels: {
+        Row: {
+          archive: boolean
+          arrete_apres_cycle: number | null
+          choix_a_reconfirmer: boolean
+          contact_id: number | null
+          created_at: string
+          id: string
+          origine: string
+          rappels_actifs: boolean
+          recurrence: string
+          revision: number
+          titre: string
+          type_evenement: string
+          updated_at: string
+          user_id: string
+          visible: boolean
+        }
+        Insert: {
+          archive?: boolean
+          arrete_apres_cycle?: number | null
+          choix_a_reconfirmer?: boolean
+          contact_id?: number | null
+          created_at?: string
+          id?: string
+          origine: string
+          rappels_actifs?: boolean
+          recurrence?: string
+          revision?: number
+          titre: string
+          type_evenement: string
+          updated_at?: string
+          user_id: string
+          visible?: boolean
+        }
+        Update: {
+          archive?: boolean
+          arrete_apres_cycle?: number | null
+          choix_a_reconfirmer?: boolean
+          contact_id?: number | null
+          created_at?: string
+          id?: string
+          origine?: string
+          rappels_actifs?: boolean
+          recurrence?: string
+          revision?: number
+          titre?: string
+          type_evenement?: string
+          updated_at?: string
+          user_id?: string
+          visible?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot02_evenement_contact_owner"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           actif: boolean
@@ -103,6 +203,27 @@ export type Database = {
           max_utilisations?: number
           nb_utilisations?: number
           token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      listes_personnelles: {
+        Row: {
+          created_at: string
+          id: string
+          nom: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nom: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nom?: string
           user_id?: string
         }
         Relationships: []
@@ -145,7 +266,7 @@ export type Database = {
       }
       notifications: {
         Row: {
-          contact_id: number
+          contact_id: number | null
           created_at: string | null
           email_envoye: boolean
           event_date: string | null
@@ -154,11 +275,13 @@ export type Database = {
           jours_restants: number | null
           lue: boolean | null
           message: string
+          occurrence_id: string | null
+          occurrence_revision: number | null
           type: string
           user_id: string
         }
         Insert: {
-          contact_id: number
+          contact_id?: number | null
           created_at?: string | null
           email_envoye?: boolean
           event_date?: string | null
@@ -167,11 +290,13 @@ export type Database = {
           jours_restants?: number | null
           lue?: boolean | null
           message: string
+          occurrence_id?: string | null
+          occurrence_revision?: number | null
           type: string
           user_id: string
         }
         Update: {
-          contact_id?: number
+          contact_id?: number | null
           created_at?: string | null
           email_envoye?: boolean
           event_date?: string | null
@@ -180,16 +305,78 @@ export type Database = {
           jours_restants?: number | null
           lue?: boolean | null
           message?: string
+          occurrence_id?: string | null
+          occurrence_revision?: number | null
           type?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "lot02_notification_occurrence_owner"
+            columns: ["user_id", "occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
           {
             foreignKeyName: "notifications_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      occurrences_evenements: {
+        Row: {
+          annulee: boolean
+          created_at: string
+          cycle: number
+          date_exception: boolean
+          date_occurrence: string
+          evenement_id: string
+          id: string
+          regle_id: string
+          revision: number
+          titre_historique: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          annulee?: boolean
+          created_at?: string
+          cycle: number
+          date_exception?: boolean
+          date_occurrence: string
+          evenement_id: string
+          id?: string
+          regle_id: string
+          revision?: number
+          titre_historique: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          annulee?: boolean
+          created_at?: string
+          cycle?: number
+          date_exception?: boolean
+          date_occurrence?: string
+          evenement_id?: string
+          id?: string
+          regle_id?: string
+          revision?: number
+          titre_historique?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot02_occurrence_regle_owner"
+            columns: ["user_id", "evenement_id", "regle_id"]
+            isOneToOne: false
+            referencedRelation: "regles_evenements"
+            referencedColumns: ["user_id", "evenement_id", "id"]
           },
         ]
       }
@@ -282,7 +469,7 @@ export type Database = {
       }
       rappels: {
         Row: {
-          contact_id: number
+          contact_id: number | null
           created_at: string
           date_envoi: string
           destinataire: string
@@ -291,6 +478,8 @@ export type Database = {
           event_description: string | null
           id: number
           message: string
+          occurrence_id: string | null
+          occurrence_revision: number | null
           sent_at: string | null
           source: string | null
           statut: string | null
@@ -301,7 +490,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          contact_id: number
+          contact_id?: number | null
           created_at?: string
           date_envoi: string
           destinataire: string
@@ -310,6 +499,8 @@ export type Database = {
           event_description?: string | null
           id?: never
           message: string
+          occurrence_id?: string | null
+          occurrence_revision?: number | null
           sent_at?: string | null
           source?: string | null
           statut?: string | null
@@ -320,7 +511,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          contact_id?: number
+          contact_id?: number | null
           created_at?: string
           date_envoi?: string
           destinataire?: string
@@ -329,6 +520,8 @@ export type Database = {
           event_description?: string | null
           id?: never
           message?: string
+          occurrence_id?: string | null
+          occurrence_revision?: number | null
           sent_at?: string | null
           source?: string | null
           statut?: string | null
@@ -340,11 +533,71 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "lot02_rappel_occurrence_owner"
+            columns: ["user_id", "occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
             foreignKeyName: "rappels_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      regles_evenements: {
+        Row: {
+          annee_naissance: number | null
+          created_at: string
+          date_ponctuelle: string | null
+          debut_cycle: number
+          evenement_id: string
+          fete_prenom_cle: string | null
+          fin_cycle: number | null
+          id: string
+          jour: number | null
+          mois: number | null
+          retiree: boolean
+          user_id: string
+        }
+        Insert: {
+          annee_naissance?: number | null
+          created_at?: string
+          date_ponctuelle?: string | null
+          debut_cycle: number
+          evenement_id: string
+          fete_prenom_cle?: string | null
+          fin_cycle?: number | null
+          id?: string
+          jour?: number | null
+          mois?: number | null
+          retiree?: boolean
+          user_id: string
+        }
+        Update: {
+          annee_naissance?: number | null
+          created_at?: string
+          date_ponctuelle?: string | null
+          debut_cycle?: number
+          evenement_id?: string
+          fete_prenom_cle?: string | null
+          fin_cycle?: number | null
+          id?: string
+          jour?: number | null
+          mois?: number | null
+          retiree?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot02_regle_owner"
+            columns: ["user_id", "evenement_id"]
+            isOneToOne: false
+            referencedRelation: "evenements_personnels"
+            referencedColumns: ["user_id", "id"]
           },
         ]
       }
@@ -418,11 +671,78 @@ export type Database = {
         }[]
       }
       desactiver_invitation: { Args: { p_id: string }; Returns: undefined }
+      enregistrer_evenement_lot02: { Args: { p_donnees: Json }; Returns: Json }
       est_contact_lie: {
         Args: { email_du_contact: string; mon_user_id: string }
         Returns: boolean
       }
       incrementer_quota_ia: { Args: { p_user_id: string }; Returns: number }
+      materialiser_occurrences_lot02: {
+        Args: { p_debut: string; p_fin: string }
+        Returns: {
+          annulee: boolean
+          created_at: string
+          cycle: number
+          date_exception: boolean
+          date_occurrence: string
+          evenement_id: string
+          id: string
+          regle_id: string
+          revision: number
+          titre_historique: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "occurrences_evenements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      materialiser_occurrences_serveur_lot02: {
+        Args: { p_debut: string; p_fin: string; p_user: string }
+        Returns: {
+          annulee: boolean
+          created_at: string
+          cycle: number
+          date_exception: boolean
+          date_occurrence: string
+          evenement_id: string
+          id: string
+          regle_id: string
+          revision: number
+          titre_historique: string
+          updated_at: string
+          user_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "occurrences_evenements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      modifier_occurrence_lot02: {
+        Args: {
+          p_annulee: boolean
+          p_date: string
+          p_id: string
+          p_revision: number
+        }
+        Returns: Json
+      }
+      preferences_evenement_lot02: {
+        Args: {
+          p_archive: boolean
+          p_arret: number
+          p_id: string
+          p_rappels: boolean
+          p_revision: number
+          p_visible: boolean
+        }
+        Returns: Json
+      }
       repondre_invitation: {
         Args: {
           p_date_naissance: string
@@ -458,6 +778,10 @@ export type Database = {
           prenom_hote: string
           succes: boolean
         }[]
+      }
+      supprimer_evenement_lot02: {
+        Args: { p_confirmer: boolean; p_id: string; p_revision: number }
+        Returns: undefined
       }
       verifier_invitation: {
         Args: { p_token: string }
@@ -600,4 +924,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

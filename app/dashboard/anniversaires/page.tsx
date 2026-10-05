@@ -1,10 +1,16 @@
 'use client'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
+import MissingContactBanner from '@/components/MissingContactBanner'
 
 import { useState, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { calculerProchainAnniversaire, formaterDateFR } from '@/lib/date-utils'
+import { formaterDateFR } from '@/lib/date-utils'
+import { parisDay, daysBetween, parseLocalDay } from '@/lib/calendar-day'
+import { shiftDay } from '@/lib/personal-events'
+import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents'
+import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
+import { ListSelector } from '@/components/PrivateLists'
 import { useDrawer } from '@/components/DrawerContext'
 import ProgressRing from '@/components/ProgressRing'
 
@@ -51,7 +57,11 @@ function SkeletonCard() {
 
 export default function AnniversairesPage() {
   const router = useRouter()
-  const { contacts, loading, error: listError, retry } = useContacts()
+  const { contacts: allContacts, loading, error: listError, retry } = useContacts()
+  const lists = usePrivateLists()
+  const today = parisDay()
+  const dates = usePersonalEvents(today, shiftDay(today, 399))
+  const contacts = lists.filter(allContacts)
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
@@ -62,28 +72,15 @@ export default function AnniversairesPage() {
 
   // ── Calcul des anniversaires (avec gestion date manquante) ──
   const { annivList, contactsSansDate } = useMemo(() => {
-    const resultats: ContactAvecAnniv[] = []
-    const sansDate: Contact[] = []
-
-    for (const contact of contacts) {
-      if (!contact.date_naissance) {
-        sansDate.push(contact)
-        continue
-      }
-
-      const { joursRestants, ageAVenir, date: prochainAnniv } =
-        calculerProchainAnniversaire(contact.date_naissance)
-
-      resultats.push({
-        contact,
-        joursRestants,
-        ageAVenir,
-        prochainAnniv,
-      })
-    }
-
-    return { annivList: resultats, contactsSansDate: sansDate }
-  }, [contacts])
+  const annivList: ContactAvecAnniv[] = []
+  const contactsSansDate: Contact[] = []
+  for (const contact of contacts) {
+    const next = dates.views.find(view => view.contact?.id === contact.id && view.kind === 'anniversaire')
+    if (!next) { contactsSansDate.push(contact); continue }
+    annivList.push({ contact, joursRestants: daysBetween(today, next.date), ageAVenir: next.age, prochainAnniv: parseLocalDay(next.date) })
+  }
+  return { annivList, contactsSansDate }
+  }, [contacts, dates.views, today])
 
   // ── Filtrage ──
   const annivListFiltree = useMemo(() => {
@@ -120,11 +117,14 @@ export default function AnniversairesPage() {
   }, [router])
 
   // ── Rendu ──
+  if (dates.error || lists.error) return <LoadFailure message={dates.error || lists.error} retry={() => { dates.retry(); lists.retry() }} />
+  if (dates.loading || lists.loading) return <p role="status">Chargement des anniversaires…</p>
   if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
 
       <main className="max-w-5xl mx-auto space-y-6">
+        <ListSelector state={lists} />
 
         {/* En-tête */}
         <header className="flex items-center justify-between">
@@ -142,37 +142,7 @@ export default function AnniversairesPage() {
         </header>
 
         {/* ⚠️ Section contacts sans date de naissance */}
-{contactsSansDate.length > 0 && (
-  <div className="bg-orange-500/10 border border-orange-500/30 rounded-2xl p-4 text-sm text-warning">
-    <div className="flex items-start gap-4">
-      {/* Texte à gauche */}
-      <div className="flex-1 min-w-0">
-        <p className="font-medium">
-          ⚠️ <strong>{contactsSansDate.length}</strong> contact{contactsSansDate.length > 1 ? 's' : ''} sans date de naissance
-        </p>
-        <p className="text-xs text-warning mt-1 break-words">
-          {contactsSansDate
-            .slice(0, 5)
-            .map(c => (c.prenom && c.prenom.trim() !== '' ? c.prenom : '(sans prénom)'))
-            .join(', ')}
-          {contactsSansDate.length > 5 ? `, +${contactsSansDate.length - 5} autre(s)` : ''}
-        </p>
-      </div>
-
-      {/* Bouton à droite */}
-      <button
-        onClick={() => router.push('/dashboard/contacts')}
-        className="flex-shrink-0 inline-flex items-center gap-2 px-4 py-2 rounded-xl
-                   bg-ink/5 hover:bg-ink/10
-                   border border-orange-500/40 hover:border-orange-400
-                   text-warning text-xs sm:text-sm font-medium
-                   transition"
-      >
-        ✏️ Compléter les dates
-      </button>
-    </div>
-  </div>
-)}
+        <MissingContactBanner contacts={contactsSansDate} reason="sans date de naissance" actionLabel="Compléter les dates" />
 
         {/* Barre de filtres + tri + vue */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">

@@ -8,6 +8,7 @@ import { createHash } from 'node:crypto';
 import { genererEmailRappel } from '@/lib/email-templates';
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { messageNeedsRescheduling, automaticReminderUseful } from '@/lib/reminder-policy';
+import { rappelOccurrenceCurrent } from '@/lib/rappel-occurrence';
 
 // 🔐 Secrets lus depuis les variables d'environnement (jamais en clair dans le code)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -96,6 +97,15 @@ export async function GET(request: NextRequest) {
 
     // 3️⃣ Boucle de traitement
     for (const rappel of rappels) {
+      try {
+        if (!await rappelOccurrenceCurrent(supabaseAdmin, rappel)) {
+          resultats.push({ id: rappel.id, statut: 'suspendu', raison: 'occurrence_modifiee_ou_suspendue' });
+          continue;
+        }
+      } catch {
+        resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Vérification de la date impossible' });
+        continue;
+      }
       const messageManuel = rappel.source === 'message_programme';
       if (!messageManuel && preferencesUnavailable) {
         resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Préférences indisponibles' });
@@ -134,7 +144,7 @@ export async function GET(request: NextRequest) {
       const expediteurEmail = expediteur.email || '';
 
       // 🤝 Contact (sécurisé contre null/undefined)
-      const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '' };
+      const contact = rappel.contacts || { prenom: 'Ami', nom: '', email: '', user_id: null };
 
       // 📍 Logique de destination
       let destEmail: string | string[];
@@ -154,7 +164,7 @@ export async function GET(request: NextRequest) {
           resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Destination inconnue' });
           continue;
       }
-      if (!rappel.contacts || contact.user_id !== rappel.user_id ||
+      if ((rappel.contacts ? contact.user_id !== rappel.user_id : !(rappel.occurrence_id && rappel.contact_id === null && rappel.destinataire === 'moi')) ||
           (rappel.destinataire !== 'contact' && !expediteurEmail) ||
           (rappel.destinataire !== 'moi' && !emailContactFallback)) {
         resultats.push({ id: rappel.id, statut: 'erreur', erreur: 'Contact ou adresse de destination invalide' });

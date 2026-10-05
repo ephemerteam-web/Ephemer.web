@@ -1,7 +1,7 @@
 import { readPages } from './pagination'
 import { supabase } from './supabase-browser'
 
-export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations', userId: string) {
+export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations' | 'listes_personnelles' | 'appartenances_listes' | 'evenements_personnels' | 'regles_evenements' | 'occurrences_evenements', userId: string) {
   const rows: Record<string, unknown>[] = []
   const order = table === 'notification_preferences' ? 'user_id' : 'id'
   // Les liens d'invitation sont des capacités d'accès : ne pas exporter leurs tokens.
@@ -18,9 +18,9 @@ export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications
 export async function exportOwnData() {
   const { data: { user }, error } = await supabase.auth.getUser()
   if (error || !user) throw new Error('Reconnecte-toi pour exporter tes données.')
-  const tables = ['profiles', 'contacts', 'rappels', 'notifications', 'notification_preferences', 'invitations'] as const
+  const tables = ['profiles', 'contacts', 'rappels', 'notifications', 'notification_preferences', 'invitations', 'listes_personnelles', 'appartenances_listes', 'evenements_personnels', 'regles_evenements', 'occurrences_evenements'] as const
   const result: Record<string, unknown> = {
-    format: 'ephemer-personal-export', version: 1, exported_at: new Date().toISOString(),
+    format: 'ephemer-personal-export', version: 2, exported_at: new Date().toISOString(),
     account: { id: user.id, email: user.email },
     limitations: 'Lecture paginée sans instantané transactionnel. Tokens d’invitation, secrets de session et clés push exclus. Les journaux des prestataires et sauvegardes ne sont pas inclus.',
   }

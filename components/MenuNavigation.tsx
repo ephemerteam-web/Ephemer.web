@@ -43,7 +43,6 @@ const GROUPES: Groupe[] = [
   {
     titre: 'Mes données',
     pages: [
-      { label: 'Données et diagnostic', chemin: '/dashboard/donnees', icone: '📋' },
       { label: 'Contacts', chemin: '/dashboard/contacts', icone: '👥' },
       { label: 'Inviter des contacts', chemin: '/dashboard/inviter', icone: '📩' }
     ],

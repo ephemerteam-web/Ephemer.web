@@ -50,7 +50,7 @@ test('invitations : une panne interdit le formulaire incomplet et le réessai r�
 
 test('profil : erreur persistante et réessai, valeurs nullables normalisées seulement dans le formulaire',async()=>{
   const db=pageDatabase({profiles:[{id:'u1',prenom:null,nom:null,date_naissance:null,telephone_indicatif:null,telephone_numero:null}]},{failAt:1})
-  const h=harness('app/dashboard/profil/page.tsx',{overrides:{'next/navigation':{useRouter:()=>nav},'@/lib/supabase-browser':{supabase:db},'@/components/Modal':{default:'modal'}}})
+  const h=harness('app/dashboard/profil/page.tsx',{overrides:{'next/navigation':{useRouter:()=>nav},'@/lib/supabase-browser':{supabase:db},'@/components/Modal':{default:'modal'},'@/components/PersonalDates':{default:'button'}}})
   h.render();await h.flush();h.render();assert.equal(h.nodes().filter(n=>n.type==='input').length,0)
   h.find(n=>typeof n.props.retry==='function').props.retry();h.render();await h.flush();h.render()
   assert.ok(h.nodes().some(n=>n.type==='input' && n.props.value===''))

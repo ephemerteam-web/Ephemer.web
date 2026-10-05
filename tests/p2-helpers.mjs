@@ -15,7 +15,19 @@ const saints = loadPure('lib/saints.ts','trouverSaintParPrenom')
 const months = loadPure('lib/month-events.ts','monthEvents,requestedMonth',{ ...calendar, ...saints })
 const journal = loadPure('lib/email-journal.ts','validateJournalResponse,emailJournalRpc')
 const ids = loadPure('lib/database-id.ts','databaseId')
-export const p2Helpers = { ...ids, ...journal, ...constants, ...calendar, ...preferences, ...pagination, ...gifts, ...months }
+const personal = loadPure('lib/personal-events.ts','eventViews,previewEventViews,monthWindow,shiftDay',{ ...calendar, ...months })
+const reminderPolicy = loadPure('lib/reminder-policy.ts','enabledMilestones',{ ...calendar, ...preferences })
+const occurrencePolicy = loadPure('lib/occurrence-reminders.ts','occurrenceNotifications,occurrenceRecap',{ ...calendar, ...reminderPolicy })
+const listHelpers = loadPure('lib/private-lists.ts','isUuid,contactsInList,changeMembership,renameList,readPrivateLists',pagination)
+const eventLoader = loadPure('lib/personal-event-data.ts','readEventData',{ ...calendar, ...pagination, ...personal })
+const rappelHelpers = loadPure('lib/rappel-occurrence.ts','rappelOccurrenceCurrent')
+const notificationPersistence = loadPure('lib/occurrence-notifications.ts','persistOccurrenceNotification')
+// Les anciennes fixtures ne contiennent aucune occurrence. Leur RPC simulée
+// retourne une table vide ; les nouveaux tests fournissent leur propre RPC.
+async function readEventData(client, ...args) {
+  return eventLoader.readEventData({ ...client, rpc: client.rpc ?? (() => pageDatabase({ rows: [] }).from('rows')) }, ...args)
+}
+export const p2Helpers = { ...ids, ...journal, ...constants, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, readEventData }
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {
@@ -28,6 +40,7 @@ export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = ()
       limit: size => { limit = Math.min(size, cap); return query },
       gt: (k,v) => { filters.push(row => row[k] > v); return query },
       eq: (k,v) => { filters.push(row => row[k] === v); return query },
+      is: (k,v) => { filters.push(row => row[k] === v); return query },
       or: expression => {
         if (expression !== 'lue.eq.false,lue.is.null') throw new Error('Filtre inattendu')
         filters.push(row => row.lue === false || row.lue === null); return query

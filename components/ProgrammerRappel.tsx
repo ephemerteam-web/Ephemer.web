@@ -6,6 +6,9 @@ import { programmerMessage } from "@/lib/rappels";
 import { DESTINATAIRES_RAPPEL } from "@/lib/constants";
 import type { Destinataire } from "@/lib/rappels";
 import { formaterDateFR, formatDateLocale } from "@/lib/date-utils";
+import { parisDay, parseLocalDay } from '@/lib/calendar-day';
+import { shiftDay } from '@/lib/personal-events';
+import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents';
 
 // ============================================================
 // 📌 TYPES
@@ -51,11 +54,17 @@ export default function ProgrammerRappel({
   message,
   tone,
   eventType,
-  datesPossibles,
+  datesPossibles: suppliedDates,
 }: Props) {
+  const todayParis = parisDay();
+  const dates = usePersonalEvents(todayParis, shiftDay(todayParis, 399));
+  const kind = eventType === 'fete_prenomale' || eventType === 'fete_prenom' ? 'fete_prenomale' : eventType;
+  const view = dates.views.find(row => row.contact?.id === Number(selectedContact.id) && row.kind === kind);
+  const canonical = dates.data?.events.some(row => row.contact_id === Number(selectedContact.id) && row.type_evenement === kind);
+  const datesPossibles = view ? { jourJ: parseLocalDay(view.date), j7: parseLocalDay(shiftDay(view.date, -7)), j1: parseLocalDay(shiftDay(view.date, -1)) } : canonical ? null : suppliedDates;
   const [destinataire, setDestinataire] = useState<Destinataire>("moi");
   const [dateEnvoi, setDateEnvoi] = useState<Date | null>(
-    datesPossibles?.jourJ ?? null
+    null
   );
 
   // 🆕 État pour la date personnalisée
@@ -85,7 +94,8 @@ export default function ProgrammerRappel({
     setProgrammation({ loading: true, success: false, error: "" });
 
     // 🛡️ Sécurité : on doit avoir une date
-    if (!dateEnvoi) {
+    const chosenDate = dateEnvoi ?? datesPossibles?.jourJ;
+    if (!chosenDate || dates.loading || dates.error) {
       setProgrammation({
         loading: false,
         success: false,
@@ -113,7 +123,8 @@ export default function ProgrammerRappel({
         message: message || "Message généré automatiquement",
         destinataire,
         emailUtilisateur: session.user.email || "",
-        dateOverride: dateEnvoi,
+        dateOverride: chosenDate,
+        occurrence: view?.occurrence ?? undefined,
         ton: tone,
         eventDate: datesPossibles ? formatDateLocale(datesPossibles.jourJ) : undefined,
       });
@@ -127,10 +138,12 @@ export default function ProgrammerRappel({
   }
 
   // 🆕 Date min pour le champ date = aujourd'hui (format YYYY-MM-DD)
-  const today = formatDateLocale(new Date());
+  const today = todayParis;
 
   return (
     <div className="bg-ink/5 rounded-xl p-4 border border-line space-y-4">
+      {dates.error && <p role="alert">{dates.error}<button className="min-h-11 underline" onClick={dates.retry}>Réessayer</button></p>}
+      {canonical && !view && <p role="status">Aucune occurrence affichée pour cet événement. Vérifie ses dates et préférences avant de programmer un message.</p>}
       <h3 className="font-semibold text-accent">📅 Programmer un rappel</h3>
 
       {/* Choix du destinataire */}
@@ -168,7 +181,7 @@ export default function ProgrammerRappel({
                   setDateEnvoi(date);
                 }}
                 className={`w-full text-left px-3 py-2 rounded-lg border transition ${
-                  !modePerso && dateEnvoi?.getTime() === date?.getTime()
+                  !modePerso && (dateEnvoi ?? datesPossibles?.jourJ)?.getTime() === date?.getTime()
                     ? "bg-action/20 border-accent text-ink"
                     : "bg-ink/5 border-line text-muted hover:bg-ink/10"
                 }`}
@@ -212,7 +225,7 @@ export default function ProgrammerRappel({
       {/* Bouton programmer */}
       <Button
         onClick={handleProgrammer}
-        disabled={programmation.loading || programmation.success || !message || !dateEnvoi}
+        disabled={programmation.loading || programmation.success || !message || !(dateEnvoi ?? datesPossibles?.jourJ) || dates.loading || !!dates.error}
         className="w-full"
       >
         {programmation.loading ? "⏳ Programmation..." : "✅ Programmer le rappel"}

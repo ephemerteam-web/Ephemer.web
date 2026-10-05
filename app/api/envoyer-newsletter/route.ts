@@ -1,7 +1,8 @@
 // 📰 Newsletter mensuelle, traitements par lots et réservation d’envoi conservée.
 import { NextRequest, NextResponse } from 'next/server'
 import { parisDay, parseLocalDay } from '@/lib/calendar-day'
-import { monthEvents } from '@/lib/month-events'
+import { readEventData } from '@/lib/personal-event-data'
+import { eventViews, monthWindow } from '@/lib/personal-events'
 import { readPages, readAllRows } from '@/lib/pagination'
 import { deliverEmail } from '@/lib/email-delivery'
 import { supabaseAdmin } from '@/lib/supabase-admin'
@@ -24,10 +25,10 @@ export async function GET(request: NextRequest) {
       for (const profil of profils) {
         if (!profil.email) continue
         try {
-          const contacts = await readAllRows(() => supabaseAdmin.from('contacts')
-            .select('id, prenom, nom, date_naissance').eq('user_id', profil.id))
-          const evenements = monthEvents(contacts, mois, annee).map(e => ({ prenomContact: e.prenom,
-            nomContact: e.nom, typeEvenement: e.typeEvenement, jour: e.jour, emoji: e.emoji }))
+          const { start, end } = monthWindow(mois, annee)
+          const dates = await readEventData(supabaseAdmin, profil.id, start, end, true)
+          const evenements = eventViews(dates, start, end).map(e => ({ prenomContact: e.title,
+            nomContact: '', typeEvenement: e.kind === 'fete_prenomale' ? 'fete_prenomale' : e.kind, jour: Number(e.date.slice(8)), emoji: e.kind === 'anniversaire' ? '🎂' : '🎉' }))
           const html = genererNewsletterMensuelle({ prenomUtilisateur: profil.prenom || 'cher utilisateur',
             moisLibelle: moisLibelle.charAt(0).toUpperCase() + moisLibelle.slice(1), evenements })
           const result = await deliverEmail({ key: `newsletter/${profil.id}/${annee}-${mois + 1}`,

@@ -9,6 +9,10 @@ import type { EmailJob } from '@/lib/email-delivery';
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { echapperHtml } from '@/lib/email-html';
+import { readEventData } from '@/lib/personal-event-data';
+import { eventViews, shiftDay, type EventData } from '@/lib/personal-events';
+import { occurrenceNotifications, occurrenceRecap } from '@/lib/occurrence-reminders';
+import { persistOccurrenceNotification } from '@/lib/occurrence-notifications';
 
 type User = { id: string; email: string | null; prenom?: string | null; nom?: string | null };
 
@@ -45,9 +49,8 @@ export async function GET(request: Request) {
   }
 }
 
-async function generateUserEvents(userId: string, contacts: BirthdayContact[], prefs: ReminderPreferences | null, today: string) {
+async function generateUserEvents(userId: string, contacts: BirthdayContact[], prefs: ReminderPreferences | null, today: string, dates?: EventData) {
   const rows = birthdayNotifications(userId, contacts, prefs, today);
-  if (!rows.length) return 0;
   let inserted = 0;
   for (const batch of batches(rows)) {
     const { data, count, error } = await supabaseAdmin.from('notifications')
@@ -56,17 +59,21 @@ async function generateUserEvents(userId: string, contacts: BirthdayContact[], p
     if (error) throw error;
     inserted += count ?? data?.length ?? 0;
   }
+  if (dates) for (const row of occurrenceNotifications(userId, eventViews(dates, today, shiftDay(today, 7), true), prefs, today)) {
+    inserted += await persistOccurrenceNotification(supabaseAdmin, row);
+  }
   return inserted;
 }
 
-async function deliverUserPending(user: User, contacts: BirthdayContact[], prefs: ReminderPreferences | null, today: string) {
+async function deliverUserPending(user: User, contacts: BirthdayContact[], prefs: ReminderPreferences | null, today: string, dates?: EventData) {
   if (!resolvePreferences(prefs).canal_email || !user.email) return 0;
   // La livraison dépend de la file persistante, jamais de nouvelles insertions.
   // Inclure les paliers déjà envoyés permet d'écarter un ancien palier superflu.
   const data = await readAllRows(() => supabaseAdmin.from('notifications')
-    .select('id, contact_id, event_date, jours_restants, email_envoye')
-    .eq('user_id', user.id).eq('type', 'anniversaire').gte('event_date', today));
-  const groups = selectBirthdayRecap(data || [], contacts, prefs, today);
+    .select('id, contact_id, type, occurrence_id, occurrence_revision, event_date, jours_restants, email_envoye')
+    .eq('user_id', user.id).gte('event_date', today));
+  const groups = [...selectBirthdayRecap((data || []).filter((row): row is typeof row & { contact_id: number } => row.contact_id !== null && !row.occurrence_id && row.type === 'anniversaire'), contacts, prefs, today),
+    ...(dates ? occurrenceRecap(data, eventViews(dates, today, shiftDay(today, 7), true), prefs, today) : [])];
   if (!groups.length) return 0;
   const ids = groups.flatMap(group => group.ids).sort();
   const emails = groups.map(({ contact, date, jours }) => ({ contact, date, jours }));
@@ -83,8 +90,8 @@ async function deliverUserPending(user: User, contacts: BirthdayContact[], prefs
 }
 
 async function processUser(user: User, today = parisDay()) {
-  const contacts = await readAllRows(() => supabaseAdmin.from('contacts')
-    .select('id, prenom, nom, date_naissance').eq('user_id', user.id));
+  const dates = await readEventData(supabaseAdmin, user.id, today, shiftDay(today, 7), true);
+  const contacts = dates.contacts.filter(contact => !dates.events.some(event => event.contact_id === contact.id && event.type_evenement === 'anniversaire'));
   const { data: prefs, error: prefsError } = await supabaseAdmin.from('notification_preferences')
     .select('*').eq('user_id', user.id).maybeSingle();
   if (prefsError) throw prefsError;
@@ -96,7 +103,7 @@ async function processUser(user: User, today = parisDay()) {
     catch { if (!errors.includes('journal')) errors.push('journal'); }
   }
   try {
-    notifs = await generateUserEvents(user.id, contacts || [], prefs, today);
+    notifs = await generateUserEvents(user.id, contacts || [], prefs, today, dates);
     await journal('generation', true);
   } catch (error) {
     console.error('Échec génération notifications', user.id, error);
@@ -105,7 +112,9 @@ async function processUser(user: User, today = parisDay()) {
   }
   // Même si la génération échoue, essayer de livrer la file déjà enregistrée.
   try {
-    emails = await deliverUserPending(user, contacts || [], prefs, today);
+    const currentDates = await readEventData(supabaseAdmin, user.id, today, shiftDay(today, 7), true, false);
+    const currentContacts = currentDates.contacts.filter(contact => !currentDates.events.some(event => event.contact_id === contact.id && event.type_evenement === 'anniversaire'));
+    emails = await deliverUserPending(user, currentContacts, prefs, today, currentDates);
     await journal('livraison', true);
   } catch (error) {
     console.error('Échec livraison récapitulatif', user.id, error);

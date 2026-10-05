@@ -112,6 +112,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
     {
       titre: 'Compte',
       items: [
+        { label: 'Données et diagnostic', chemin: '/dashboard/donnees', icone: '📋' },
         {
           label: 'Déconnexion',
           icone: '🚪',

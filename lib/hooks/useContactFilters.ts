@@ -16,6 +16,7 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
   const [recherche, setRecherche] = useState('')
   const [triPar, setTriPar] = useState<TriContact>('nom')
   const [filtreRelation, setFiltreRelation] = useState<string>('tous')
+  const [favorisUniquement, setFavorisUniquement] = useState(false)
 
   const contactsFiltres = useMemo(() => {
     return [...contacts]
@@ -33,10 +34,13 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
         const matchRelation =
           filtreRelation === 'tous' || relation === filtreRelation
 
-        return matchRecherche && matchRelation
+        // Ce filtre utilise le favori existant, sans modifier la fiche du contact.
+        const matchFavori = !favorisUniquement || contact.est_favori === true
+
+        return matchRecherche && matchRelation && matchFavori
       })
       .sort((a, b) => compareContactNames(a, b, triPar))
-  }, [contacts, recherche, triPar, filtreRelation])
+  }, [contacts, recherche, triPar, filtreRelation, favorisUniquement])
 
   return {
     recherche,
@@ -45,6 +49,8 @@ export function useContactFilters<T extends ContactFiltrable>(contacts: T[]) {
     setTriPar,
     filtreRelation,
     setFiltreRelation,
+    favorisUniquement,
+    setFavorisUniquement,
     contactsFiltres,
   }
 }

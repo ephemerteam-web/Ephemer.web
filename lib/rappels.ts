@@ -3,6 +3,7 @@ import { databaseId } from './database-id'
 import { parseLocalDay } from './calendar-day'
 import { supabase } from './supabase-browser'
 import { calculerDateEvenement, formatDateLocale, TypeEvenement } from './date-utils'
+import type { Occurrence } from './personal-events'
 
 // ============================================================
 // 🔔 RAPPELS AUTOMATIQUES
@@ -133,6 +134,7 @@ export async function annulerRappelsContact(userId: string, contactId: string) {
 export type Destinataire = 'moi' | 'contact' | 'les_deux'
 
 export interface ParametresMessageProgramme {
+  occurrence?: Pick<Occurrence, 'id' | 'revision' | 'date_occurrence'>
   userId: string
   contactId: string
   contact: {
@@ -253,7 +255,7 @@ export async function programmerMessage(params: ParametresMessageProgramme) {
 
   const { data, error } = await supabase
     .from('rappels')
-    .insert(entrees)
+    .insert(entrees.map(row => params.occurrence ? { ...row, occurrence_id: params.occurrence.id, occurrence_revision: params.occurrence.revision, event_date: params.occurrence.date_occurrence } : row))
     .select()
 
   if (error) {

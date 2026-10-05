@@ -129,6 +129,7 @@ export default function NotificationBell() {
   async function handleNotificationClick(notif: Notification) {
     marquerLue(notif.id)
     setOuvert(false)
+    if (notif.contact_id === null) return
 
 
     const scope = scopeRef.current
@@ -145,7 +146,7 @@ export default function NotificationBell() {
     }
 
     // 👈 un contact venu d'une invitation est un contact "lié"
-    const estLie = notif.type === 'invitation_remplie'
+    const estLie = false
 
     ouvrirDrawer({ ...contact, estLie })
   }

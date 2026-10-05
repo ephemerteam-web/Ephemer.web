@@ -2,8 +2,12 @@
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
-import { birthdayInYear, isCalendarDay, nextBirthdayDay, parseLocalDay, daysBetween } from '@/lib/calendar-day'
-import { formatDateLocale } from '@/lib/date-utils'
+import { parisDay, parseLocalDay, daysBetween } from '@/lib/calendar-day'
+import { shiftDay } from '@/lib/personal-events'
+import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents'
+import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
+import { ListSelector } from '@/components/PrivateLists'
+import PersonalDates, { EventAgenda } from '@/components/PersonalDates'
 
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -15,14 +19,19 @@ import SaintDuJour from '@/components/SaintDuJour'
 
 
 
-type Contact = import('@/types/database').Contact
 
 export default function Dashboard() {
   const router = useRouter()
   const user = useDashboardUser()
   const userName = user.email.split('@')[0] || null
   const { contacts: allContacts, loading, error: listError, retry } = useContacts()
-  const contacts = useMemo(() => allContacts.filter(contact => contact.est_favori), [allContacts])
+  const lists = usePrivateLists()
+  const today = parisDay()
+  const dates = usePersonalEvents(shiftDay(today, -7), shiftDay(today, 399))
+  const filtered = lists.filter(allContacts)
+  const contacts = filtered.filter(contact => contact.est_favori)
+  const ids = new Set(filtered.map(contact => contact.id))
+  const views = dates.views.filter(view => !lists.selected || (view.contact !== null && ids.has(view.contact.id)))
   const profile = user.prenom ? { prenom: user.prenom } : null
   const [aideOuverte, setAideOuverte] = useState(false)
   const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | number | null>(null)
@@ -37,102 +46,17 @@ export default function Dashboard() {
     return SAINTS.filter((s) => s.date === `${mois}-${jour}`)
   }, [])
 
-  const { anniversairesAujourdhui, anniversairesPassés, anniversairesBientot } = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+  const birthdays = views.filter(view => view.kind === 'anniversaire' && view.contact?.est_favori)
+  const anniversairesAujourdhui = birthdays.filter(view => view.date === today).map(view => view.contact!)
+  const anniversairesPassés = birthdays.filter(view => daysBetween(today, view.date) >= -7 && view.date < today).map(view => ({ ...view.contact!, joursPassés: -daysBetween(today, view.date) }))
+  const anniversairesBientot = birthdays.filter(view => view.date > today && daysBetween(today, view.date) <= 30).map(view => ({ ...view.contact!, joursRestants: daysBetween(today, view.date) }))
+  const favoris = contacts.map(contact => {
+    const next = views.find(view => view.contact?.id === contact.id && view.date >= today && ['anniversaire', 'fete_prenomale'].includes(view.kind))
+    return { ...contact, prochainEvent: next ? { type: next.kind === 'anniversaire' ? 'anniversaire' as const : 'fete_prenom' as const, date: parseLocalDay(next.date), jours: daysBetween(today, next.date) } : null }
+  }).sort((a, b) => (a.prochainEvent?.jours ?? Infinity) - (b.prochainEvent?.jours ?? Infinity))
 
-    const prochainAnniv = (dateNaissance: string): Date => {
-      const anniv = parseLocalDay(birthdayInYear(dateNaissance, today.getFullYear()))
-      return anniv
-    }
-
-    const diffJours = (d: Date): number => {
-      return daysBetween(formatDateLocale(today), formatDateLocale(d))
-    }
-
-    const aujourd: Contact[] = []
-    const passés: (Contact & { joursPassés: number })[] = []
-    const bientot: (Contact & { joursRestants: number })[] = []
-
-    for (const c of contacts) {
-      if (!c.date_naissance || !isCalendarDay(c.date_naissance)) continue
-      const anniv = prochainAnniv(c.date_naissance)
-      const diff = diffJours(anniv)
-
-      if (diff === 0) {
-        aujourd.push(c)
-      } else if (diff < 0 && diff >= -7) {
-        passés.push({ ...c, joursPassés: Math.abs(diff) })
-      } else if (diff > 0 && diff <= 30) {
-        bientot.push({ ...c, joursRestants: diff })
-      }
-    }
-
-    passés.sort((a, b) => a.joursPassés - b.joursPassés)
-    bientot.sort((a, b) => a.joursRestants - b.joursRestants)
-
-        return {
-      anniversairesAujourdhui: aujourd,
-      anniversairesPassés: passés,
-      anniversairesBientot: bientot,
-    }
-  }, [contacts])
-
-  // ============================================
-  // ⭐ FAVORIS + leur prochain événement (anniv OU fête prénom)
-  // ============================================
-  const favoris = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const prochaineFetePrenom = (prenom: string): Date | null => {
-      const prenomNorm = prenom.trim().toLowerCase()
-      const saintTrouve = SAINTS.find((s) =>
-        s.prenoms.some((p) => p.trim().toLowerCase() === prenomNorm)
-      )
-      if (!saintTrouve) return null
-      const [mois, jour] = saintTrouve.date.split('-').map(Number)
-      const dateFete = new Date(today.getFullYear(), mois - 1, jour)
-      if (dateFete < today) dateFete.setFullYear(dateFete.getFullYear() + 1)
-      return dateFete
-    }
-
-    const prochainAnniv = (dateNaissance: string): Date => {
-      const anniv = parseLocalDay(nextBirthdayDay(dateNaissance, formatDateLocale(today)))
-      return anniv
-    }
-
-    const diffJours = (d: Date): number =>
-      daysBetween(formatDateLocale(today), formatDateLocale(d))
-
-    return contacts
-      .filter((c) => c.est_favori)
-      .map((c) => {
-        const dateAnniv = c.date_naissance && isCalendarDay(c.date_naissance) ? prochainAnniv(c.date_naissance) : null
-        const dateFete = prochaineFetePrenom(c.prenom ?? '')
-
-        let prochainEvent: { type: 'anniversaire' | 'fete_prenom'; date: Date; jours: number } | null = null
-
-        if (dateAnniv) {
-          prochainEvent = { type: 'anniversaire', date: dateAnniv, jours: diffJours(dateAnniv) }
-        }
-        if (dateFete) {
-          const joursFete = diffJours(dateFete)
-          if (!prochainEvent || joursFete < prochainEvent.jours) {
-            prochainEvent = { type: 'fete_prenom', date: dateFete, jours: joursFete }
-          }
-        }
-
-        return { ...c, prochainEvent }
-      })
-      .sort((a, b) => {
-        if (!a.prochainEvent) return 1
-        if (!b.prochainEvent) return -1
-        return a.prochainEvent.jours - b.prochainEvent.jours
-      })
-  }, [contacts])
-
-  if (loading) {
+  if (dates.error || lists.error) return <LoadFailure message={dates.error || lists.error} retry={() => { dates.retry(); lists.retry() }} />
+  if (loading || dates.loading || lists.loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -197,6 +121,8 @@ export default function Dashboard() {
   if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
+      <div className="flex flex-wrap items-end gap-3"><ListSelector state={lists} /><PersonalDates contacts={allContacts} onSaved={dates.retry} /></div>
+      <EventAgenda views={views.filter(view => view.date >= today && daysBetween(today, view.date) <= 30)} title="Événements à venir" />
 
 
       {/* ============ EN-TÊTE ============ */}
@@ -458,7 +384,7 @@ export default function Dashboard() {
       {/* ============ FOOTER ============ */}
       <div className="mt-10 pt-6 border-t border-line text-center space-y-3">
         <p className="text-info text-sm">
-          Made with 💜 • Version Alpha 0.7 ou 0.8 ? who knows ?
+          Made with 💜 • Version Alpha 0.8
         </p>
 
         <div className="flex justify-center gap-2 flex-wrap">

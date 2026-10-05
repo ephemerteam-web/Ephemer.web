@@ -25,6 +25,7 @@ function database(tables, operations) {
       eq: (key, value) => { filters.push([key, value]); return query },
       in: (key, value) => { filters.push([key, value]); return query },
       gte: (key, value) => { filters.push([key, value]); return query },
+      lte: (key, value) => { filters.push([key, value]); return query },
       upsert: () => { action = 'upsert'; return query },
       update: () => { action = 'update'; return query },
       then(resolve) {
@@ -61,8 +62,8 @@ const tables = {
   contacts: [{ id: 12, prenom: 'Test', date_naissance: '2000-09-19' }],
   notification_preferences: { canal_email: true, rappel_jourj: true },
   notifications: [
-    { id: 'n1', contact_id: 12, event_date: '2026-09-19', jours_restants: 0 },
-    { id: 'other', contact_id: 99, event_date: '2026-09-19', jours_restants: 0 },
+    { id: 'n1', type: 'anniversaire', contact_id: 12, event_date: '2026-09-19', jours_restants: 0 },
+    { id: 'other', type: 'anniversaire', contact_id: 99, event_date: '2026-09-19', jours_restants: 0 },
   ],
 }
 test('récapitulatif : seuls les IDs inclus sont marqués, clé stable transmise', async () => {

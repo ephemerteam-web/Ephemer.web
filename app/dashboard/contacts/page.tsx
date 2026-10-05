@@ -1,6 +1,9 @@
 'use client'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
+import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
+import { ListSelector, ManageLists } from '@/components/PrivateLists'
+import PersonalDates from '@/components/PersonalDates'
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -21,6 +24,7 @@ type ContactAvecLien = Contact & {
 export default function ContactsPage() {
   const router = useRouter()
   const { contacts: rows, loading, error: listError, retry } = useContacts()
+  const lists = usePrivateLists()
   const contacts = useMemo(() => rows.map(contact => ({ ...contact, estLie: false })), [rows])
   const { ouvrirDrawer } = useDrawer()
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
@@ -32,8 +36,10 @@ export default function ContactsPage() {
     setTriPar,
     filtreRelation,
     setFiltreRelation,
+    favorisUniquement,
+    setFavorisUniquement,
     contactsFiltres,
-  } = useContactFilters(contacts)
+  } = useContactFilters(lists.filter(contacts))
 
   // Reference pour la liste de contacts (pour le scroll)
   const listRef = useRef<HTMLDivElement>(null)
@@ -119,9 +125,10 @@ export default function ContactsPage() {
   }
 
   if (listError) return <LoadFailure message={listError} retry={retry} />
+  if (lists.error) return <LoadFailure message={lists.error} retry={lists.retry} />
 
   // Etat de chargement
-  if (loading) {
+  if (loading || lists.loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh] px-4">
         <div className="text-center">
@@ -194,6 +201,17 @@ export default function ContactsPage() {
             })}
           </div>
 
+          <label className="mb-3 flex min-h-11 w-fit cursor-pointer items-center gap-2 text-sm text-ink">
+            <input
+              type="checkbox"
+              checked={favorisUniquement}
+              onChange={(event) => setFavorisUniquement(event.target.checked)}
+              className="h-5 w-5 accent-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            />
+            Favoris uniquement
+          </label>
+          <div className="mb-3 flex flex-wrap items-end gap-3"><ListSelector state={lists} /><ManageLists state={lists} contacts={rows} /><PersonalDates contacts={rows} onSaved={retry} /></div>
+
           {/* Tri + Boutons d'action */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="relative min-w-0 max-w-full">
@@ -259,7 +277,7 @@ export default function ContactsPage() {
           <div className="text-center mt-16">
             <span className="text-6xl mb-4 block">🔍</span>
             <p className="text-info">
-              Aucun contact ne correspond à ta recherche.
+              Aucun contact ne correspond à tes filtres.
             </p>
           </div>
         ) : (

@@ -2,6 +2,8 @@
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import LoadFailure from '@/components/LoadFailure'
 import Link from 'next/link'
+import PersonalDates from '@/components/PersonalDates'
+import type { Contact } from '@/types/database'
 import { createRequestScope } from '@/lib/request-scope'
 
 import { useContactDraft } from '@/components/ContactDraftProvider'
@@ -24,6 +26,8 @@ export default function ModifierContact() {
   const [prenom, setPrenom] = useState('')
   const [nom, setNom] = useState('')
   const [dateNaissance, setDateNaissance] = useState('')
+  const [loadedContact, setLoadedContact] = useState<Contact | null>(null)
+  const [canonicalBirth, setCanonicalBirth] = useState(false)
   const [relation, setRelation] = useState('ami')
   const [email, setEmail] = useState('')
   const [telephoneIndicatif, setTelephoneIndicatif] = useState('+33')
@@ -47,6 +51,11 @@ export default function ModifierContact() {
       if (!scope.current()) return
       if (error) { setLoadError('Impossible de charger ce contact. Réessaie.'); setChargement(false); return }
       if (!data) { setMissing(true); setChargement(false); return }
+      const { data: birthdays, error: birthdayError } = await supabase.from('evenements_personnels').select('id').eq('user_id', user.id).eq('contact_id', contactId).eq('type_evenement', 'anniversaire')
+      if (!scope.current()) return
+      if (birthdayError) throw birthdayError
+      setCanonicalBirth(!!birthdays?.length)
+      setLoadedContact(data)
 
       setPrenom(data.prenom ?? '')
       setNom(data.nom || '')
@@ -75,7 +84,7 @@ export default function ModifierContact() {
       .update({
         prenom,
         nom,
-        date_naissance: dateNaissance || null,
+        ...(!canonicalBirth ? { date_naissance: dateNaissance || null } : {}),
         relation: normalizeRelation(relation),
         email: email || null,
         telephone_indicatif: telephoneNumero ? telephoneIndicatif : null,
@@ -169,6 +178,7 @@ export default function ModifierContact() {
             </label>
             <input
               id="dateNaissance"
+              disabled={canonicalBirth}
               type="date"
               value={dateNaissance}
               onChange={(e) => setDateNaissance(e.target.value)}
@@ -315,6 +325,9 @@ export default function ModifierContact() {
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
         </form>
+        <div className="my-4"><PersonalDates contacts={loadedContact ? [loadedContact] : []} contactId={contactId} onSaved={() => { setChargement(true); setAttempt(value => value + 1) }} />
+          {canonicalBirth && <p className="text-sm text-muted">L’anniversaire se modifie dans les dates personnelles, avec une année facultative.</p>}
+        </div>
 
         {/* Suppression */}
         <div className="mt-6 border-t border-line pt-4">
