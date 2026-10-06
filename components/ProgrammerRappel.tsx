@@ -42,6 +42,7 @@ type Props = {
   tone: string;
   eventType: string;
   datesPossibles?: DatesPossibles | null; // ✅ optionnel maintenant
+  occurrenceId?: string | null;
 };
 
 // ============================================================
@@ -55,12 +56,13 @@ export default function ProgrammerRappel({
   tone,
   eventType,
   datesPossibles: suppliedDates,
+  occurrenceId,
 }: Props) {
   const todayParis = parisDay();
   const dates = usePersonalEvents(todayParis, shiftDay(todayParis, 399));
   const kind = eventType === 'fete_prenomale' || eventType === 'fete_prenom' ? 'fete_prenomale' : eventType;
-  const view = dates.views.find(row => row.contact?.id === Number(selectedContact.id) && row.kind === kind);
-  const canonical = dates.data?.events.some(row => row.contact_id === Number(selectedContact.id) && row.type_evenement === kind);
+  const view = dates.views.find(row => row.contact?.id === Number(selectedContact.id) && row.kind === kind && (!occurrenceId || row.occurrence?.id === occurrenceId));
+  const canonical = Boolean(occurrenceId) || dates.data?.events.some(row => row.contact_id === Number(selectedContact.id) && row.type_evenement === kind);
   const datesPossibles = view ? { jourJ: parseLocalDay(view.date), j7: parseLocalDay(shiftDay(view.date, -7)), j1: parseLocalDay(shiftDay(view.date, -1)) } : canonical ? null : suppliedDates;
   const [destinataire, setDestinataire] = useState<Destinataire>("moi");
   const [dateEnvoi, setDateEnvoi] = useState<Date | null>(
@@ -95,7 +97,7 @@ export default function ProgrammerRappel({
 
     // 🛡️ Sécurité : on doit avoir une date
     const chosenDate = dateEnvoi ?? datesPossibles?.jourJ;
-    if (!chosenDate || dates.loading || dates.error) {
+    if (!chosenDate || dates.loading || dates.error || (occurrenceId && !view)) {
       setProgrammation({
         loading: false,
         success: false,

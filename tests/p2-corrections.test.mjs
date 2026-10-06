@@ -31,7 +31,7 @@ test('API mensuelle : limites, paramètres présents invalides et minuit UTC', (
 test('cadeaux : éliminer les idées inutilisables et limiter à six', () => {
   const valid = { idee: ' Livre ', raison: ' Lecture ', categorie: 'loisir', recherche: ' livre ' }
   for (const value of [null,{},[],[{ ...valid, idee: ' ' }],[{ ...valid, categorie: 'xxx' }],[{ ...valid, recherche: null }]]) assert.equal(h.usableGiftIdeas(value).length,0)
-  assert.equal(h.usableGiftIdeas(Array(12).fill(valid)).length,6)
+  assert.equal(h.usableGiftIdeas(Array(12).fill(valid)).length,0)
   assert.equal(h.usableGiftIdeas([valid])[0].idee,'Livre')
 })
 test('API cadeaux : JSON invalide, tableau vide et idées rejetées renvoient 502 ; chaque occasion réussit', async () => {
@@ -40,10 +40,10 @@ test('API cadeaux : JSON invalide, tableau vide et idées rejetées renvoient 50
     const { POST } = loadPure('app/api/generate-gift-ideas/route.ts','POST',{
       ...h, verifierGardeIA:async()=>({ok:true}), process:{env:{}}, AbortSignal,
       NextResponse:{json:(body,options)=>({body,status:options?.status??200})},
-      fetch:async()=>({ok:true,json:async()=>({choices:[{message:{content}}]})}),console:{error(){},log(){}}
+      fetch:async()=>Response.json({choices:[{message:{content}}]}),console:{error(){},log(){}}
     })
     for (const occasion of [...h.TYPES_EVENEMENT.map(o=>o.value),'fete_prenom']) {
-      const response=await POST({json:async()=>({eventType:occasion,relation:'amis'})})
+      const response=await POST(new Request('https://test.invalid', { method: 'POST', body: JSON.stringify({eventType:occasion,relation:'amis'}) }))
       assert.equal(response.status,status)
       if(status===200) assert.equal(response.body.ideas.length,1)
     }

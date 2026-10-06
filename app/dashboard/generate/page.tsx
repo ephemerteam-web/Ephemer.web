@@ -14,15 +14,31 @@ import { isCalendarDay, parseLocalDay } from '@/lib/calendar-day'
 import { chosenNameDay, nameDays } from '@/lib/name-days'
 import { canGenerate, contactDisplayName, generatorReducer, initialGeneratorState, searchGeneratorContacts, type GeneratorContact } from '@/lib/message-generator'
 import ProgrammerRappel from '@/components/ProgrammerRappel'
+import AIConsent from '@/components/AIConsent'
+import { SavePreparationMessage } from '@/components/GeneratorAttention'
+import type { AIContactField } from '@/lib/ai-consent'
+import { MESSAGE_LENGTHS } from '@/lib/ai-options'
+import { readStyleBook } from '@/lib/personal-preferences'
+import { resolveMessageStyle, styleSettings } from '@/lib/message-styles'
+import { useAttentionLoad } from '@/components/AttentionShared'
 
 const fieldClass = 'min-h-11 w-full min-w-0 max-w-full rounded-xl border border-line bg-canvas px-3 py-2 text-base text-ink focus-visible:outline-2 focus-visible:outline-accent'
 const secondaryButtonClass = 'min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-ink/10 disabled:opacity-50'
 const otherOccasions = TYPES_EVENEMENT.filter(event => event.value !== 'anniversaire' && event.value !== 'fete_prenomale')
 
-function GenerateForm({ contactId, initialOccasion }: { contactId: string | null; initialOccasion: string | null }) {
-  const [state, dispatch] = useReducer(generatorReducer, initialOccasion, initialGeneratorState)
+function GenerateForm({ contactId, initialOccasion, occurrenceId }: { contactId: string | null; initialOccasion: string | null; occurrenceId?: string | null }) {
+  const [consent, setConsent] = useState<{ contact: number | null; fields: AIContactField[] }>({ contact: null, fields: [] })
+  const [state, reduce] = useReducer(generatorReducer, initialOccasion, initialGeneratorState)
+  const temporarySettings = useRef(false)
+  const appliedContext = useRef('')
+  const dispatch: typeof reduce = action => {
+    if (['tone', 'length', 'addressing', 'emojis', 'signature', 'relation', 'style'].includes(action.type)) temporarySettings.current = true
+    if (['contact', 'manual', 'clear'].includes(action.type)) temporarySettings.current = false
+    reduce(action)
+  }
   const [contacts, setContacts] = useState<GeneratorContact[]>([])
   const user = useDashboardUser()
+  const styleBook = useAttentionLoad(user.id + ':generator-styles', () => readStyleBook(user.id))
   const session = { user }
   const [contactsLoading, setContactsLoading] = useState(true)
   const [contactsError, setContactsError] = useState('')
@@ -56,7 +72,7 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
         setContacts(loaded)
         if (contactId && !recipientTouchedRef.current) {
           const contact = loaded.find(item => String(item.id) === contactId)
-          if (contact) dispatch({ type: 'contact', contact })
+          if (contact) { appliedContext.current = ''; reduce({ type: 'contact', contact }) }
           else setPrefillWarning('Ce contact n’est plus disponible. Choisis un autre destinataire.')
         }
       } catch (error) {
@@ -68,6 +84,19 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
     void loadContacts()
     return () => { active = false }
   }, [contactId, retry, user.id])
+
+  // Appliquer le style une seule fois par destinataire ; une saisie temporaire reste prioritaire.
+  useEffect(() => {
+    if (!styleBook.data || contactsLoading) return
+    const context = user.id + ':' + (state.contact?.id ?? (state.manual ? 'manual' : 'empty'))
+    if (appliedContext.current === context) return
+    appliedContext.current = context
+    if (temporarySettings.current) return
+    const book = styleBook.data
+    const assigned = book.contacts.find(p => p.contact_id === state.contact?.id)?.style_id ?? null
+    const settings = resolveMessageStyle(book.styles, book.defaultPreference?.style_id ?? null, assigned)
+    if (settings) reduce({ type: 'style', settings })
+  }, [styleBook.data, contactsLoading, state.contact?.id, state.manual, user.id])
 
   useEffect(() => () => { if (copyTimerRef.current) clearTimeout(copyTimerRef.current) }, [])
 
@@ -109,6 +138,8 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
   }
 
   function chooseContact(contact: GeneratorContact) {
+    appliedContext.current = ''
+    setConsent({ contact: null, fields: [] })
     recipientTouchedRef.current = true
     dispatch({ type: 'contact', contact })
     setSearch('')
@@ -118,6 +149,8 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
   }
 
   function changeRecipient(manual = false) {
+    appliedContext.current = ''
+    setConsent({ contact: null, fields: [] })
     recipientTouchedRef.current = true
     dispatch({ type: manual ? 'manual' : 'clear' })
     setSearch('')
@@ -145,14 +178,16 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
   }
 
   async function handleGenerate() {
-    if (!session || !canGenerate(state) || pendingRef.current) return
+    if (!session || !canGenerate(state) || pendingRef.current || !styleBook.data) return
     pendingRef.current = true
     resetFeedback()
     dispatch({ type: 'begin' })
     try {
       // Interface existante conservée ; les informations inutilisées restent vides.
       const text = await genererMessage({ firstName, lastName: '', age: null, relation: state.relation, tone: state.tone,
-        eventType: state.eventType, eventDate: null, eventDescription: null, note: null })
+        eventType: state.eventType, eventDate: null, eventDescription: null, note: null,
+        length: state.length, addressing: state.addressing, emojis: state.emojis, signature: state.signature,
+        contactId: selectedContact?.id, consentFields: consent.contact === selectedContact?.id ? consent.fields : [] })
       dispatch({ type: 'success', value: text })
       if (window.matchMedia('(max-width: 767px)').matches) {
         requestAnimationFrame(() => resultRef.current?.scrollIntoView({ block: 'start', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' }))
@@ -161,6 +196,7 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
       dispatch({ type: 'failure', value: error instanceof Error ? error.message : 'Impossible de générer le message. Réessaie.' })
     } finally {
       pendingRef.current = false
+      setConsent({ contact: null, fields: [] })
     }
   }
 
@@ -197,6 +233,13 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
           <h1 className="text-xl font-bold sm:text-2xl">Un message pour tes proches</h1>
           <p className="text-sm text-muted">Choisis à qui l’adresser, puis laisse-toi inspirer.</p>
         </header>
+        <section className="space-y-2 rounded-xl border border-line p-3" aria-label="Styles de messages">
+          <div className="flex flex-wrap items-center justify-between gap-2"><h2 className="text-sm font-semibold">Mes styles</h2><Link className={secondaryButtonClass} href="/dashboard/styles">Gérer mes styles</Link></div>
+          {!styleBook.data ? <div role={styleBook.error ? 'alert' : 'status'} className="text-sm text-muted">{styleBook.error ?? 'Chargement des styles…'}{styleBook.error && <button type="button" className={secondaryButtonClass} onClick={styleBook.reload}>Réessayer</button>}</div> : <>
+            <label className="block text-sm" htmlFor="saved-message-style">Appliquer un style à cette demande</label><select id="saved-message-style" className={fieldClass} value="" disabled={state.loading} onChange={e => { const style = styleBook.data?.styles.find(s => s.id === e.target.value); if (style) dispatch({ type: 'style', settings: styleSettings(style) }) }}><option value="">Choisir un style enregistré</option>{styleBook.data.styles.map(s => <option key={s.id} value={s.id}>{s.nom}</option>)}</select>
+            <p className="text-xs text-muted">Style du contact, puis défaut du compte. Tes réglages temporaires restent prioritaires et ne modifient aucun style enregistré.</p>
+          </>}
+        </section>
 
         <form className="min-w-0 space-y-4" onSubmit={event => { event.preventDefault(); void handleGenerate() }}>
           <fieldset disabled={state.loading} className="min-w-0 space-y-4 disabled:opacity-70">
@@ -295,14 +338,19 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
                     {TYPES_RELATION.map(relation => <option key={relation.value} value={relation.value}>{relation.label}</option>)}
                   </select>
                 </div>
-                <p className="text-xs text-muted sm:col-span-2">Ces choix concernent ce message et ne modifient pas le contact.</p>
+                <label className="min-w-0 text-sm text-muted" htmlFor="message-length">Longueur<select id="message-length" className={fieldClass} value={state.length} onChange={e => dispatch({ type: 'length', value: e.target.value })}>{MESSAGE_LENGTHS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}</select></label>
+                <label className="min-w-0 text-sm text-muted" htmlFor="message-addressing">S’adresser au destinataire<select id="message-addressing" className={fieldClass} value={state.addressing} onChange={e => dispatch({ type: 'addressing', value: e.target.value })}><option value="tu">Tutoiement</option><option value="vous">Vouvoiement</option></select></label>
+                <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={state.emojis} onChange={e => dispatch({ type: 'emojis', value: String(e.target.checked) })} />Autoriser quelques emojis</label>
+                <label className="min-w-0 text-sm text-muted sm:col-span-2" htmlFor="message-signature">Signature facultative<textarea id="message-signature" className={fieldClass} maxLength={200} value={state.signature} onChange={e => dispatch({ type: 'signature', value: e.target.value })} /><span className="text-xs">Ajoutée localement au message, jamais transmise à l’IA.</span></label>
+                <p className="text-xs text-muted sm:col-span-2">Ces choix concernent ce message uniquement et ne modifient pas le contact.</p>
               </div>
             </details>
           </fieldset>
 
           <p className="break-words text-xs text-muted">{occasionLabel} · {relationLabel} · {toneLabel}</p>
           {state.manual && !session && !contactsLoading && contactsError && <p role="alert" className="text-sm text-danger">Ta session est indisponible. <Link href="/connexion" className="underline">Reconnecte-toi</Link> pour générer un message.</p>}
-          <button type="submit" disabled={!session || !canGenerate(state)} aria-busy={state.loading} className="min-h-11 w-full rounded-xl bg-action px-4 py-3 font-semibold text-on-action transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50">
+          {selectedContact && <AIConsent fields={consent.contact === selectedContact.id ? consent.fields : []} onChange={fields => setConsent({ contact: selectedContact.id, fields })} disabled={state.loading} />}
+          <button type="submit" disabled={!session || !canGenerate(state) || !styleBook.data} aria-busy={state.loading} className="min-h-11 w-full rounded-xl bg-action px-4 py-3 font-semibold text-on-action transition-colors hover:bg-action-hover disabled:cursor-not-allowed disabled:opacity-50">
             {state.loading ? 'Génération en cours…' : state.hasResult ? 'Nouvelle version' : 'Générer le message'}
           </button>
           {state.loading && <p role="status" className="text-sm text-muted">Création de ton message…</p>}
@@ -314,6 +362,7 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
           <h2 id="result-title" className="text-sm font-semibold">Ton message pour {recipientName}</h2>
           <label htmlFor="generated-message" className="sr-only">Modifier le message généré</label>
           <textarea id="generated-message" value={state.message} disabled={state.loading} onChange={event => { dispatch({ type: 'edit', value: event.target.value }); resetFeedback() }} className={`${fieldClass} min-h-36 resize-y leading-relaxed`} />
+          {occurrenceId && state.message.trim() && <SavePreparationMessage key={occurrenceId} occurrenceId={occurrenceId} message={state.message} />}
           <div className="flex flex-wrap gap-2">
             <button type="button" disabled={!state.message.trim()} onClick={() => void handleCopy()} className={secondaryButtonClass}>{copied ? 'Copié !' : 'Copier'}</button>
             <button type="button" disabled={!state.message.trim()} onClick={() => void handleShare()} className={secondaryButtonClass}>Partager</button>
@@ -343,6 +392,7 @@ function GenerateForm({ contactId, initialOccasion }: { contactId: string | null
             {!datesPossibles && state.eventType === 'anniversaire' && <p className="text-sm text-muted">Aucune date d’anniversaire disponible. Choisis une date d’envoi personnalisée ci-dessous.</p>}
             {!selectedContact.email && <p className="text-sm text-warning">Ce contact n’a pas d’adresse e-mail. Tu peux te programmer un rappel ou <Link href={`/dashboard/contacts/${selectedContact.id}/edit`} className="underline">compléter sa fiche</Link> pour lui envoyer un e-mail.</p>}
             <ProgrammerRappel key={`${selectedContact.id}:${state.eventType}:${preferredFeast}:${eventDate}:${state.message}`} session={session}
+              occurrenceId={occurrenceId}
               selectedContact={{ ...selectedContact, prenom: selectedContact.prenom ?? '', nom: selectedContact.nom ?? '' }} message={state.message} tone={state.tone} eventType={state.eventType} datesPossibles={datesPossibles} />
             <p className="text-xs leading-relaxed text-muted">Chaque rappel correspond à un envoi unique. Les anniversaires proposent leur prochaine occurrence ; les dates personnalisées ne se renouvellent pas automatiquement.</p>
           </fieldset>
@@ -358,7 +408,8 @@ function GenerateFromUrl() {
   const contactId = searchParams.get('contactId')
   const initialOccasion = searchParams.get('eventType')
   // Une nouvelle URL ouvre un nouveau formulaire, sans réutiliser un ancien message.
-  return <GenerateForm key={JSON.stringify([contactId, initialOccasion])} contactId={contactId} initialOccasion={initialOccasion} />
+  const occurrenceId = searchParams.get('occurrenceId')
+  return <GenerateForm key={JSON.stringify([contactId, initialOccasion, occurrenceId])} contactId={contactId} initialOccasion={initialOccasion} occurrenceId={occurrenceId} />
 }
 
 export default function GeneratePage() {

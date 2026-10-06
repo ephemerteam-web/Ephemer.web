@@ -4,7 +4,7 @@ import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
 
 export default function ConfidentialitePage() {
-  const currentDate = '4 octobre 2026'
+  const currentDate = '6 octobre 2026'
   const currentYear = new Date().getFullYear()
 
   return (
@@ -66,6 +66,8 @@ export default function ConfidentialitePage() {
             <li>Préférences de communication ;</li>
             <li>Événements associés : anniversaire, fête prénominale ou autre ;</li>
             <li>Notes ou informations facultatives que vous ajoutez volontairement.</li>
+            <li>Styles personnels de message, signatures locales et affectations choisies ;</li>
+            <li>Catégories de centres d’intérêt choisies explicitement pour un contact, utilisées seulement dans les filtres locaux.</li>
           </Liste>
           <SousTitre>2.3 Données techniques</SousTitre>
           <Liste>
@@ -182,7 +184,8 @@ export default function ConfidentialitePage() {
         <Section titre="13. Génération de messages personnalisés">
           <p>Ephemer.name peut vous aider à générer des messages personnalisés pour vos contacts.</p>
           <p>{AI_NOTICE}</p>
-          <p>Le prestataire est appelé uniquement lorsque vous lancez une génération. Les notes et détails libres restent exclus de ces requêtes.</p>
+          <p>Le prestataire est appelé uniquement lorsque vous lancez une génération. Les cases facultatives, décochées par défaut, autorisent pour cette demande le prénom, l’âge calculé et/ou la note du contact. Vous pouvez les décocher avant la demande suivante. Les notes d’idées cadeaux, réactions et brouillons restent privés.</p>
+          <p>Les préparations, tâches, idées, cadeaux offerts et montants déclarés sont conservés dans votre espace privé, inclus dans l’export de données et effacés lors de la suppression du compte. Supprimer un contact détache ses références dans les historiques ; supprimer une idée conserve les choix historiques.</p>
         </Section>
 
         {/* 14 */}

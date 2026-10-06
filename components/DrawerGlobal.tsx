@@ -169,6 +169,7 @@ export default function DrawerGlobal() {
                 </p>
               </div>
 
+              <button className="flex min-h-11 w-full items-center rounded-xl border border-line p-3 text-accent" onClick={() => { const id = contactAffiche.id; void navigate('/dashboard/contacts/' + id + '/attentions', fermerDrawer) }}>Préparer ses événements · idées et cadeaux</button>
               {/* Notes */}
               <div className="bg-ink/5 rounded-xl p-4 border border-line">
                 <p className="text-xs text-info uppercase tracking-wider mb-2">📝 Notes</p>

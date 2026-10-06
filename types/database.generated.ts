@@ -53,6 +53,151 @@ export type Database = {
           },
         ]
       }
+      cadeaux_offerts: {
+        Row: {
+          achat_declare: boolean
+          choix_id: string | null
+          contact_id: number | null
+          created_at: string
+          date_achat: string | null
+          date_don: string
+          destinataire_historique: string
+          devise_depensee: string | null
+          id: string
+          montant_depense_centimes: number | null
+          occurrence_id: string | null
+          reaction: string | null
+          revision: number
+          titre: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achat_declare?: boolean
+          choix_id?: string | null
+          contact_id?: number | null
+          created_at?: string
+          date_achat?: string | null
+          date_don: string
+          destinataire_historique: string
+          devise_depensee?: string | null
+          id?: string
+          montant_depense_centimes?: number | null
+          occurrence_id?: string | null
+          reaction?: string | null
+          revision?: number
+          titre: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          achat_declare?: boolean
+          choix_id?: string | null
+          contact_id?: number | null
+          created_at?: string
+          date_achat?: string | null
+          date_don?: string
+          destinataire_historique?: string
+          devise_depensee?: string | null
+          id?: string
+          montant_depense_centimes?: number | null
+          occurrence_id?: string | null
+          reaction?: string | null
+          revision?: number
+          titre?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot05_don_choix"
+            columns: ["user_id", "choix_id"]
+            isOneToOne: true
+            referencedRelation: "choix_cadeaux"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "lot05_don_contact"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "lot05_don_occurrence"
+            columns: ["user_id", "occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "occurrences_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      choix_cadeaux: {
+        Row: {
+          created_at: string
+          date_achat: string | null
+          devise_depensee: string | null
+          devise_estimee: string | null
+          etat: string
+          id: string
+          idee_id: string | null
+          montant_depense_centimes: number | null
+          preparation_id: string
+          prix_estime_centimes: number | null
+          revision: number
+          titre: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_achat?: string | null
+          devise_depensee?: string | null
+          devise_estimee?: string | null
+          etat?: string
+          id?: string
+          idee_id?: string | null
+          montant_depense_centimes?: number | null
+          preparation_id: string
+          prix_estime_centimes?: number | null
+          revision?: number
+          titre: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          date_achat?: string | null
+          devise_depensee?: string | null
+          devise_estimee?: string | null
+          etat?: string
+          id?: string
+          idee_id?: string | null
+          montant_depense_centimes?: number | null
+          preparation_id?: string
+          prix_estime_centimes?: number | null
+          revision?: number
+          titre?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot05_choix_idee"
+            columns: ["user_id", "idee_id"]
+            isOneToOne: false
+            referencedRelation: "idees_cadeaux"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "lot05_choix_preparation"
+            columns: ["user_id", "preparation_id"]
+            isOneToOne: false
+            referencedRelation: "preparations_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           created_at: string
@@ -164,6 +309,59 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "lot02_evenement_contact_owner"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      idees_cadeaux: {
+        Row: {
+          archivee: boolean
+          contact_id: number | null
+          created_at: string
+          devise_estimee: string | null
+          id: string
+          lien_marchand: string | null
+          note: string | null
+          prix_estime_centimes: number | null
+          revision: number
+          titre: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archivee?: boolean
+          contact_id?: number | null
+          created_at?: string
+          devise_estimee?: string | null
+          id?: string
+          lien_marchand?: string | null
+          note?: string | null
+          prix_estime_centimes?: number | null
+          revision?: number
+          titre: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          archivee?: boolean
+          contact_id?: number | null
+          created_at?: string
+          devise_estimee?: string | null
+          id?: string
+          lien_marchand?: string | null
+          note?: string | null
+          prix_estime_centimes?: number | null
+          revision?: number
+          titre?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot05_idee_contact"
             columns: ["user_id", "contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
@@ -410,6 +608,120 @@ export type Database = {
         }
         Relationships: []
       }
+      preferences_cadeaux_contacts: {
+        Row: {
+          categories: string[]
+          contact_id: number
+          created_at: string
+          id: string
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          categories?: string[]
+          contact_id: number
+          created_at?: string
+          id?: string
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          categories?: string[]
+          contact_id?: number
+          created_at?: string
+          id?: string
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preferences_cadeaux_contacts_user_id_contact_id_fkey"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      preferences_styles_messages: {
+        Row: {
+          created_at: string
+          id: string
+          revision: number
+          style_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          revision?: number
+          style_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          revision?: number
+          style_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "preferences_styles_messages_user_id_style_id_fkey"
+            columns: ["user_id", "style_id"]
+            isOneToOne: false
+            referencedRelation: "styles_messages"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      preparations_evenements: {
+        Row: {
+          created_at: string
+          etat: string
+          id: string
+          occurrence_id: string
+          revision: number
+          sans_achat: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          etat?: string
+          id?: string
+          occurrence_id: string
+          revision?: number
+          sans_achat?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          etat?: string
+          id?: string
+          occurrence_id?: string
+          revision?: number
+          sans_achat?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot04_preparation_occurrence"
+            columns: ["user_id", "occurrence_id"]
+            isOneToOne: true
+            referencedRelation: "occurrences_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -631,6 +943,140 @@ export type Database = {
         }
         Relationships: []
       }
+      styles_messages: {
+        Row: {
+          adresse: string
+          created_at: string
+          emojis: boolean
+          id: string
+          longueur: string
+          nom: string
+          revision: number
+          signature: string
+          ton: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          adresse?: string
+          created_at?: string
+          emojis?: boolean
+          id?: string
+          longueur?: string
+          nom: string
+          revision?: number
+          signature?: string
+          ton: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          adresse?: string
+          created_at?: string
+          emojis?: boolean
+          id?: string
+          longueur?: string
+          nom?: string
+          revision?: number
+          signature?: string
+          ton?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      styles_messages_contacts: {
+        Row: {
+          contact_id: number
+          created_at: string
+          id: string
+          revision: number
+          style_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: number
+          created_at?: string
+          id?: string
+          revision?: number
+          style_id: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          contact_id?: number
+          created_at?: string
+          id?: string
+          revision?: number
+          style_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "styles_messages_contacts_user_id_contact_id_fkey"
+            columns: ["user_id", "contact_id"]
+            isOneToOne: true
+            referencedRelation: "contacts"
+            referencedColumns: ["user_id", "id"]
+          },
+          {
+            foreignKeyName: "styles_messages_contacts_user_id_style_id_fkey"
+            columns: ["user_id", "style_id"]
+            isOneToOne: false
+            referencedRelation: "styles_messages"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
+      taches_preparation: {
+        Row: {
+          brouillon_texte: string | null
+          created_at: string
+          etat: string
+          id: string
+          preparation_id: string
+          revision: number
+          titre: string
+          type_tache: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          brouillon_texte?: string | null
+          created_at?: string
+          etat?: string
+          id?: string
+          preparation_id: string
+          revision?: number
+          titre: string
+          type_tache: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          brouillon_texte?: string | null
+          created_at?: string
+          etat?: string
+          id?: string
+          preparation_id?: string
+          revision?: number
+          titre?: string
+          type_tache?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot04_tache_preparation"
+            columns: ["user_id", "preparation_id"]
+            isOneToOne: false
+            referencedRelation: "preparations_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       user_push_subscriptions: {
         Row: {
           created_at: string
@@ -657,6 +1103,70 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      ajouter_tache_lot04: {
+        Args: {
+          p_id: string
+          p_preparation: string
+          p_titre: string
+          p_type: string
+        }
+        Returns: {
+          brouillon_texte: string | null
+          created_at: string
+          etat: string
+          id: string
+          preparation_id: string
+          revision: number
+          titre: string
+          type_tache: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "taches_preparation"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      budget_cadeaux_lot05: {
+        Args: { p_debut: string; p_fin: string }
+        Returns: {
+          depense: string
+          depense_sans_date: string
+          devise: string
+          nb_depense_inconnu: number
+          nb_depense_sans_date: number
+          nb_depense_sans_date_inconnu: number
+          nb_prevu_inconnu: number
+          prevu: string
+        }[]
+      }
+      choisir_idee_lot05: {
+        Args: { p_id: string; p_idee: string; p_preparation: string }
+        Returns: {
+          created_at: string
+          date_achat: string | null
+          devise_depensee: string | null
+          devise_estimee: string | null
+          etat: string
+          id: string
+          idee_id: string | null
+          montant_depense_centimes: number | null
+          preparation_id: string
+          prix_estime_centimes: number | null
+          revision: number
+          titre: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "choix_cadeaux"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       creer_invitation: {
         Args: { p_label?: string }
         Returns: {
@@ -672,6 +1182,57 @@ export type Database = {
       }
       desactiver_invitation: { Args: { p_id: string }; Returns: undefined }
       enregistrer_evenement_lot02: { Args: { p_donnees: Json }; Returns: Json }
+      enregistrer_preparation_lot04: {
+        Args: {
+          p_etat: string
+          p_id: string
+          p_revision: number
+          p_sans_achat: boolean
+        }
+        Returns: {
+          created_at: string
+          etat: string
+          id: string
+          occurrence_id: string
+          revision: number
+          sans_achat: boolean
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "preparations_evenements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      enregistrer_tache_lot04: {
+        Args: {
+          p_brouillon: string
+          p_etat: string
+          p_id: string
+          p_revision: number
+          p_titre: string
+        }
+        Returns: {
+          brouillon_texte: string | null
+          created_at: string
+          etat: string
+          id: string
+          preparation_id: string
+          revision: number
+          titre: string
+          type_tache: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "taches_preparation"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       est_contact_lie: {
         Args: { email_du_contact: string; mon_user_id: string }
         Returns: boolean
@@ -731,6 +1292,57 @@ export type Database = {
           p_revision: number
         }
         Returns: Json
+      }
+      noter_cadeau_offert_lot05: {
+        Args: {
+          p_choix: string
+          p_date: string
+          p_id: string
+          p_reaction: string
+        }
+        Returns: {
+          achat_declare: boolean
+          choix_id: string | null
+          contact_id: number | null
+          created_at: string
+          date_achat: string | null
+          date_don: string
+          destinataire_historique: string
+          devise_depensee: string | null
+          id: string
+          montant_depense_centimes: number | null
+          occurrence_id: string | null
+          reaction: string | null
+          revision: number
+          titre: string
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "cadeaux_offerts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      ouvrir_preparation_lot04: {
+        Args: { p_occurrence: string }
+        Returns: {
+          created_at: string
+          etat: string
+          id: string
+          occurrence_id: string
+          revision: number
+          sans_achat: boolean
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "preparations_evenements"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       preferences_evenement_lot02: {
         Args: {

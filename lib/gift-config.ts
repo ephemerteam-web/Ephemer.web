@@ -43,19 +43,23 @@ type Marchand = {
   url: (recherche: string) => string;
   couleur: string;
   categories: CategorieCadeau[];
+  affilie?: boolean;
 };
 
-const tagAmazon = process.env.NEXT_PUBLIC_AMAZON_TAG ?? "";
+const configuredTag = (process.env.NEXT_PUBLIC_AMAZON_TAG ?? "").trim();
+const tagAmazon = configuredTag.length <= 128 ? configuredTag : '';
+const encodeMerchantValue = (value: string) => encodeURIComponent(value).replace(/[!'()*]/g, character => '%' + character.charCodeAt(0).toString(16).toUpperCase());
 
 // ✅ Amazon France — CONFIRMÉ
 const amazonFrance: Marchand = {
+  affilie: Boolean(tagAmazon),
   id: "amazon",
   nom: "Amazon",
   emoji: "📦",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return tagAmazon
-      ? `https://www.amazon.fr/s?k=${query}&tag=${tagAmazon}`
+      ? `https://www.amazon.fr/s?k=${query}&tag=${encodeMerchantValue(tagAmazon)}`
       : `https://www.amazon.fr/s?k=${query}`;
   },
   couleur: "bg-[#FF9900] hover:bg-[#e68a00] text-black",
@@ -68,7 +72,7 @@ const cdiscount: Marchand = {
   nom: "Cdiscount",
   emoji: "🛒",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.cdiscount.com/search/10/${query}.html`;
   },
   couleur: "bg-[#004A9F] hover:bg-[#003580] text-white",
@@ -81,7 +85,7 @@ const fnac: Marchand = {
   nom: "Fnac",
   emoji: "🎧",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.fnac.com/SearchResult/ResultList.aspx?Search=${query}`;
   },
   couleur: "bg-[#E30613] hover:bg-[#c80510] text-white",
@@ -94,7 +98,7 @@ const cultura: Marchand = {
   nom: "Cultura",
   emoji: "📚",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.cultura.com/search?q=${query}`;
   },
   couleur: "bg-[#E5007D] hover:bg-[#c5006a] text-white",
@@ -107,7 +111,7 @@ const marionnaud: Marchand = {
   nom: "Marionnaud",
   emoji: "💄",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.marionnaud.fr/search?query=${query}`;
   },
   couleur: "bg-[#D4006D] hover:bg-[#b5005d] text-white",
@@ -120,7 +124,7 @@ const sephora: Marchand = {
   nom: "Sephora",
   emoji: "✨",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.sephora.fr/search?q=${query}`;
   },
   couleur: "bg-black hover:bg-gray-900 text-white",
@@ -133,7 +137,7 @@ const boulanger: Marchand = {
   nom: "Boulanger",
   emoji: "🔌",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.boulanger.fr/resultats?tr=${query}`;
   },
   couleur: "bg-[#E2001A] hover:bg-[#c50017] text-white",
@@ -146,7 +150,7 @@ const laRedoute: Marchand = {
   nom: "La Redoute",
   emoji: "🛋️",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.laredoute.fr/pge/find?q=${query}`;
   },
   couleur: "bg-[#9E1B32] hover:bg-[#861728] text-white",
@@ -159,7 +163,7 @@ const maisonsDuMonde: Marchand = {
   nom: "Maisons du Monde",
   emoji: "🌿",
   url: (recherche: string) => {
-    const query = encodeURIComponent(recherche);
+    const query = encodeMerchantValue(recherche);
     return `https://www.maisonsdumonde.com/FR/fr/search?q=${query}`;
   },
   couleur: "bg-[#6B8E23] hover:bg-[#5a7820] text-white",

@@ -1,6 +1,7 @@
 // État du formulaire : un changement de destinataire ou de réglage efface l'ancien résultat.
 import { TYPES_EVENEMENT, TYPES_RELATION, TONS_MESSAGE, normalizeRelation } from '@/lib/constants'
 import type { Contact } from '@/types/database'
+import type { StyleSettings } from './message-styles'
 
 export type GeneratorContact = Pick<Contact, 'id' | 'prenom' | 'nom' | 'relation' | 'date_naissance' | 'email' | 'est_favori'>
 
@@ -10,6 +11,10 @@ export type GeneratorState = {
   firstName: string
   relation: string
   tone: string
+  length: 'short' | 'medium' | 'long'
+  addressing: 'tu' | 'vous'
+  emojis: boolean
+  signature: string
   eventType: string
   message: string
   hasResult: boolean
@@ -18,16 +23,17 @@ export type GeneratorState = {
 }
 
 export type GeneratorAction =
+  | { type: 'style'; settings: StyleSettings }
   | { type: 'contact'; contact: GeneratorContact }
   | { type: 'manual' | 'clear' | 'begin' }
-  | { type: 'name' | 'relation' | 'tone' | 'occasion' | 'success' | 'failure' | 'edit'; value: string }
+  | { type: 'name' | 'relation' | 'tone' | 'occasion' | 'success' | 'failure' | 'edit' | 'length' | 'addressing' | 'emojis' | 'signature'; value: string }
 
 export function validOccasion(value: string | null) {
   return TYPES_EVENEMENT.some(event => event.value === value) ? value! : 'anniversaire'
 }
 
 export function initialGeneratorState(eventType: string | null = null): GeneratorState {
-  return { contact: null, manual: false, firstName: '', relation: 'ami', tone: 'familier', eventType: validOccasion(eventType), message: '', hasResult: false, error: '', loading: false }
+  return { contact: null, manual: false, firstName: '', relation: 'ami', tone: 'familier', length: 'short', addressing: 'tu', emojis: false, signature: '', eventType: validOccasion(eventType), message: '', hasResult: false, error: '', loading: false }
 }
 
 export function contactDisplayName(contact: GeneratorContact) {
@@ -43,9 +49,11 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
   if (state.loading && action.type !== 'success' && action.type !== 'failure') return state
   const resetResult = { message: '', hasResult: false, error: '' }
   switch (action.type) {
+    case 'style':
+      return { ...state, ...resetResult, ...action.settings }
     case 'contact': {
       const relation = normalizeRelation(action.contact.relation)
-      return { ...state, ...resetResult, contact: action.contact, manual: false, firstName: action.contact.prenom?.trim() ?? '', relation, tone: relation === 'pro' ? 'formel' : 'familier' }
+      return { ...initialGeneratorState(state.eventType), contact: action.contact, firstName: action.contact.prenom?.trim() ?? '', relation, tone: relation === 'pro' ? 'formel' : 'familier', addressing: relation === 'pro' ? 'vous' : 'tu' }
     }
     case 'manual':
     case 'clear':
@@ -54,7 +62,15 @@ export function generatorReducer(state: GeneratorState, action: GeneratorAction)
       return state.manual && action.value !== state.firstName ? { ...state, ...resetResult, firstName: action.value } : state
     case 'relation':
       if (action.value === state.relation || !TYPES_RELATION.some(item => item.value === action.value)) return state
-      return { ...state, ...resetResult, relation: action.value, tone: action.value === 'pro' ? 'formel' : 'familier' }
+      return { ...state, ...resetResult, relation: action.value, tone: action.value === 'pro' ? 'formel' : 'familier', addressing: action.value === 'pro' ? 'vous' : 'tu' }
+    case 'length':
+      return ['short', 'medium', 'long'].includes(action.value) ? { ...state, ...resetResult, length: action.value as GeneratorState['length'] } : state
+    case 'addressing':
+      return action.value === 'tu' || action.value === 'vous' ? { ...state, ...resetResult, addressing: action.value } : state
+    case 'emojis':
+      return action.value === 'true' || action.value === 'false' ? { ...state, ...resetResult, emojis: action.value === 'true' } : state
+    case 'signature':
+      return { ...state, ...resetResult, signature: action.value.slice(0, 200) }
     case 'tone':
       return action.value !== state.tone && TONS_MESSAGE.some(item => item.value === action.value) ? { ...state, ...resetResult, tone: action.value } : state
     case 'occasion': {

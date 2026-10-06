@@ -3,6 +3,7 @@ import { useDashboardUser } from '@/components/DashboardUserContext'
 import LoadFailure from '@/components/LoadFailure'
 import Link from 'next/link'
 import PersonalDates from '@/components/PersonalDates'
+import ContactPreferences from '@/components/ContactPreferences'
 import type { Contact } from '@/types/database'
 import { createRequestScope } from '@/lib/request-scope'
 
@@ -325,6 +326,7 @@ export default function ModifierContact() {
             {saving ? 'Sauvegarde...' : '💾 Sauvegarder'}
           </button>
         </form>
+        <div className="my-6"><ContactPreferences key={user.id + ':' + contactId} contactId={contactId} /></div>
         <div className="my-4"><PersonalDates contacts={loadedContact ? [loadedContact] : []} contactId={contactId} onSaved={() => { setChargement(true); setAttempt(value => value + 1) }} />
           {canonicalBirth && <p className="text-sm text-muted">L’anniversaire se modifie dans les dates personnelles, avec une année facultative.</p>}
         </div>

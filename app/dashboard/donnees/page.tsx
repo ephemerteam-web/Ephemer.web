@@ -48,7 +48,7 @@ export default function DataPage() {
     <PageHeading title="Mes données et diagnostic">Comprendre les rappels et récupérer une copie personnelle.</PageHeading>
     {error && <Notice error>{error}</Notice>}
     <Card><h2 className="text-xl font-semibold">Exporter mes données</h2>
-      <p>Profil, contacts, rappels, notifications, préférences et métadonnées des invitations au format JSON. Les liens secrets et clés push sont exclus. Conserve ce fichier personnel dans un endroit sûr.</p>
+      <p>Profil, contacts, dates et occurrences, listes, préparations et brouillons, idées, choix et cadeaux offerts, styles et affectations, centres d’intérêt, rappels, notifications, préférences et métadonnées des invitations au format JSON (version 5). Les liens secrets et clés push sont exclus. Conserve ce fichier personnel dans un endroit sûr.</p>
       <Button disabled={busy} onClick={() => run('export')}>{busy ? 'Opération en cours…' : 'Télécharger mon export'}</Button>
     </Card>
     <Card><h2 className="text-xl font-semibold">Diagnostic sans envoi</h2>

@@ -5,10 +5,11 @@ import {
   TYPES_EVENEMENT,
   TONS_MESSAGE,
   MESSAGES_UI,
-  normalizeRelation,
-  normalizeOccasion,
 } from "@/lib/constants";
 import { verifierGardeIA } from '@/lib/garde-ia';
+import { personalAIContext } from '@/lib/ai-consent-server';
+import { AIInputError, messageAIOptions } from '@/lib/ai-options';
+import { aiRequest, providerText } from '@/lib/ai-transport';
 
 
 type LabelValueItem = { value: string; label: string };
@@ -18,9 +19,6 @@ function getLabelFromValue(array: readonly LabelValueItem[], value: string): str
   return item ? item.label : array[0]?.label || value;
 }
 
-const VALID_EVENT_TYPES = new Set<string>(TYPES_EVENEMENT.map(e => e.value));
-const VALID_RELATIONS = new Set<string>(TYPES_RELATION.map(r => r.value));
-const VALID_TONES = new Set<string>(TONS_MESSAGE.map(t => t.value));
 
 function getToneInstruction(tone: string): string {
   switch (tone) {
@@ -66,24 +64,24 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // ... tout ton code existant reste identique
-    const body = await request.json();
-    if (!body || typeof body !== 'object' || Array.isArray(body)) return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
-    // Liste fermée : aucun texte personnel libre ne part vers le prestataire.
-    const validatedEventType = VALID_EVENT_TYPES.has(normalizeOccasion(body.eventType)) ? normalizeOccasion(body.eventType) : TYPES_EVENEMENT[0].value;
-    const validatedRelation = VALID_RELATIONS.has(normalizeRelation(body.relation)) ? normalizeRelation(body.relation) : TYPES_RELATION[0].value;
-    const validatedTone = VALID_TONES.has(body.tone) ? body.tone : TONS_MESSAGE[0].value;
+    const body = await aiRequest(request);
+    const options = messageAIOptions(body);
+    const personalContext = await personalAIContext(body, garde.userId);
+    const { eventType: validatedEventType, relation: validatedRelation, tone: validatedTone } = options;
     const eventLabel = getLabelFromValue(TYPES_EVENEMENT, validatedEventType);
     const relationLabel = getLabelFromValue(TYPES_RELATION, validatedRelation);
     const toneLabel = getLabelFromValue(TONS_MESSAGE, validatedTone);
 const toneInstruction = getToneInstruction(validatedTone);
 const relationInstruction = getRelationInstruction(validatedRelation);
 
-const prompt = `Rédige un message personnel en français, chaleureux et naturel, de 1 à 2 phrases.
+const phrases = { short: '1 à 2', medium: '3 à 4', long: '5 à 6' }[options.length];
+const prompt = `Rédige un message personnel en français, chaleureux et naturel, de ${phrases} phrases.
+Adresse : ${options.addressing === 'vous' ? 'vouvoiement' : 'tutoiement'}. ${options.emojis ? 'Quelques emojis discrets sont permis.' : 'Aucun emoji.'}
 Occasion : ${eventLabel}. Relation : ${relationLabel}. ${relationInstruction}
 Ton : ${toneLabel}. ${toneInstruction}
 N'invente aucun nom, âge, date ou détail personnel. Ne mentionne pas d'années écoulées.
-Aucun prénom, aucune signature, aucun champ à compléter. Une seule version, sans guillemets.`;
+Aucun prénom, aucune signature, aucun champ à compléter. Une seule version, sans guillemets.
+${personalContext}`;
 
     const mammouthResponse = await fetch("https://api.mammouth.ai/v1/chat/completions", {
       method: "POST",
@@ -107,12 +105,12 @@ Aucun prénom, aucune signature, aucun champ à compléter. Une seule version, s
       );
     }
 
-    const data = await mammouthResponse.json();
-    const message = data.choices?.[0]?.message?.content?.trim() || "";
+    const message = await providerText(mammouthResponse, 4000);
     return NextResponse.json({ message });
 
   } catch (error) {
-    console.error("Erreur inattendue:", error);
+    if (error instanceof AIInputError) return NextResponse.json({ error: error.message }, { status: error.status });
+    console.error("Erreur inattendue generate-message");
     return NextResponse.json(
       { error: MESSAGES_UI.erreur_genérique },
       { status: 500 }

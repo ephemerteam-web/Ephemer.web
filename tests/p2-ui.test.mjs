@@ -50,11 +50,12 @@ test('dialogue : ouverture native, focus initial, Échap et retour au déclenche
   const hidden=h.render({...props,open:false});await h.flush();assert.equal(closed,1);assert.equal(focused,'trigger');assert.equal(hidden.props.style.display,'none')
 })
 
-test('carte cadeau : bouton réel et face masquée inerte pour le clavier',()=>{
-  const h=harness('app/dashboard/gift-ideas/page.tsx',{extra:'\nexport { FlipCard };',overrides:{'next/navigation':{},'@/lib/supabase-browser':{},'@/components/DrawerContext':{},'@/components/AppSelect':{default:'select'}}})
-  const props={idea:{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'},index:0}
-  h.render(props,'FlipCard');assert.ok(h.find(node=>node.props['aria-hidden']===true).props.inert)
-  const button=h.find(node=>node.type==='button' && h.text(node).startsWith('Voir les détails'))
-  button.props.onClick();h.render(props,'FlipCard');assert.ok(h.find(node=>node.props['aria-hidden']===true).props.inert)
-  assert.equal(h.find(node=>node.type==='button' && h.text(node).includes('Revenir')).type,'button')
+test('carte cadeau : détails visibles et choix de marchand accessible sans retournement',()=>{
+  const h=harness('components/GiftSuggestions.tsx',{extra:'\nexport { SuggestionCard };',overrides:{'@/lib/supabase-browser':{},'@/components/ContactDraftProvider':{useContactDraft:()=>({hasPrivateDraft:()=>false})}}})
+  const props={idea:{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'},contactId:null,recipient:'',occurrenceId:null,noPurchase:false,previous:false}
+  h.render(props,'SuggestionCard');assert.match(h.text(),/Lecture/);assert.match(h.text(),/prix et disponibilité à vérifier/)
+  assert.equal(h.nodes().filter(node=>node.props['aria-hidden']===true&&node.props.inert).length,0)
+  const select=h.find(node=>node.type==='select');select.props.onChange({target:{value:'fnac'}})
+  h.render(props,'SuggestionCard');assert.match(h.find(n=>n.type==='a').props.href,/fnac/)
+  h.render({...props,noPurchase:true},'SuggestionCard');assert.equal(h.nodes().filter(n=>n.type==='a').length,0)
 })

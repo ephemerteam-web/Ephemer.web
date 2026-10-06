@@ -19,7 +19,7 @@ export function harness(file,{overrides={},globals={},extra='',sources={}}={}) {
     const source=(sources[resolved]??readFileSync(new URL(`../${resolved}`,import.meta.url),'utf8'))+(path===file?extra:'')
     const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText
     const compiledModule={exports:{}}; modules.set(path,compiledModule.exports)
-    const require=name=>name==='react'?hooks:overrides[name]??(name.startsWith('@/')?load(name.slice(2)):name.startsWith('.')?load(new URL(name,`https://test/${resolved}`).pathname.slice(1)):nativeRequire(name))
+    const require=name=>name==='react'?hooks:overrides[name]??(name.startsWith('@/')?load(name.slice(2)):name.startsWith('.')?(overrides['@/'+new URL(name,`https://test/${resolved}`).pathname.slice(1)]??load(new URL(name,`https://test/${resolved}`).pathname.slice(1))):nativeRequire(name))
     runInNewContext(compiled,{module:compiledModule,exports:compiledModule.exports,require,console:{error(){},warn(){},log(){}},process:{env:{}},setTimeout,clearTimeout,crypto:{randomUUID:()=> 'draft-id'},...globals})
     return compiledModule.exports
   }

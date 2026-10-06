@@ -8,6 +8,7 @@ import { nameDays } from '@/lib/name-days'
 import { parisDay, parseLocalDay } from '@/lib/calendar-day'
 import { eventLabels, shiftDay, type EventView, type PersonalEvent } from '@/lib/personal-events'
 import type { Contact, Json } from '@/types/database'
+import Link from 'next/link'
 
 const input = 'block min-h-11 w-full rounded-lg border border-line bg-surface p-2 text-ink'
 export function EventAgenda({ views, title = 'Dates personnelles' }: { views: EventView[]; title?: string }) {
@@ -16,6 +17,7 @@ export function EventAgenda({ views, title = 'Dates personnelles' }: { views: Ev
     {views.map(view => <div key={view.key} className="rounded-xl border border-line p-3">
       <p>{parseLocalDay(view.date).toLocaleDateString('fr-FR')} · {view.title}</p>
       <p className="text-sm text-muted">{view.contact ? `${view.contact.prenom ?? ''} ${view.contact.nom ?? ''}` : 'Ma date'}{view.age !== null ? ` · ${view.age} ans` : ''}{!view.reminder && view.event ? ' · Rappels suspendus' : ''}</p>
+      {view.occurrence && <Link className="inline-flex min-h-11 items-center text-sm text-accent underline" href={'/dashboard/preparer/' + view.occurrence.id}>Préparer cet événement</Link>}
     </div>)}
   </section>
 }

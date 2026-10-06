@@ -49,7 +49,8 @@ export async function DELETE(request: Request) {
     }
 
     // 3. Auth n'est supprimé qu'après les deux nettoyages réussis.
-    // Les autres tables liées à Auth sont nettoyées par leurs cascades existantes.
+    // Les tables liées à Auth sont nettoyées par leurs cascades confirmées,
+    // y compris préparations, tâches, idées, choix et dons (04/05), styles, affectations et intérêts (06/07).
     // Ces appels séparés ne forment pas une transaction : un échec Auth doit être annoncé.
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id)
     if (deleteError) {

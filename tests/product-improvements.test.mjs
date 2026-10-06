@@ -34,9 +34,9 @@ test('IA : les champs personnels sont exclus même dans une requête directe hos
   for (const route of ['generate-message', 'generate-gift-ideas']) {
     const requests = []
     const { POST } = load(`app/api/${route}/route.ts`, 'POST', { ...constants, verifierGardeIA: async () => ({ ok: true }), NextResponse: { json: (body, opts) => ({ body, status: opts?.status ?? 200 }) }, AbortSignal, process: { env: {} }, console,
-      fetch: async (url, options) => { requests.push(options.body); return { ok: true, json: async () => ({ choices: [{ message: { content: route === 'generate-message' ? 'Bonne journée !' : JSON.stringify([{ idee:'Livre', raison:'Lecture', categorie:'loisir', recherche:'livre' }]) } }] }) } },
+      fetch: async (url, options) => { requests.push(options.body); return Response.json({ choices: [{ message: { content: route === 'generate-message' ? 'Bonne journée !' : JSON.stringify([{ idee:'Livre', raison:'Lecture', categorie:'loisir', recherche:'livre' }]) } }] }) },
     })
-    const response = await POST({ json: async () => ({ ...secrets, relation: 'ami', eventType: 'anniversaire', tone: 'familier' }) })
+    const response = await POST(new Request('https://test.invalid', { method: 'POST', body: JSON.stringify({ ...secrets, relation: 'ami', eventType: 'anniversaire', tone: 'familier' }) }))
     assert.equal(response.status, 200)
     assert.equal(requests.length, 1)
     for (const value of Object.values(secrets)) assert.ok(!requests[0].includes(value), value)

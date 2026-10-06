@@ -1,4 +1,5 @@
 import { minimalAIInput } from './ai-privacy';
+import { localMessage, type MessageLength } from './ai-options';
 // ============================================================
 // 📡 APPELS API - Génération de messages
 // ============================================================
@@ -17,6 +18,12 @@ export type GenerateMessageParams = {
   eventDescription: string | null;
   note: string | null;
   eventDateOrigin?: string | null;
+  contactId?: number;
+  consentFields?: import('./ai-consent').AIContactField[];
+  length?: MessageLength;
+  addressing?: 'tu' | 'vous';
+  emojis?: boolean;
+  signature?: string;
 };
 
 /**
@@ -46,8 +53,8 @@ export async function genererMessage(params: GenerateMessageParams): Promise<str
   let responseData: { message?: string; error?: string } = {};
   try {
     responseData = await response.json();
-  } catch (parseErr) {
-    console.error("Réponse non-JSON:", parseErr);
+  } catch {
+    console.error("Réponse non-JSON du générateur");
   }
 
   if (!response.ok) {
@@ -59,6 +66,6 @@ export async function genererMessage(params: GenerateMessageParams): Promise<str
     throw new Error("Aucun message reçu du serveur");
   }
 
-  const firstName = params.firstName.trim().slice(0, 80);
-  return firstName ? `${firstName}, ${responseData.message}` : responseData.message;
+  if (typeof responseData.message !== 'string' || responseData.message.length > 4000) throw new Error('Réponse IA invalide.');
+  return localMessage(responseData.message, params.firstName, params.signature);
 }

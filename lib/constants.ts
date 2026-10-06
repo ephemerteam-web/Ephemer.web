@@ -54,6 +54,10 @@ export const TYPES_EVENEMENT = [
   { value: 'jour_special', label: '⭐ Jour spécial (ex: date de rencontre)' },
   { value: 'mariage', label: '💍 Mariage' },
   { value: 'naissance', label: '👶 Naissance' },
+  { value: 'rencontre', label: '💫 Rencontre' },
+  { value: 'adoption', label: '🌱 Adoption' },
+  { value: 'reussite', label: '🎉 Réussite' },
+  { value: 'libre', label: '⭐ Événement personnel' },
   { value: 'autre', label: '🎉 Autre' },
 ] as const
 

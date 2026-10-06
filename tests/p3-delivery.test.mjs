@@ -147,16 +147,17 @@ test('polices locales : tous les fichiers gardent les empreintes du build de ré
 test('cadeaux : occasion spéciale sans date ni description, requête sans notes ni intérêts',async()=>{
   const params=new URLSearchParams('contactId=12&eventType=jour_special'),requests=[]
   let tokenCalls=0
-  const client={...pageDatabase({contacts:[{id:12,user_id:'u1',prenom:null,nom:null,relation:'ami',date_naissance:null,note:'Privé',interets:'Privé',est_favori:null}]}),auth:{getSession:async()=>{tokenCalls++;return {data:{session:{user:{id:'u1'},access_token:'simulation'}}}}}}
-  const h=harness('app/dashboard/gift-ideas/page.tsx',{extra:'\nexport { GiftIdeasForm };',overrides:{'next/navigation':{useSearchParams:()=>params},'@/lib/supabase-browser':{supabase:client},'@/components/DrawerContext':{useDrawer:()=>drawer},'@/components/AppSelect':{default:'occasion'}},globals:{fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({ideas:[{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'}]})}}}})
-  h.render({},'GiftIdeasForm');await h.flush();h.render({},'GiftIdeasForm')
+  const client={...pageDatabase({contacts:[{id:12,user_id:'u1',prenom:null,nom:null,relation:'ami',date_naissance:null,note:'Privé',interets:'Privé',est_favori:null}]}),auth:{getUser:async()=>({data:{user:{id:'u1'}}}),getSession:async()=>{tokenCalls++;return {data:{session:{user:{id:'u1'},access_token:'simulation'}}}}}}
+  const h=harness('components/GiftSuggestions.tsx',{overrides:{'@/lib/supabase-browser':{supabase:client},'@/components/ContactDraftProvider':{useContactDraft:()=>({hasPrivateDraft:()=>false})}},globals:{fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({ideas:[{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'}]})}}}})
+  const props={initialContactId:params.get('contactId'),initialEventType:params.get('eventType')}
+  h.render(props);await h.flush();h.render(props)
   assert.equal(tokenCalls,0)
-  assert.equal(h.find(n=>n.type==='occasion').props.value,'jour_special')
+  assert.ok(h.nodes().some(n=>n.type==='select'&&n.props.value==='jour_special'))
   assert.equal(h.nodes().filter(n=>n.type==='input'&&n.props.type==='date').length,0)
   const generate=h.find(n=>n.type==='button'&&h.text(n).includes('Trouver des idées'))
-  assert.equal(generate.props.disabled,false);await generate.props.onClick();h.render({},'GiftIdeasForm')
+  assert.equal(generate.props.disabled,false);await generate.props.onClick();await h.flush();h.render(props)
   assert.equal(tokenCalls,1);assert.equal(requests.length,1);assert.equal(requests[0].eventType,'jour_special')
-  assert.deepEqual(Object.keys(requests[0]).sort(),['eventType','relation','tone'])
+  assert.deepEqual(Object.keys(requests[0]).sort(),['budgetCents','currency','eventType','giftMode','relation'])
   assert.doesNotMatch(JSON.stringify(requests),/Privé|date|note|interet|prenom/)
 })
 

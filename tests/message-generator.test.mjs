@@ -15,7 +15,7 @@ const contacts = [
 ]
 
 // Exécuter le vrai formulaire avec des hooks et un transport simulés, sans service externe.
-function harness({ contactId = null, occasion = null, failContacts = false, contactData = contacts, deferContacts = false } = {}) {
+function harness({ contactId = null, occasion = null, failContacts = false, contactData = contacts, deferContacts = false, styleBook = { styles: [], defaultPreference: null, contacts: [] } } = {}) {
   const slots = [], effects = [], modules = new Map(), requests = [], frames = []
   const documentMock = { activeElement: null }
   let releaseContacts
@@ -39,7 +39,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
     useMemo(fn) { return fn() },
     useEffect(fn, deps) {
       const index = cursor++
-      if (!slots[index] || deps.some((dep, i) => !Object.is(dep, slots[index][i]))) {
+      if (!slots[index] || !deps || deps.some((dep, i) => !Object.is(dep, slots[index][i]))) {
         slots[index] = deps
         effects.push(fn)
       }
@@ -67,6 +67,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
     'next/navigation': { useSearchParams: () => new URLSearchParams({ ...(contactId ? { contactId } : {}), ...(occasion ? { eventType: occasion } : {}) }) },
     'next/link': { default: ({ href, children, ...props }) => React.createElement('a', { href, ...props }, children) },
     '@/lib/supabase-browser': { supabase },
+    '@/lib/personal-preferences': { readStyleBook: async () => styleBook },
     '@/components/ProgrammerRappel': { default: props => React.createElement('div', { 'data-test-reminder': true, 'data-contact-id': props.selectedContact.id }) },
   }
   function load(path) {
@@ -108,9 +109,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
   }
   function find(predicate) { const node = nodes().find(predicate); assert.ok(node, 'Élément attendu absent'); return node }
   async function start() {
-    render()
-    effects.splice(0).forEach(fn => fn())
-    await new Promise(resolve => setImmediate(resolve))
+    for (let i = 0; i < 4; i++) { render(); effects.splice(0).forEach(fn => fn()); await new Promise(resolve => setImmediate(resolve)) }
     render()
   }
   function click(label) { find(node => node.type === 'button' && text(node) === label).props.onClick(); render() }
@@ -120,7 +119,7 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
     html: () => renderToStaticMarkup(currentTree),
     helpers: () => load('lib/message-generator'),
     prefilledProps: () => form.GenerateFromUrl().props,
-    async generate() { await find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await new Promise(resolve => setImmediate(resolve)); render() },
+    async generate() { effects.splice(0).forEach(fn => fn()); render(); await find(node => node.type === 'form').props.onSubmit({ preventDefault() {} }); await new Promise(resolve => setImmediate(resolve)); render() },
     setApiFailure() { apiError = true },
     allowContacts() { failLoad = false },
     setResponse(value) { response = value },
@@ -129,6 +128,23 @@ function harness({ contactId = null, occasion = null, failContacts = false, cont
     async releaseContacts() { releaseContacts(); await new Promise(resolve => setImmediate(resolve)); render() },
   }
 }
+
+test('styles du contact puis défaut du compte ; temporaires et signature locale restent prioritaires', async () => {
+  const styles = [{ id: 'def', nom: 'Défaut', ton: 'poetique', longueur: 'longue', adresse: 'vous', emojis: true, signature: 'Signature locale' }, { id: 'contact', nom: 'Contact', ton: 'humoristique', longueur: 'moyenne', adresse: 'tu', emojis: false, signature: 'Signature contact' }]
+  const book = { styles, defaultPreference: { style_id: 'def' }, contacts: [{ contact_id: 2, style_id: 'contact' }] }
+  const h = harness({ contactId: '2', styleBook: book }); await h.start()
+  assert.equal(h.find(n => n.props.id === 'message-tone').props.value, 'humoristique')
+  assert.equal(h.find(n => n.props.id === 'message-signature').props.value, 'Signature contact')
+  h.find(n => n.props.id === 'message-tone').props.onChange({ target: { value: 'formel' } }); h.render(); await h.generate()
+  assert.equal(h.requests[0].tone, 'formel'); assert.equal(h.requests[0].length, 'medium')
+  assert.doesNotMatch(JSON.stringify(h.requests), /Signature|Défaut|Contact/)
+  assert.match(h.find(n => n.props.id === 'generated-message').props.value, /Signature contact$/)
+  const fallback = harness({ contactId: '1', styleBook: book }); await fallback.start()
+  assert.equal(fallback.find(n => n.props.id === 'message-tone').props.value, 'poetique')
+  fallback.find(n => n.props.id === 'saved-message-style').props.onChange({ target: { value: 'contact' } }); fallback.render()
+  assert.equal(fallback.find(n => n.props.id === 'message-tone').props.value, 'humoristique')
+  assert.equal(styles[0].ton, 'poetique')
+})
 
 test('recherche sans accents, favoris en premier et champs absents', () => {
   const { searchGeneratorContacts, contactDisplayName } = harness().helpers()
@@ -146,7 +162,7 @@ test('lien prérempli, ton professionnel et aucun champ personnel envoyé à l�
   assert.equal(h.find(n => n.type === 'details' && h.text(n.props.children[0]).startsWith('Personnaliser')).props.open, undefined)
   await h.generate()
   assert.equal(h.find(n => n.props.id === 'generated-message').props.value, 'Zoé, Bonne journée !')
-  assert.deepEqual(h.requests, [{ eventType: 'mariage', relation: 'pro', tone: 'formel' }])
+  assert.deepEqual(h.requests, [{ eventType: 'mariage', relation: 'pro', tone: 'formel', length: 'short', addressing: 'vous', emojis: false }])
   assert.ok(!h.html().includes('type="number"'))
 })
 
@@ -157,9 +173,22 @@ test('prénom libre : génération sans date, sans création de contact ni progr
   h.find(n => n.props.id === 'free-firstname').props.onChange({ target: { value: ' Alice ' } }); h.render()
   await h.generate()
   assert.equal(h.find(n => n.props.id === 'generated-message').props.value, 'Alice, Bonne journée !')
-  assert.deepEqual(h.requests[0], { eventType: 'anniversaire', relation: 'ami', tone: 'familier' })
+  assert.deepEqual(h.requests[0], { eventType: 'anniversaire', relation: 'ami', tone: 'familier', length: 'short', addressing: 'tu', emojis: false })
   assert.ok(!h.html().includes('data-test-reminder'))
   assert.match(h.html(), /Pour programmer un rappel, choisis un contact enregistré/)
+})
+
+test('réglages temporaires : contenu exact envoyé et signature locale ajoutée une seule fois', async () => {
+  const h = harness({ contactId: '1' }); await h.start()
+  for (const [id,value] of [['message-length','long'],['message-addressing','vous'],['message-signature','Amitiés, Léa']]) {
+    h.find(n=>n.props.id===id).props.onChange({target:{value}}); h.render()
+  }
+  await h.generate()
+  assert.equal(h.requests[0].length,'long');assert.equal(h.requests[0].addressing,'vous')
+  assert.ok(!JSON.stringify(h.requests).includes('Amitiés'))
+  assert.equal(h.find(n=>n.props.id==='generated-message').props.value,'Élodie, Bonne journée !\n\nAmitiés, Léa')
+  await h.generate()
+  assert.equal(h.find(n=>n.props.id==='generated-message').props.value.split('Amitiés, Léa').length,2)
 })
 
 test('échec d’une nouvelle version : message édité conservé ; un changement de ton efface le résultat', async () => {

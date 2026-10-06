@@ -168,6 +168,7 @@ function EventCard({ event }: { event: EventView }) {
     <p className="mb-1 text-xs text-muted"><span aria-hidden="true" className={`mr-1 ${group.color}`}>{group.icon}</span>{eventLabels[event.kind] ?? group.label}</p>
     <h3 className="font-medium">{event.title}</h3><p className="mt-1 text-sm text-muted">{event.contact ? `${event.contact.prenom ?? ''} ${event.contact.nom ?? ''}`.trim() : 'Ma date'}{event.age !== null ? ` · ${event.age} ans` : ''}</p>
     <p className="mt-2 text-xs text-muted">{event.reminder ? 'Rappels activés' : event.event ? 'Rappels suspendus' : 'Date historique · choix à confirmer'}</p>
+    {event.occurrence && <a className="mt-2 flex min-h-11 items-center text-sm text-accent underline" href={'/dashboard/preparer/' + event.occurrence.id}>Préparer cet événement</a>}
     {event.contact && <a className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline underline-offset-4" href={`/dashboard/contacts/${event.contact.id}/edit`}>Modifier ce contact</a>}
   </article>
 }

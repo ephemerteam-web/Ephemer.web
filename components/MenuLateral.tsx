@@ -29,7 +29,7 @@ type MenuSection = {
 }
 
 export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps) {
-  const { navigate, confirm, contacts, prenom } = useContactDraft()
+  const { navigate, confirm, contacts, prenom, hasPrivateDraft } = useContactDraft()
   const pathname = usePathname()
 
   const [translateX, setTranslateX] = useState(0)
@@ -43,6 +43,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   }, [ouvert])
 
   const handleLogout = async () => {
+    if (hasPrivateDraft() && !await confirm('Te déconnecter sans enregistrer tes attentions ?')) return
     if ((contacts.length || prenom.trim()) && !await confirm("Te déconnecter et effacer le brouillon de contacts ?")) return
     try {
       if ('serviceWorker' in navigator) {

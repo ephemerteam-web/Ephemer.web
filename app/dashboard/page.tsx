@@ -114,6 +114,9 @@ export default function Dashboard() {
   // ⚙️ GESTION (tons sobres)
   // ============================================
   const outilsGestion = [
+    { id: 3, icon: '✓', titre: 'Mes préparations', sous: 'Retrouve tes attentions', path: '/dashboard/preparations' },
+    { id: 4, icon: '🎁', titre: 'Boîte à idées', sous: 'Idées et cadeaux offerts', path: '/dashboard/idees' },
+    { id: 5, icon: '€', titre: 'Budget cadeaux', sous: 'Prévu et dépensé', path: '/dashboard/budget' },
     { id: 1, icon: '📒', titre: 'Contacts', sous: 'Gère ton carnet', path: '/dashboard/contacts' },
     { id: 2, icon: '📨', titre: 'Messages programmés', sous: 'Tes envois en attente', path: '/dashboard/messages-programmes' },
   ]

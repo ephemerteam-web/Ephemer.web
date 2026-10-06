@@ -15,3 +15,19 @@ Pour garantir un nettoyage atomique, faire valider humainement dans le dashboard
 ## Vérification locale
 
 `node --test tests/account-deletion.test.mjs` exécute le vrai handler avec une base et Auth simulés : accès refusés, erreurs à chaque étape, exceptions, succès, isolation entre utilisateurs et reprise après suppression partielle. Aucun compte réel n'est supprimé et aucune variable d'environnement n'est chargée.
+
+## Extension aux lots 04/05 — 6 octobre 2026
+
+Les contrats confirmés de `preparations_evenements`, `taches_preparation`, `idees_cadeaux`, `choix_cadeaux` et `cadeaux_offerts` ont chacun une clé `user_id` vers Auth avec `ON DELETE CASCADE`. La suppression Auth finale efface donc les préparations, brouillons, notes et historiques du compte. Aucune suppression directe via service role n'est ajoutée : ses droits sur ces nouvelles tables sont volontairement limités à la lecture.
+
+La suppression d'un contact seule détache ses références et conserve les nouveaux historiques. La suppression d'une idée détache sa référence du choix ; retirer un don lié à un choix conserve la dépense du choix. L'effacement explicite d'un événement efface ses occurrences et dépendances selon le contrat installé, après confirmation de l'utilisateur.
+
+L'export JSON version 3 inclut les cinq tables, avec filtre propriétaire et contrôle final de session. Les tests applicatifs vérifient cet export et ses refus ; la cascade Auth doit aussi être exercée avec les fixtures SQL sur une copie autorisée, sans compte réel. Ces nouvelles cascades ne rendent pas atomique l'ensemble des anciens appels de suppression.
+
+## Contrats proposés des lots 06/07
+
+Les quatre nouvelles tables proposées de styles, affectations et catégories auront des cascades Auth ; contact supprimé retire seulement ses préférences, style supprimé retire ses affectations sans réécrire les anciens messages. Ces contrats sont **non installés** à cette étape. Aucune référence à une table absente n'est ajoutée à la route de suppression ni à l'export. Après confirmation et intégration : export version 4 pour les trois tables de styles, puis version 5 pour les catégories ; recette d'effacement uniquement avec comptes fictifs sur copie autorisée. Voir les dossiers [06](evolution/lot-06/README.md) et [07](evolution/lot-07/README.md).
+
+## Installation et intégration des lots 06/07 — 6 octobre 2026
+
+Cette étape remplace le statut proposé ci-dessus : application manuelle confirmée par l'utilisateur, `lot06_catalogue_conforme` et `lot07_catalogue_conforme` relancés par l'assistant en lecture seule, types réels régénérés. Les quatre cascades Auth et les références composées sont confirmées au catalogue. La route conserve la suppression Auth finale : aucun DELETE direct service role sur ces tables n'est ajouté. Suppression contact : affectations et intérêts retirés ; suppression style : défaut et affectations retirés, messages existants conservés. L'export version 5 inclut les quatre tables, filtre le propriétaire et refuse le changement de session. Les fixtures de suppression restent réservées à une copie autorisée, sans compte réel ; la confirmation du catalogue ne constitue pas une recette de cascade exécutée par l'assistant.

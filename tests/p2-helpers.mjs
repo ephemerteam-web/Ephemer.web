@@ -3,10 +3,15 @@ import { stripTypeScriptTypes } from 'node:module'
 import { runInNewContext } from 'node:vm'
 export function loadPure(path, names, context = {}) {
   const code = stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
-    .replace(/^import[\s\S]*?from ['"][^'"]+['"];?\r?\n/gm, '').replace(/^export /gm, '')
+    .replace(/^import ['"][^'"]+['"];?\r?\n/gm, '').replace(/^import[\s\S]*?from ['"][^'"]+['"];?\r?\n/gm, '').replace(/^export /gm, '')
   return runInNewContext(`${code}\n;({${names}})`, { console, URLSearchParams, process: { env: {} }, ...context })
 }
-const constants = loadPure('lib/constants.ts','TYPES_EVENEMENT,TYPES_RELATION,normalizeRelation,normalizeOccasion')
+const constants = loadPure('lib/constants.ts','TYPES_EVENEMENT,TYPES_RELATION,TONS_MESSAGE,normalizeRelation,normalizeOccasion')
+const amounts = loadPure('lib/attention-utils.ts', 'CURRENCIES,centsInput')
+const aiOptions = loadPure('lib/ai-options.ts', 'AIInputError,commonAIOptions,messageAIOptions,giftAIOptions,localMessage,GIFT_MODES,MESSAGE_LENGTHS', { ...constants, ...amounts })
+const aiTransport = loadPure('lib/ai-transport.ts', 'aiRequest,providerText,limitedJSON', { ...aiOptions, TextDecoder })
+const consent = loadPure('lib/ai-consent.ts', 'consentInput,contactAIContext')
+const aiContext = loadPure('lib/ai-consent-server.ts', 'personalAIContext', { ...consent, parisDay: () => '2026-10-06' })
 const calendar = loadPure('lib/calendar-day.ts','parisDay,isCalendarDay,birthdayInYear,nextBirthdayDay,daysBetween')
 const preferences = loadPure('lib/notification-preferences.ts','DEFAULT_PREFERENCES,resolvePreferences')
 const pagination = loadPure('lib/pagination.ts','readPages,readAllRows,readAllResult,batches,PAGE_SIZE',constants)
@@ -27,7 +32,7 @@ const notificationPersistence = loadPure('lib/occurrence-notifications.ts','pers
 async function readEventData(client, ...args) {
   return eventLoader.readEventData({ ...client, rpc: client.rpc ?? (() => pageDatabase({ rows: [] }).from('rows')) }, ...args)
 }
-export const p2Helpers = { ...ids, ...journal, ...constants, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, readEventData }
+export const p2Helpers = { ...ids, ...journal, ...constants, ...amounts, ...aiOptions, ...aiTransport, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, ...consent, ...aiContext, readEventData }
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {

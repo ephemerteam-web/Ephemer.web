@@ -17,6 +17,11 @@ type Page = { label: string; chemin: string; icone: string }
 type Groupe = { titre: string; pages: Page[] }
 
 const GROUPES: Groupe[] = [
+  { titre: 'Mes attentions', pages: [
+    { label: 'Mes préparations', chemin: '/dashboard/preparations', icone: '✓' },
+    { label: 'Boîte à idées et cadeaux', chemin: '/dashboard/idees', icone: '🎁' },
+    { label: 'Budget cadeaux', chemin: '/dashboard/budget', icone: '€' },
+  ] },
   {
     titre: 'Principal',
     pages: [
