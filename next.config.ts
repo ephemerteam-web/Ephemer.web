@@ -79,6 +79,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      // Le shell et toutes les réponses cartes (y compris refus de méthode) restent privés.
+      ...['/carte', '/api/cartes/:path*'].map(source => ({ source, headers: [
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+        { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}; style-src 'self' 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'` },
+      ] })),
       // En développement, les noms de chunks peuvent être réutilisés après une modification.
       // Ne jamais garder une ancienne version du graphe de modules dans le navigateur.
       ...(process.env.NODE_ENV === 'development' ? [{

@@ -10,6 +10,7 @@ import { daysBetween, parisDay } from '@/lib/calendar-day'
 import { isUuid } from '@/lib/private-lists'
 import { normalizeOccasion } from '@/lib/constants'
 import { readAllRows } from '@/lib/pagination'
+import CardPreview from './cards/CardPreview'
 
 const taskLabels: Record<string, string> = { cadeau: 'Choisir un cadeau', message: 'Préparer un message', appel: 'Prévoir un appel', sortie: 'Prévoir une sortie', libre: 'Tâche libre' }
 function TaskEditor({ task, onSaved }: { task: Task; onSaved: () => void }) {
@@ -80,6 +81,7 @@ export default function PreparationScreen({ occurrenceId }: { occurrenceId: stri
       <div className="flex flex-wrap gap-2"><Link className={button} href={'/dashboard/generate?' + params}>Générer un message</Link><Link className={button} href={'/dashboard/gift-ideas?' + params}>Trouver des idées cadeaux</Link></div>
       <p className="text-xs text-muted">Tes brouillons et préparatifs ne sont pas transmis automatiquement à l’IA.</p>
     </section>
+    <CardPreview key={user.id + ':' + preparation.id} ownerId={user.id} preparationId={preparation.id} preparedMessage={tasks.find(task => task.type_tache === 'message')?.brouillon_texte ?? undefined} />
     <GiftChoices preparationId={preparation.id} refresh={giftRefresh} />
     <IdeaLibrary contactId={contact?.id ?? null} preparationId={preparation.id} onChanged={() => setGiftRefresh(v => v + 1)} />
   </main>

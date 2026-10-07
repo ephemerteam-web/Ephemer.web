@@ -132,6 +132,56 @@ export type Database = {
           },
         ]
       }
+      cartes_individuelles: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          modele_id: string
+          modele_version: number
+          preparation_id: string
+          rendu_version: number
+          revision: number
+          signature: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          modele_id?: string
+          modele_version?: number
+          preparation_id: string
+          rendu_version?: number
+          revision?: number
+          signature?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          modele_id?: string
+          modele_version?: number
+          preparation_id?: string
+          rendu_version?: number
+          revision?: number
+          signature?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot08_carte_preparation"
+            columns: ["user_id", "preparation_id"]
+            isOneToOne: true
+            referencedRelation: "preparations_evenements"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
       choix_cadeaux: {
         Row: {
           created_at: string
@@ -1098,6 +1148,41 @@ export type Database = {
         }
         Relationships: []
       }
+      versions_cartes: {
+        Row: {
+          carte_id: string
+          contenu: Json
+          created_at: string
+          id: string
+          revision_publication: number
+          user_id: string
+        }
+        Insert: {
+          carte_id: string
+          contenu: Json
+          created_at?: string
+          id: string
+          revision_publication: number
+          user_id: string
+        }
+        Update: {
+          carte_id?: string
+          contenu?: Json
+          created_at?: string
+          id?: string
+          revision_publication?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lot08_version_carte"
+            columns: ["user_id", "carte_id"]
+            isOneToOne: false
+            referencedRelation: "cartes_individuelles"
+            referencedColumns: ["user_id", "id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1167,6 +1252,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      consulter_carte_lot08: { Args: { p_empreinte: string }; Returns: Json }
       creer_invitation: {
         Args: { p_label?: string }
         Returns: {
@@ -1237,7 +1323,38 @@ export type Database = {
         Args: { email_du_contact: string; mon_user_id: string }
         Returns: boolean
       }
+      exporter_liens_cartes_lot08: {
+        Args: { p_apres?: string; p_limite?: number; p_user_id: string }
+        Returns: {
+          carte_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          revoked_at: string
+          version_id: string
+        }[]
+      }
+      gerer_partage_carte_lot08: {
+        Args: {
+          p_action: string
+          p_carte: string
+          p_duree?: number
+          p_empreinte?: string
+          p_lien?: string
+          p_nonce?: string
+          p_operation: string
+          p_revision: number
+          p_secret_chiffre?: string
+          p_tag?: string
+          p_user_id: string
+        }
+        Returns: Json
+      }
       incrementer_quota_ia: { Args: { p_user_id: string }; Returns: number }
+      lire_partage_carte_lot08: {
+        Args: { p_avec_secret?: boolean; p_carte: string; p_user_id: string }
+        Returns: Json
+      }
       materialiser_occurrences_lot02: {
         Args: { p_debut: string; p_fin: string }
         Returns: {

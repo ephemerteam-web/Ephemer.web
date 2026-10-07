@@ -4,7 +4,7 @@ import Link from 'next/link'
 import AppLayout from '@/components/AppLayout'
 
 export default function ConfidentialitePage() {
-  const currentDate = '6 octobre 2026'
+  const currentDate = '7 octobre 2026'
   const currentYear = new Date().getFullYear()
 
   return (
@@ -109,6 +109,11 @@ export default function ConfidentialitePage() {
           <p>Lorsque vous ajoutez un contact dans Ephemer.name, vous êtes responsable de vous assurer que vous disposez d&apos;une raison légitime pour enregistrer ses informations.</p>
           <p>Ces données sont utilisées uniquement pour vous fournir les fonctionnalités du service : rappels, calendrier, génération de messages et suggestions associées.</p>
           <p>Nous ne contactons pas directement vos contacts sans action explicite de votre part.</p>
+          <SousTitre>Cartes personnelles et partage par lien privé</SousTitre>
+          <p>Depuis une préparation, vous pouvez choisir un modèle gratuit, saisir votre message et votre signature, puis enregistrer un brouillon privé. La reprise du message préparé est volontaire ; aucune fiche contact, note ou information de profil n’est ajoutée automatiquement. Les cartes ne transmettent pas votre texte à une intelligence artificielle.</p>
+          <p>Publier fige une version de la carte, consultable sans compte par son lien secret. Toute personne possédant ce lien peut ouvrir la carte, y compris après transfert. Le lien expire après la durée choisie (7, 30, 90 ou 365 jours ; 30 par défaut). Vous pouvez le désactiver ou le remplacer. Une republication invalide le lien précédent. La révocation bloque les consultations suivantes ; elle ne retire pas une copie déjà faite.</p>
+          <p>Le destinataire reçoit uniquement la version publiée : ni brouillon, ni coordonnées, ni notes privées. Le lien est conservé chiffré côté serveur pour permettre sa récupération par le créateur après reconnexion. Le contenu consulté ne reste pas dans le stockage persistant du navigateur ou le cache hors ligne. La page de carte exclut l’indexation et le suivi analytique, et ses métadonnées sociales restent génériques. Le partage par copie ou menu natif est toujours manuel.</p>
+          <p>Supprimer une carte retire ses versions et ses liens. Supprimer sa préparation ou le compte les retire également. L’export personnel inclut les brouillons, versions et statuts des liens, sans leurs secrets ni empreintes. Aucune photo ni avatar n’est conservé par cette collection.</p>
         </Section>
 
         {/* 6 */}
