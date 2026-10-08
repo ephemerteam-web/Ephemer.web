@@ -1,4 +1,5 @@
 -- Catalogue uniquement, executable EN ENTIER ; aucune fixture ni mutation.
+-- Apres installation du lot 09, utiliser ../lot-09/verification-lecture-seule.sql : controle combine 08+09.
 -- Compare aussi les definitions affichees au schema propose ; ne prouve pas les comportements RLS.
 BEGIN READ ONLY;
 SELECT table_schema,table_name,column_name,data_type,is_nullable,column_default FROM information_schema.columns

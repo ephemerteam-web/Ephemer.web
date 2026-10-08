@@ -107,7 +107,7 @@ test('export 6 : styles, affectations et intérêts du propriétaire uniquement,
   const data = Object.fromEntries(tables.map(table => [table, [{ id: 'a', user_id: 'A', signature: 'PRIVATE_A' }, { id: 'b', user_id: 'B', signature: 'PRIVATE_B' }]]))
   const db = pageDatabase(data); db.auth = { getUser: async () => ({ data: { user: { id: 'A' } } }) }
   const api = loadPure('lib/user-data.ts', 'exportOwnData,readOwnRows', { ...p2Helpers, supabase: db })
-  const exported = await api.exportOwnData(); assert.equal(exported.version, 6)
+  const exported = await api.exportOwnData(); assert.equal(exported.version, 7)
   for (const table of tables) assert.equal(exported[table].length, 1)
   assert.doesNotMatch(JSON.stringify(exported), /PRIVATE_B/)
   const failed = pageDatabase(data, { failAt: 1 }); failed.auth = db.auth

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createCardReader } from '@/lib/card-public-reader'
 import type { PublicCard } from '@/lib/cards'
-import CardRendererV1 from './CardRendererV1'
+import CardRenderer from './CardRenderer'
 export default function PublicCardScreen() {
   const [state, setState] = useState<{ card: PublicCard | null; message: string }>({ card: null, message: 'Vérification de la carte…' })
   useEffect(() => {
@@ -20,6 +20,6 @@ export default function PublicCardScreen() {
   }, [])
   return <main className="mx-auto w-full max-w-2xl min-w-0 flex-1 px-3 py-6 sm:px-6">
     <h1 className="mb-5 text-center text-xl font-semibold">Une carte pour toi</h1>
-    {state.card ? <CardRendererV1 snapshot={state.card.content} /> : <p role="status" className="rounded-xl border border-line p-5 text-center">{state.message || 'Vérification de la carte…'}</p>}
+    {state.card ? <CardRenderer snapshot={state.card.content} /> : <p role="status" className="rounded-xl border border-line p-5 text-center">{state.message || 'Vérification de la carte…'}</p>}
   </main>
 }

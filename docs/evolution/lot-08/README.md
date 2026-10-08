@@ -35,6 +35,8 @@ La lecture publique retourne exactement `content` (les six champs fermés du ren
 
 ## Application humaine — ne pas sauter la validation
 
+Extension avatar (lot 09) : son [contrôle combiné](../lot-09/verification-lecture-seule.sql) reprend les assertions 08 avec les seules colonnes/droits 09 autorisés. Après installation 09, utiliser ce contrôle et sa recette ; le contrôle/recette historiques 08 restent stricts sur le contrat V1. Ne pas réappliquer le schéma 08. Le lot 09 reste proposé tant que son catalogue n’est pas confirmé.
+
 Procédure initiale conservée pour une nouvelle copie de test. **Ne pas réappliquer `schema-propose.sql` sur la cible déjà confirmée.** L’intégration locale décrite ci-dessus a eu lieu après confirmation ; les recettes réelles restent distinctes des simulations.
 
 1. Lire le dossier entier et les contrats installés 02–07. Sauvegarder la cible, vérifier la restauration sur copie et noter le projet concerné. Inspecter les triggers Auth/contacts ; neutraliser les fournisseurs externes dans la copie de test.

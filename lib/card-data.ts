@@ -1,11 +1,13 @@
 // 💌 Brouillons soumis aux RLS ; liens gérés uniquement par les routes serveur.
 import { supabase } from './supabase-browser'
 import { requireOwner } from './attention-data'
-import { cardSnapshot, type CardSnapshotV1, type CardShareStatus } from './cards'
+import { type CardShareStatus } from './cards'
+import { supportedCardSnapshot, type SupportedCardSnapshot } from './card-snapshot-v2'
 import type { Tables } from '@/types/database'
 export type CardDraft = Tables<'cartes_individuelles'>
-export function draftSnapshot(row: CardDraft): CardSnapshotV1 {
-  return cardSnapshot({ format: 1, templateId: row.modele_id, templateVersion: row.modele_version, renderVersion: row.rendu_version, message: row.message, signature: row.signature })
+export function draftSnapshot(row: CardDraft): SupportedCardSnapshot {
+  if (row.rendu_version === 1 && row.avatar_signature != null) throw new Error('Brouillon invalide.')
+  return supportedCardSnapshot({ format: row.rendu_version, templateId: row.modele_id, templateVersion: row.modele_version, renderVersion: row.rendu_version, message: row.message, signature: row.signature, ...(row.rendu_version === 2 ? { avatar: row.avatar_signature } : {}) })
 }
 export async function cardRequest<T>(owner: string, path: string, method = 'GET', body?: unknown): Promise<T> {
   await requireOwner(owner)
@@ -35,9 +37,9 @@ export async function loadCard(owner: string, preparationId: string) {
   if (share.revision !== result.data.revision) throw new Error('La carte a changé pendant le chargement. Relance la lecture.')
   return { draft: result.data, share }
 }
-export async function saveCard(owner: string, preparationId: string, id: string, revision: number | null, input: CardSnapshotV1): Promise<CardDraft> {
-  const snapshot = cardSnapshot(input)
-  const values = { modele_id: snapshot.templateId, modele_version: snapshot.templateVersion, rendu_version: snapshot.renderVersion, message: snapshot.message, signature: snapshot.signature }
+export async function saveCard(owner: string, preparationId: string, id: string, revision: number | null, input: SupportedCardSnapshot): Promise<CardDraft> {
+  const snapshot = supportedCardSnapshot(input)
+  const values = { modele_id: snapshot.templateId, modele_version: snapshot.templateVersion, rendu_version: snapshot.renderVersion, message: snapshot.message, signature: snapshot.signature, avatar_signature: snapshot.format === 2 ? snapshot.avatar : null }
   await requireOwner(owner)
   const matches = (row: CardDraft) => row.preparation_id === preparationId && JSON.stringify(draftSnapshot(row)) === JSON.stringify(snapshot)
   if (revision === null) {

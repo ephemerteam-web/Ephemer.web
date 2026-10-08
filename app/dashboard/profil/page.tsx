@@ -6,6 +6,7 @@ import { createRequestScope } from '@/lib/request-scope'
 
 import Modal from '@/components/Modal'
 import PersonalDates from '@/components/PersonalDates'
+import AccountAvatarBadge from '@/components/avatars/AccountAvatarBadge'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -215,9 +216,9 @@ export default function DashboardProfil() {
               Avatar plus petit (16x16 au lieu de 24x24)
               pour ne pas gaspiller l'espace vertical
             */}
-            <div className="w-16 h-16 flex-shrink-0 bg-gradient-to-br from-action to-action rounded-2xl flex items-center justify-center text-3xl">
-              👤
-            </div>
+            <Link href="/avatar" aria-label="Personnaliser mon avatar" className="w-16 h-16 flex-shrink-0 bg-gradient-to-br from-action to-action rounded-2xl flex items-center justify-center text-3xl hover:ring-2 hover:ring-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              <AccountAvatarBadge initiale={prenom.charAt(0).toUpperCase()} rounded={false} />
+            </Link>
             <div className="min-w-0">
               {/* min-w-0 permet à truncate de fonctionner dans un flex */}
               <p className="text-ink font-semibold truncate">

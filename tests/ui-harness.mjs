@@ -6,7 +6,8 @@ import React from 'react'
 import ts from 'typescript'
 const nativeRequire=createRequire(import.meta.url)
 export function harness(file,{overrides={},globals={},extra='',sources={}}={}) {
-  overrides = { '@/components/DashboardUserContext': { useDashboardUser: () => ({ id: 'u1', email: 'test@example.invalid' }) }, ...overrides }
+  const emptyAvatar={config:null,updateAvatar:()=>{}}
+  overrides = { '@/components/DashboardUserContext': { useDashboardUser: () => ({ id: 'u1', email: 'test@example.invalid' }) }, '@/components/avatars/DashboardAvatarContext':{useDashboardAvatar:()=>emptyAvatar,default:({children})=>children}, ...overrides }
   const slots=[], effects=[], modules=new Map(); let cursor=0,tree
   const hooks={...React,
     useState(initial){const i=cursor++; if(!(i in slots)) slots[i]=typeof initial==='function'?initial():initial; return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value}]},

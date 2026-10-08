@@ -3,7 +3,8 @@ import 'server-only'
 import { randomUUID } from 'node:crypto'
 import { supabaseAdmin } from './supabase-admin'
 import { limitedJSON } from './ai-transport'
-import { cardSnapshot, publicCard, CARD_EXPIRY_DAYS, type CardShareStatus } from './cards'
+import { publicCard, CARD_EXPIRY_DAYS, type CardShareStatus } from './cards'
+import { supportedCardSnapshot } from './card-snapshot-v2'
 import { cardSecretHash, decryptCardSecret, encryptCardSecret, isCardSecret, newCardSecret, type EncryptedCardSecret } from './card-link-crypto'
 
 export const CARD_PRIVATE_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow, noarchive', 'Vary': 'Authorization' }
@@ -55,7 +56,7 @@ async function currentStatus(client: typeof supabaseAdmin, userId: string, id: s
     const version = await client.from('versions_cartes').select('contenu').eq('user_id', userId).eq('carte_id', id).eq('id', state.versionId).maybeSingle()
     databaseError(version.error)
     if (!version.data) throw inaccessible()
-    published = cardSnapshot(version.data.contenu, true)
+    published = supportedCardSnapshot(version.data.contenu, true)
   }
   return { revision: card.revision, versionId: typeof state.versionId === 'string' ? state.versionId : null, linkId: typeof state.linkId === 'string' ? state.linkId : null,
     state: state.state as CardShareStatus['state'], expiresAt: typeof state.expiresAt === 'string' ? state.expiresAt : null, published }
@@ -73,7 +74,10 @@ async function mutate(client: typeof supabaseAdmin, userId: string, id: string, 
     catch { throw new CardHTTPError(503, 'La création des liens est indisponible. La clé serveur doit être configurée.') }
     Object.assign(args, { p_duree: body.expiryDays, p_lien: linkId, p_empreinte: cardSecretHash(secret), p_secret_chiffre: envelope.ciphertext, p_nonce: envelope.nonce, p_tag: envelope.tag })
   }
-  const result = await client.rpc('gerer_partage_carte_lot08', args)
+  const { p_action, ...publicationArgs } = args
+  const result = action === 'publier'
+    ? await client.rpc('publier_carte_lot09', { ...publicationArgs, p_duree: args.p_duree!, p_lien: args.p_lien!, p_empreinte: args.p_empreinte!, p_secret_chiffre: args.p_secret_chiffre!, p_nonce: args.p_nonce!, p_tag: args.p_tag! })
+    : await client.rpc('gerer_partage_carte_lot08', { ...publicationArgs, p_action })
   databaseError(result.error)
   // Ne jamais renvoyer le secret généré ci-dessus : un retry peut correspondre à un ancien résultat.
   return currentStatus(client, userId, id)

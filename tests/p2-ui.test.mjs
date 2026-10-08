@@ -46,7 +46,8 @@ test('dialogue : ouverture native, focus initial, Échap et retour au déclenche
   const props={open:true,title:'Confirmer',onClose:()=>{cancelled=true},children:'Test'}
   let tree=h.render(props);tree.props.ref.current={showModal(){opened++},close(){closed++},querySelector:()=>initial}
   await h.flush();assert.equal(opened,1);assert.equal(focused,'initial');assert.ok(tree.props['aria-labelledby'])
-  tree.props.onCancel({preventDefault(){}});assert.equal(cancelled,true)
+  let stopped=false
+  tree.props.onCancel({preventDefault(){},stopPropagation(){stopped=true}});assert.equal(cancelled,true);assert.equal(stopped,true)
   const hidden=h.render({...props,open:false});await h.flush();assert.equal(closed,1);assert.equal(focused,'trigger');assert.equal(hidden.props.style.display,'none')
 })
 

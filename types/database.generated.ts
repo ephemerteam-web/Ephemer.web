@@ -53,6 +53,30 @@ export type Database = {
           },
         ]
       }
+      avatars_utilisateurs: {
+        Row: {
+          configuration: Json
+          created_at: string
+          revision: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          configuration: Json
+          created_at?: string
+          revision?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          configuration?: Json
+          created_at?: string
+          revision?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       cadeaux_offerts: {
         Row: {
           achat_declare: boolean
@@ -134,6 +158,7 @@ export type Database = {
       }
       cartes_individuelles: {
         Row: {
+          avatar_signature: Json | null
           created_at: string
           id: string
           message: string
@@ -147,6 +172,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          avatar_signature?: Json | null
           created_at?: string
           id?: string
           message?: string
@@ -160,6 +186,7 @@ export type Database = {
           user_id?: string
         }
         Update: {
+          avatar_signature?: Json | null
           created_at?: string
           id?: string
           message?: string
@@ -1469,6 +1496,21 @@ export type Database = {
           p_rappels: boolean
           p_revision: number
           p_visible: boolean
+        }
+        Returns: Json
+      }
+      publier_carte_lot09: {
+        Args: {
+          p_carte: string
+          p_duree: number
+          p_empreinte: string
+          p_lien: string
+          p_nonce: string
+          p_operation: string
+          p_revision: number
+          p_secret_chiffre: string
+          p_tag: string
+          p_user_id: string
         }
         Returns: Json
       }

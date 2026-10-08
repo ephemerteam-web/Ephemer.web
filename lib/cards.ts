@@ -1,4 +1,5 @@
 // 💌 Contrat de rendu indépendant de la base. Ne pas modifier un rendu déjà publié : créer une version suivante.
+import { supportedCardSnapshot, type SupportedCardSnapshot } from './card-snapshot-v2'
 export const CARD_TEMPLATES = [
   { id: 'clair_de_lune', label: 'Clair de lune', description: 'Une lune dorée dans un ciel bleu profond.' },
   { id: 'constellation', label: 'Constellation', description: 'Des étoiles reliées sur un papier lumineux.' },
@@ -12,13 +13,13 @@ export type CardSnapshotV1 = {
   format: 1; templateId: CardTemplateId; templateVersion: 1; renderVersion: 1
   message: string; signature: string
 }
-export type CardShareStatus = { revision: number; versionId: string | null; linkId: string | null; state: 'absent' | 'actif' | 'expire' | 'revoque'; expiresAt: string | null; published: CardSnapshotV1 | null }
-export type PublicCard = { content: CardSnapshotV1; expiresAt: string }
+export type CardShareStatus = { revision: number; versionId: string | null; linkId: string | null; state: 'absent' | 'actif' | 'expire' | 'revoque'; expiresAt: string | null; published: SupportedCardSnapshot | null }
+export type PublicCard = { content: SupportedCardSnapshot; expiresAt: string }
 export function publicCard(input: unknown, now = Date.now()): PublicCard {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Cette carte est indisponible')
   const value = input as Record<string, unknown>
   if (typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt)) || Date.parse(value.expiresAt) <= now) throw new Error('Cette carte est indisponible')
-  return { content: cardSnapshot(value.content, true), expiresAt: value.expiresAt }
+  return { content: supportedCardSnapshot(value.content, true), expiresAt: value.expiresAt }
 }
 const snapshotKeys = ['format', 'templateId', 'templateVersion', 'renderVersion', 'message', 'signature']
 export function isCardTemplate(value: unknown): value is CardTemplateId {

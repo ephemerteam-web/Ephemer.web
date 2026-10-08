@@ -6,7 +6,7 @@ import test from 'node:test'
 
 function load(path, name, context) {
   const source = stripTypeScriptTypes(readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'))
-    .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '')
+    .replace(/^import[^\n]+\n/gm, '').replace(/^export default [^\n]+\n/gm, '').replace(/^export /gm, '')
   return runInNewContext(`${source}\n;${name}`, context)
 }
 function response(url = null) {
@@ -52,6 +52,22 @@ test('proxy : absence de session, redirection sans perdre les cookies', async ()
   const result = await proxy({ url: 'https://example.invalid/dashboard', cookies: response().cookies })
   assert.equal(result.url, 'https://example.invalid/connexion')
   assert.equal(result.cookies.getAll()[0].maxAge, 0)
+})
+
+test('avatar : route privée couverte par Auth, refus sans session et absence de cache public',async()=>{
+  const config=load('proxy.ts','config',{})
+  assert.ok(config.matcher.includes('/avatar'))
+  const proxy=load('proxy.ts','proxy',{process:{env},NextResponse,URL,createServerClient:()=>({auth:{getUser:async()=>({data:{user:null},error:null})}})})
+  const result=await proxy({url:'https://example.invalid/avatar',cookies:response().cookies})
+  assert.equal(result.url,'https://example.invalid/connexion')
+  assert.equal(result.headers.get('cache-control'),'private, no-store')
+  const next=load('next.config.ts','nextConfig',{process:{env:{NODE_ENV:'production'}}})
+  assert.equal((await next.rewrites()).find(r=>r.source==='/avatar').destination,'/dashboard/avatar')
+  for(const source of ['/avatar','/dashboard/avatar']) {
+    const headers=(await next.headers()).find(r=>r.source===source).headers
+    assert.match(headers.find(h=>h.key==='Cache-Control').value,/private, no-store/)
+    assert.match(headers.find(h=>h.key==='X-Robots-Tag').value,/noindex/)
+  }
 })
 
 test('callback : code manquant/refusé, reset valide et destination externe refusée', async () => {

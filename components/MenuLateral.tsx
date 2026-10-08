@@ -1,5 +1,6 @@
 'use client'
 import Modal from '@/components/Modal'
+import AccountAvatarBadge from '@/components/avatars/AccountAvatarBadge'
 import { useContactDraft } from '@/components/ContactDraftProvider'
 
 import { useEffect, useRef, useState } from 'react'
@@ -171,13 +172,9 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
           </button>
 
           <div className="flex flex-col items-center text-center mt-4">
-            <div className="w-20 h-20 rounded-full bg-action/20 flex items-center justify-center mb-3">
-              {initiale ? (
-                <span className="text-accent font-bold text-3xl">{initiale}</span>
-              ) : (
-                <span className="text-accent text-xl">👤</span>
-              )}
-            </div>
+            <button type="button" aria-label="Personnaliser mon avatar" onClick={() => naviguerVers('/avatar')} className="w-20 h-20 rounded-full bg-action/20 flex items-center justify-center mb-3 hover:ring-2 hover:ring-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+              <AccountAvatarBadge initiale={initiale} className="text-3xl" />
+            </button>
 
             <p className="text-ink font-semibold text-lg">
               {user?.prenom || 'Mon compte'}

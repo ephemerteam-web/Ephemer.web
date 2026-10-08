@@ -1,6 +1,8 @@
 'use client'
 import { DashboardUserContext, type DashboardUser } from '@/components/DashboardUserContext'
 import LoadFailure from '@/components/LoadFailure'
+import DashboardAvatarProvider from '@/components/avatars/DashboardAvatarContext'
+import AccountAvatarBadge from '@/components/avatars/AccountAvatarBadge'
 
 import ContactDraftProvider from '@/components/ContactDraftProvider'
 import CelestialBackdrop from '@/components/CelestialBackdrop'
@@ -79,7 +81,7 @@ export default function DashboardLayout({
     : <main className="p-8 text-ink" role="status">Vérification de la session…</main>
 
   return (
-    <DashboardUserContext.Provider key={user.id} value={user}><ContactDraftProvider><DrawerProvider>
+    <DashboardUserContext.Provider key={user.id} value={user}><DashboardAvatarProvider ownerId={user.id}><ContactDraftProvider><DrawerProvider>
       <div className="min-h-screen bg-canvas relative isolate">
 
         <CelestialBackdrop />
@@ -122,15 +124,7 @@ export default function DashboardLayout({
       aria-label="Ouvrir le menu"
       className="relative w-10 h-10 rounded-full bg-gradient-to-br from-action/30 to-action/10 border-2 border-accent/40 hover:border-accent hover:scale-105 transition-all duration-200 flex items-center justify-center"
     >
-      {initiale ? (
-        <span className="text-accent font-bold text-base group-hover:scale-110 transition-transform">
-          {initiale}
-        </span>
-      ) : (
-        <svg className="w-5 h-5 text-accent/70" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-        </svg>
-      )}
+      <AccountAvatarBadge initiale={initiale} />
       <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-canvas" />
     </button>
   </div>
@@ -155,6 +149,6 @@ export default function DashboardLayout({
         <DrawerGlobal />
 
       </div>
-    </DrawerProvider></ContactDraftProvider></DashboardUserContext.Provider>
+    </DrawerProvider></ContactDraftProvider></DashboardAvatarProvider></DashboardUserContext.Provider>
   )
 }

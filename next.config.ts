@@ -79,6 +79,10 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      ...['/avatar', '/dashboard/avatar'].map(source => ({ source, headers: [
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+      ] })),
       // Le shell et toutes les réponses cartes (y compris refus de méthode) restent privés.
       ...['/carte', '/api/cartes/:path*'].map(source => ({ source, headers: [
         { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
@@ -93,6 +97,11 @@ const nextConfig: NextConfig = {
         headers: [{ key: 'Cache-Control', value: 'no-store, must-revalidate' }],
       }] : []),
     ];
+  },
+
+  // Même layout privé et mêmes garde-fous ; l’URL visible reste /avatar.
+  async rewrites() {
+    return [{ source: '/avatar', destination: '/dashboard/avatar' }];
   },
 
   // ─── Redirections utiles ───

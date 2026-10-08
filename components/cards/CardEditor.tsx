@@ -3,14 +3,16 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { button, field } from '@/components/AttentionShared'
-import { CARD_TEMPLATES, CARD_EXPIRY_DAYS, CARD_MESSAGE_LIMIT, CARD_SIGNATURE_LIMIT, cardSnapshot, isCardTemplate, type CardSnapshotV1, type CardShareStatus } from '@/lib/cards'
+import { CARD_TEMPLATES, CARD_EXPIRY_DAYS, CARD_MESSAGE_LIMIT, CARD_SIGNATURE_LIMIT, isCardTemplate, type CardShareStatus } from '@/lib/cards'
+import { supportedCardSnapshot, type SupportedCardSnapshot } from '@/lib/card-snapshot-v2'
+import { avatarForCard } from '@/lib/avatar-data'
 import { cardOperation, cardRequest, draftSnapshot, loadCard, recoverCardLink, saveCard, type CardDraft, type CardOperation, type RecoveredCardLink } from '@/lib/card-data'
-import CardRendererV1 from './CardRendererV1'
+import CardRenderer from './CardRenderer'
 
-const blank: CardSnapshotV1 = { format: 1, templateId: 'clair_de_lune', templateVersion: 1, renderVersion: 1, message: '', signature: '' }
+const blank: SupportedCardSnapshot = { format: 2, templateId: 'clair_de_lune', templateVersion: 1, renderVersion: 2, message: '', signature: '', avatar: null }
 const sharingNotice = 'Toute personne possédant le lien peut ouvrir la carte, y compris après transfert. Une révocation bloque les consultations suivantes ; elle ne retire pas une copie déjà faite.'
 export default function CardEditor({ ownerId, preparationId, preparedMessage, onClose, onDirtyChange }: { ownerId: string; preparationId: string; preparedMessage?: string; onClose: () => void; onDirtyChange: (dirty: boolean) => void }) {
-  const [snapshot, setSnapshot] = useState<CardSnapshotV1>(blank), [saved, setSaved] = useState<CardDraft | null>(null), [share, setShare] = useState<CardShareStatus | null>(null)
+  const [snapshot, setSnapshot] = useState<SupportedCardSnapshot>(blank), [saved, setSaved] = useState<CardDraft | null>(null), [share, setShare] = useState<CardShareStatus | null>(null)
   const [createId] = useState(() => crypto.randomUUID()), [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false)
   const [error, setError] = useState(''), [notice, setNotice] = useState(''), [days, setDays] = useState(30), [link, setLink] = useState<RecoveredCardLink | null>(null)
   const [pendingOperation, setPendingOperation] = useState<CardOperation | null>(null)
@@ -45,7 +47,7 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
   }
   async function save() {
     await run(async () => {
-      const row = await saveCard(ownerId, preparationId, saved?.id ?? createId, saved?.revision ?? null, cardSnapshot(snapshot))
+      const row = await saveCard(ownerId, preparationId, saved?.id ?? createId, saved?.revision ?? null, supportedCardSnapshot(snapshot))
       if (!alive.current) return
       setSaved(row); setNotice('Brouillon enregistré. Il reste privé.')
     })
@@ -98,10 +100,15 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
       {preparedMessage && <button type="button" className={button} onClick={() => { if (!snapshot.message || window.confirm('Remplacer le texte de la carte par ton message préparé ?')) setSnapshot({ ...snapshot, message: Array.from(preparedMessage).slice(0, CARD_MESSAGE_LIMIT).join('') }) }}>Reprendre mon message préparé</button>}
       <label className="block text-sm">Message<textarea className={field + ' mt-1 min-h-36'} value={snapshot.message} maxLength={CARD_MESSAGE_LIMIT} onChange={event => setSnapshot({ ...snapshot, message: event.target.value })} /></label>
       <label className="block text-sm">Signature choisie (facultative)<input className={field + ' mt-1'} value={snapshot.signature} maxLength={CARD_SIGNATURE_LIMIT} onChange={event => setSnapshot({ ...snapshot, signature: event.target.value })} /></label>
+      <div className="space-y-2"><p className="text-sm text-muted">L’avatar est une copie choisie pour cette carte. Modifier ton profil ne la change pas. Sans avatar enregistré dans le profil, l’apparence par défaut sera copiée.</p>
+        <div className="flex flex-wrap gap-2"><button type="button" className={button} onClick={() => void run(async () => { const avatar = await avatarForCard(ownerId); if (alive.current) { setSnapshot({ ...snapshot, format: 2, renderVersion: 2, avatar }); setNotice('Avatar copié dans la saisie. Enregistre le brouillon pour le conserver.') } })}>{snapshot.format === 2 && snapshot.avatar ? 'Actualiser depuis mon profil' : 'Ajouter mon avatar'}</button>
+          {snapshot.format === 2 && snapshot.avatar && <button type="button" className={button} onClick={() => setSnapshot({ ...snapshot, avatar: null })}>Retirer l’avatar</button>}
+        </div>
+      </div>
       <button type="button" className={button} disabled={!dirty && !!saved} onClick={() => void save()}>Enregistrer le brouillon</button>
     </fieldset>
     <p className="text-sm text-muted">{dirty ? 'Modifications non enregistrées' : saved ? 'Brouillon enregistré, visible uniquement par toi.' : 'La carte sera créée au premier enregistrement.'}</p>
-    <section aria-label="Aperçu du brouillon" className="min-w-0 space-y-2"><h3 className="font-semibold">Aperçu du brouillon privé</h3><CardRendererV1 snapshot={snapshot} /></section>
+    <section aria-label="Aperçu du brouillon" className="min-w-0 space-y-2"><h3 className="font-semibold">Aperçu du brouillon privé</h3><CardRenderer snapshot={snapshot} /></section>
     {saved && <section className="space-y-3 rounded-xl border border-line p-3"><h3 className="font-semibold">Publication et lien privé</h3><p className="text-sm">{sharingNotice}</p>
       <label className="block text-sm">Expiration du nouveau lien<select className={field + ' mt-1'} value={days} disabled={busy || !!pendingOperation} onChange={event => setDays(Number(event.target.value))}>{CARD_EXPIRY_DAYS.map(day => <option key={day} value={day}>{day} jours{day === 30 ? ' (par défaut)' : ''}</option>)}</select></label>
       <p className="text-sm">{statusLabel}{share?.expiresAt && ' · Échéance : ' + new Date(share.expiresAt).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
@@ -112,7 +119,7 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
       </div>
       {link && <div className="space-y-2"><label className="block text-sm">Lien secret à partager<input className={field + ' mt-1'} readOnly value={url} onFocus={event => event.currentTarget.select()} /></label><div className="flex flex-wrap gap-2"><button className={button} type="button" onClick={() => void copy()}>Copier le lien</button>{typeof navigator !== 'undefined' && typeof navigator.share === 'function' && <button className={button} type="button" onClick={() => void nativeShare()}>Partager…</button>}</div></div>}
     </section>}
-    {share?.published && <section aria-label="Version publiée actuelle" className="space-y-2"><h3 className="font-semibold">Version publiée actuelle</h3><p className="text-sm text-muted">Cette version conserve son message, sa signature et sa composition.</p><CardRendererV1 snapshot={share.published} /></section>}
+    {share?.published && <section aria-label="Version publiée actuelle" className="space-y-2"><h3 className="font-semibold">Version publiée actuelle</h3><p className="text-sm text-muted">Cette version conserve son message, sa signature, son avatar choisi et sa composition.</p><CardRenderer snapshot={share.published} /></section>}
     {pendingOperation && <div role="alert" className="space-y-2"><p>Résultat non confirmé. Reprendre utilise la même opération et ne crée pas un deuxième lien.</p><button className={button} disabled={busy} type="button" onClick={() => void mutate(pendingOperation.action, true)}>Reprendre la même opération</button></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
     <button type="button" className={button} disabled={busy} onClick={() => void reload()}>Relire la carte</button>

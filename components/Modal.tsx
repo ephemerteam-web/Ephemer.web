@@ -25,7 +25,7 @@ export default function Modal({ open, onClose, title, children, className = '', 
       if (trigger?.isConnected) trigger.focus()
     }
   }, [open])
-  return <dialog ref={ref} tabIndex={-1} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); closeRef.current() }}
+  return <dialog ref={ref} tabIndex={-1} aria-labelledby={titleId} onCancel={event => { event.preventDefault(); event.stopPropagation(); closeRef.current() }}
     onClick={event => { if (event.target === event.currentTarget) closeRef.current() }}
     style={{ ...style, ...(!open ? { display: 'none' } : {}) }} className={`m-auto max-h-[100dvh] max-w-[100vw] overflow-y-auto border border-line bg-surface text-ink p-5 rounded-2xl backdrop:bg-black/60 ${className}`}>
     <h2 id={titleId} className="sr-only">{title}</h2>{open && children}

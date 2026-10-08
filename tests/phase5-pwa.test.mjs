@@ -33,22 +33,24 @@ async function dispatch(handler, event) {
 }
 test('navigation privée réseau : aucune écriture de cache', async () => {
   const w = worker()
-  const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'navigate', url: 'https://example.invalid/dashboard/profil' } })
-  assert.equal(await response.text(), 'Page privée')
+  for (const path of ['/dashboard/profil','/avatar']) {
+    const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'navigate', url: 'https://example.invalid'+path } })
+    assert.equal(await response.text(), 'Page privée')
+  }
   assert.equal(w.writes.length, 0)
 })
 test('API, RSC, images privées et requêtes externes ignorées', async () => {
   const w = worker()
-  for (const path of ['/api/data', '/dashboard?_rsc=abc', '/avatar-prive.png', 'https://other.invalid/data']) {
+  for (const path of ['/api/data', '/dashboard?_rsc=abc', '/avatar?_rsc=abc', '/avatar-prive.png', 'https://other.invalid/data']) {
     const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'cors', destination: 'image', url: new URL(path, 'https://example.invalid').href } })
     assert.equal(response, undefined)
   }
   assert.equal(w.writes.length, 0)
 })
 test('offline : secours public même si aucun cache ne répond', async () => {
-  for (const cached of [true, false]) {
+  for (const cached of [true, false]) for (const path of ['/dashboard','/avatar']) {
     const w = worker({ offline: true, cached })
-    const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'navigate', url: 'https://example.invalid/dashboard' } })
+    const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'navigate', url: 'https://example.invalid'+path } })
     assert.equal(response.status, cached ? 200 : 503)
     assert.doesNotMatch(await response.text(), /Page privée/)
   }
