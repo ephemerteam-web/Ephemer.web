@@ -1,4 +1,5 @@
 'use client'
+import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
 import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
@@ -25,7 +26,8 @@ export default function ContactsPage() {
   const router = useRouter()
   const { contacts: rows, loading, error: listError, retry } = useContacts()
   const lists = usePrivateLists()
-  const contacts = useMemo(() => rows.map(contact => ({ ...contact, estLie: false })), [rows])
+  const social = useEtoiles()
+  const contacts = useMemo(() => rows.map(contact => ({ ...contact, estLie: !social.error && social.associations.some(link => link.contact_id === String(contact.id) && social.actives.some(star => star.id === link.relation_id)) })), [rows, social.associations, social.actives, social.error])
   const { ouvrirDrawer } = useDrawer()
   const [activeLetter, setActiveLetter] = useState<string | null>(null)
 
@@ -333,11 +335,7 @@ export default function ContactsPage() {
                           </span>
                         )}
                         {contact.estLie && (
-                          <span className="shrink-0 text-success" title="Contact lié" aria-label="Contact lié" role="img">
-                            <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-                              <path d="m10 13 4-4M8 16l-1 1a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m2 1 1-1a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0" />
-                            </svg>
-                          </span>
+                          <span className="shrink-0 rounded-full bg-action/10 px-2 py-0.5 text-[10px] font-semibold text-accent" title="Relation active">✦ Étoile</span>
                         )}
                       </div>
                     </div>

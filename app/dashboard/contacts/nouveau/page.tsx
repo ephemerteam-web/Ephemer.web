@@ -1,5 +1,7 @@
 'use client'
 import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useEtoiles } from '@/components/etoiles/EtoilesContext'
+import { notifyContactsChanged } from '@/lib/contact-changes'
 
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { TYPES_RELATION, normalizeRelation } from '@/lib/constants'
@@ -52,6 +54,7 @@ export default function AjoutRapideContacts() {
   
   // État principal
   const { prenom, setPrenom, contacts, setContacts, clear, confirm } = useContactDraft()
+  const social = useEtoiles()
 
   const [sauvegardeEnCours, setSauvegardeEnCours] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
@@ -247,6 +250,11 @@ export default function AjoutRapideContacts() {
       }
       
       setSucces(`🎉 ${contacts.length} contact(s) enregistré(s) avec succès !`)
+      notifyContactsChanged(userId)
+      if (social.contactSeed && contacts.some(contact => contact.id === social.contactSeed?.draftId)) {
+        setSucces('Contact enregistré. Retourne dans Mes étoiles pour choisir cette fiche et l’associer volontairement.')
+        social.setContactSeed(null)
+      }
       clear()
       setContactSelectionneId(null)
       router.refresh()
@@ -254,7 +262,7 @@ export default function AjoutRapideContacts() {
       // Réinitialiser après 3 secondes
       setTimeout(() => {
         setSucces(null)
-      }, 3000)
+      }, social.contactSeed ? 15000 : 3000)
     } catch (err) {
       console.error('Erreur sauvegarde:', err)
       setErreur('Une erreur est survenue. Réessaye.')

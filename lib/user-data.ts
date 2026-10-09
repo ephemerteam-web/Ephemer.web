@@ -1,6 +1,8 @@
-import { readPages } from './pagination'
+import { readPages, readAllRows } from './pagination'
 import { supabase } from './supabase-browser'
 import { exportCardLinks } from './card-data'
+import { exportEtoiles } from './etoiles-data'
+import { readMonUnivers } from './univers-data'
 
 export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations' | 'listes_personnelles' | 'appartenances_listes' | 'evenements_personnels' | 'regles_evenements' | 'occurrences_evenements' | 'preparations_evenements' | 'taches_preparation' | 'idees_cadeaux' | 'choix_cadeaux' | 'cadeaux_offerts' | 'styles_messages' | 'preferences_styles_messages' | 'styles_messages_contacts' | 'preferences_cadeaux_contacts' | 'cartes_individuelles' | 'versions_cartes' | 'avatars_utilisateurs', userId: string) {
   const rows: Record<string, unknown>[] = []
@@ -21,12 +23,16 @@ export async function exportOwnData() {
   if (error || !user) throw new Error('Reconnecte-toi pour exporter tes données.')
   const tables = ['profiles', 'contacts', 'rappels', 'notifications', 'notification_preferences', 'invitations', 'listes_personnelles', 'appartenances_listes', 'evenements_personnels', 'regles_evenements', 'occurrences_evenements', 'preparations_evenements', 'taches_preparation', 'idees_cadeaux', 'choix_cadeaux', 'cadeaux_offerts', 'styles_messages', 'preferences_styles_messages', 'styles_messages_contacts', 'preferences_cadeaux_contacts', 'cartes_individuelles', 'versions_cartes', 'avatars_utilisateurs'] as const
   const result: Record<string, unknown> = {
-    format: 'ephemer-personal-export', version: 7, exported_at: new Date().toISOString(),
+    format: 'ephemer-personal-export', version: 9, exported_at: new Date().toISOString(),
     account: { id: user.id, email: user.email },
-    limitations: 'Lecture paginée sans instantané transactionnel. Tokens d’invitation, empreintes et secrets des cartes (même chiffrés), secrets de session et clés push exclus. Les journaux des prestataires et sauvegardes ne sont pas inclus.',
+    limitations: 'Lecture paginée sans instantané transactionnel. Mon univers inclut les valeurs et permissions du propriétaire uniquement ; univers et avatars des étoiles exclus. Tokens d’invitation, empreintes et secrets des cartes (même chiffrés), secrets des liens sociaux, journaux d’opérations, identités résolues des destinataires de demandes envoyées, secrets de session et clés push exclus. Les journaux des prestataires et sauvegardes ne sont pas inclus.',
   }
   for (const table of tables) result[table] = await readOwnRows(table, user.id)
   result.liens_cartes = await exportCardLinks(user.id)
+  result.etoiles = await exportEtoiles(user.id)
+  result.mon_univers = await readMonUnivers(user.id)
+  // Projections explicites : aucun secret de lien ni résolution des destinataires.
+  result.notifications_etoiles = await readAllRows(() => supabase.from('notifications_etoiles').select('id,type,demande_id,relation_id,lue,created_at').eq('user_id', user.id))
   const { data: current } = await supabase.auth.getUser()
   if (current.user?.id !== user.id) throw new Error('La session a changé. Relance l’export.')
   return result

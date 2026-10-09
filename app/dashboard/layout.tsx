@@ -5,6 +5,7 @@ import DashboardAvatarProvider from '@/components/avatars/DashboardAvatarContext
 import AccountAvatarBadge from '@/components/avatars/AccountAvatarBadge'
 
 import ContactDraftProvider from '@/components/ContactDraftProvider'
+import EtoilesProvider from '@/components/etoiles/EtoilesContext'
 import CelestialBackdrop from '@/components/CelestialBackdrop'
 import { useRouter } from 'next/navigation'
 import { useState, useEffect, useRef } from 'react'
@@ -81,7 +82,7 @@ export default function DashboardLayout({
     : <main className="p-8 text-ink" role="status">Vérification de la session…</main>
 
   return (
-    <DashboardUserContext.Provider key={user.id} value={user}><DashboardAvatarProvider ownerId={user.id}><ContactDraftProvider><DrawerProvider>
+    <DashboardUserContext.Provider key={user.id} value={user}><DashboardAvatarProvider ownerId={user.id}><ContactDraftProvider><EtoilesProvider><DrawerProvider>
       <div className="min-h-screen bg-canvas relative isolate">
 
         <CelestialBackdrop />
@@ -149,6 +150,6 @@ export default function DashboardLayout({
         <DrawerGlobal />
 
       </div>
-    </DrawerProvider></ContactDraftProvider></DashboardAvatarProvider></DashboardUserContext.Provider>
+    </DrawerProvider></EtoilesProvider></ContactDraftProvider></DashboardAvatarProvider></DashboardUserContext.Provider>
   )
 }

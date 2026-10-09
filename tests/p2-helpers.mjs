@@ -33,7 +33,7 @@ async function readEventData(client, ...args) {
   return eventLoader.readEventData({ ...client, rpc: client.rpc ?? (() => pageDatabase({ rows: [] }).from('rows')) }, ...args)
 }
 // Les anciennes recettes d'export n'ont aucun droit de carte ; la route est testée séparément.
-export const p2Helpers = { ...ids, ...journal, ...constants, ...amounts, ...aiOptions, ...aiTransport, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, ...consent, ...aiContext, readEventData, exportCardLinks: async () => [] }
+export const p2Helpers = { ...ids, ...journal, ...constants, ...amounts, ...aiOptions, ...aiTransport, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, ...consent, ...aiContext, readEventData, exportCardLinks: async () => [], exportEtoiles: async () => ({ relations: [], demandes: [], blocages: [], liens: [], associations: [] }), readMonUnivers: async () => ({ revision: 0, modeIdentite: 'prenom', identite: 'Fixture', valeurs: { presentation: '', passions: '', plaisirs: '', eviter: '', anniversaire: null, email: '', telephone: '' }, partage: { presentation: false, passions: false, plaisirs: false, eviter: false, anniversaire: false, annee: false, email: false, telephone: false, avatar: false } }) }
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {

@@ -82,7 +82,7 @@ test('révisions : modification concurrente refusée, compte changé refusé et 
   await assert.rejects(api.removeAttention('choix_cadeaux','B','c'))
   assert.equal(mock.rows.choix_cadeaux.length,1)
 })
-test('export version 7 : les cinq objets du lot 04/05 sont inclus et isolés par propriétaire', async () => {
+test('export version 9 : les cinq objets du lot 04/05 sont inclus et isolés par propriétaire', async () => {
   const tables=['preparations_evenements','taches_preparation','idees_cadeaux','choix_cadeaux','cadeaux_offerts']
   const data=Object.fromEntries(tables.map(table=>[table,[{id:'a',user_id:'A',note:'A_PRIVATE'},{id:'b',user_id:'B',note:'B_PRIVATE'}]]))
   const db=pageDatabase(data,{cap:1});db.auth={getUser:async()=>({data:{user:{id:'A'}}})}

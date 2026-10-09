@@ -1,5 +1,7 @@
 'use client'
 import { useDashboardUser } from '@/components/DashboardUserContext'
+import { notifyContactsChanged } from '@/lib/contact-changes'
+import ContactEtoile from '@/components/etoiles/ContactEtoile'
 import LoadFailure from '@/components/LoadFailure'
 import Link from 'next/link'
 import PersonalDates from '@/components/PersonalDates'
@@ -99,6 +101,7 @@ export default function ModifierContact() {
       setErreur('Erreur lors de la sauvegarde. Réessaie !')
       console.error('Erreur sauvegarde contact:', error)
     } else {
+      notifyContactsChanged(user.id)
       // Ne pas faire router.refresh() ici car cela cause des appels RPC inutiles
       // La page contacts se rechargera naturellement avec les données fraîches
       router.push('/dashboard/contacts')
@@ -116,6 +119,7 @@ export default function ModifierContact() {
     if (error) {
       setErreur('Erreur lors de la suppression.')
     } else {
+      notifyContactsChanged(user.id)
       router.push('/dashboard/contacts')
       router.refresh()
     }
@@ -140,6 +144,7 @@ export default function ModifierContact() {
         </h1>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 sm:gap-5">
+          <ContactEtoile contactId={String(contactId)} email={loadedContact?.email ?? null} />
 
           {/* Prénom */}
           <div className="min-w-0">

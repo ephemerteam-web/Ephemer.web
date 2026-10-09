@@ -11,11 +11,12 @@ const row=(mouthId='doux',owner='A')=>({user_id:owner,revision:1,configuration:{
 
 test('avatar partagé : une lecture commune, résultat tardif supplanté par validation et compte étranger ignoré',async()=>{
   let resolveRead,reads=0;const listeners=new Map()
-  const h=harness('components/avatars/DashboardAvatarContext.tsx',{overrides:{'@/lib/avatar-data':{loadAvatar:()=>{reads++;return new Promise(resolve=>{resolveRead=resolve})}}},globals:{window:{addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name)}}})
+  const h=harness('components/avatars/DashboardAvatarContext.tsx',{overrides:{'@/lib/avatar-data':{loadAvatar:()=>{reads++;return new Promise(resolve=>{resolveRead=resolve})}}},globals:{window:{addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:name=>listeners.delete(name),setInterval:()=>1,clearInterval(){}},document:{visibilityState:'visible',addEventListener(){},removeEventListener(){}},navigator:{onLine:true}}})
   const render=()=>h.render({ownerId:'A',children:'Trois badges'},'AccountAvatar')
   render();await h.flush();render();assert.equal(reads,1)
   const state=()=>h.find(n=>n.props.value?.updateAvatar).props.value
   state().updateAvatar(row('dents'));render();assert.equal(state().config.mouthId,'dents')
+  assert.equal(state().savedConfig.mouthId,'dents')
   resolveRead(row('doux'));await h.flush();render();assert.equal(state().config.mouthId,'dents')
   state().updateAvatar(row('ouvert','B'));render();assert.equal(state().config.mouthId,'dents')
   listeners.get('focus')();await h.flush();render();assert.equal(reads,2)

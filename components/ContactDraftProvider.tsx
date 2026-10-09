@@ -33,13 +33,13 @@ export default function ContactDraftProvider({ children }: { children: ReactNode
   }), [])
   const answer = (value: boolean) => { resolver.current?.(value); resolver.current = null; setQuestion(null) }
   const navigate = useCallback(async (path: string, action?: () => void) => {
-    if (privateDrafts.current.size && !await confirm('Quitter sans enregistrer les modifications de tes attentions ?')) return
+    if (privateDrafts.current.size && !await confirm('Quitter sans enregistrer tes modifications ?')) return
     if (dirty && pathname === '/dashboard/contacts/nouveau' &&
       !await confirm('Quitter la saisie ? Ton brouillon reste disponible pendant cette session.')) return
     action?.(); router.push(path)
   }, [confirm, dirty, pathname, router])
   useEffect(() => {
-    const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty) { event.preventDefault(); event.returnValue = '' } }
+    const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty || privateDrafts.current.size) { event.preventDefault(); event.returnValue = '' } }
     const click = (event: MouseEvent) => {
       if ((!privateDrafts.current.size && (!dirty || pathname !== '/dashboard/contacts/nouveau')) || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
       const link = (event.target as Element)?.closest<HTMLAnchorElement>('a[href]')

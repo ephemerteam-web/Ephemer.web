@@ -96,18 +96,18 @@ test('profil : annulation explicite, erreur garde les choix et relecture volonta
   h.find(n=>n.props.value?.hairId).props.onChange(choices({hairId:'boucles'}));render();fail=true;await click('Valider les modifications')
   assert.equal(h.find(n=>n.props.value?.hairId).props.value.hairId,'boucles')
   assert.equal(h.find(n=>n.type==='button'&&h.text(n)==='Valider les modifications').props.disabled,true)
-  row={user_id:owner,configuration:choices({mouthId:'dents'}),revision:3};await click('Relire la version enregistrée')
+  row={user_id:owner,configuration:choices({mouthId:'dents'}),revision:3};await click('Recharger la version enregistrée')
   assert.equal(h.find(n=>n.props.value?.hairId).props.value.hairId,'boucles')
   fail=false;await click('Valider les modifications');assert.equal(row.revision,4);assert.equal(row.configuration.hairId,'boucles')
   assert.match(h.text(),/Avatar enregistré/);h.unmount()
 })
 
-test('export 7 : avatar V3 complet et copies de carte inclus, B exclu et aucune donnée de droit secrète',async()=>{
+test('export 8 : avatar V3 complet et copies de carte inclus, B exclu et aucune donnée de droit secrète',async()=>{
   const avatar=copy(cartoon.DEFAULT_AVATAR_V3),content={format:2,renderVersion:2,templateVersion:1,templateId:'aurore',message:'Publié',signature:'Moi',avatar}
   const db=pageDatabase({avatars_utilisateurs:[{user_id:owner,configuration:avatar},{user_id:other,configuration:config({hairId:'long'})}],cartes_individuelles:[{id:'c',user_id:owner,avatar_signature:avatar}],versions_cartes:[{id:'v',user_id:owner,contenu:content}]},{cap:1})
   db.auth={getUser:async()=>({data:{user:{id:owner}},error:null})}
   const api=loadPure('lib/user-data.ts','exportOwnData,readOwnRows',{...p2Helpers,supabase:db,exportCardLinks:async()=>[{id:'l',statut:'revoque'}]})
-  const result=await api.exportOwnData();assert.equal(result.version,7);assert.equal(result.avatars_utilisateurs.length,1)
+  const result=await api.exportOwnData();assert.equal(result.version, 9);assert.equal(result.avatars_utilisateurs.length,1)
   assert.equal(result.avatars_utilisateurs[0].user_id,owner);assert.deepEqual(result.cartes_individuelles[0].avatar_signature,avatar)
   assert.deepEqual(copy(snapshots.supportedCardSnapshot(result.versions_cartes[0].contenu,true).avatar),avatar)
 })

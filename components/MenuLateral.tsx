@@ -44,7 +44,7 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
   }, [ouvert])
 
   const handleLogout = async () => {
-    if (hasPrivateDraft() && !await confirm('Te déconnecter sans enregistrer tes attentions ?')) return
+    if (hasPrivateDraft() && !await confirm('Te déconnecter sans enregistrer tes modifications ?')) return
     if ((contacts.length || prenom.trim()) && !await confirm("Te déconnecter et effacer le brouillon de contacts ?")) return
     try {
       if ('serviceWorker' in navigator) {

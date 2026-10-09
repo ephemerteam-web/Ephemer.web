@@ -1,21 +1,23 @@
 'use client'
 import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 import LoadFailure from '@/components/LoadFailure'
 import DiagnosticPreview from '@/components/DiagnosticPreview'
 import { parseDiagnostic, type Diagnostic } from '@/lib/diagnostic'
 import { createRequestScope } from '@/lib/request-scope'
-import { markAllNotificationsRead, compareNotificationDates } from '@/lib/notifications'
+import { readNotifications, markNotificationRead, markAllMergedNotificationsRead as markAllNotificationsRead, notificationKey, type UnifiedNotification } from '@/lib/social-notifications'
+import Link from 'next/link'
 import { notifyNotificationsChanged, subscribeNotificationChanges } from '@/lib/notification-changes'
 import Modal from '@/components/Modal'
 import { DEFAULT_PREFERENCES, resolvePreferences } from '@/lib/notification-preferences'
 import type { NotificationPreferences } from '@/lib/notification-preferences'
-import { readAllResult } from '@/lib/pagination'
+
 
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useClock } from '@/lib/hooks/useClock'
 import { supabase } from '@/lib/supabase-browser'
 
-type Notification = import('@/types/database').Notification
+type Notification = UnifiedNotification
 type Preferences = NotificationPreferences
 const PREFS_DEFAUT = DEFAULT_PREFERENCES
 
@@ -32,6 +34,7 @@ function Toggle({ actif, onChange, titre, description, emoji, desactive = false 
 
 export default function CentreNotifications() {
   const user = useDashboardUser()
+  const social = useEtoiles()
   const userId = user.id
   const scopeRef = useRef(createRequestScope())
   const now = useClock()
@@ -86,14 +89,14 @@ export default function CentreNotifications() {
     setErreur(null)
     try {
       const [list, preferences] = await Promise.all([
-        readAllResult(() => supabase.from('notifications').select('*').eq('user_id', user.id)),
+        readNotifications(supabase, user.id),
         supabase.from('notification_preferences').select('*').eq('user_id', user.id).maybeSingle()
       ])
       if (!scope.current()) return
-      setListUnavailable(!!list.error)
+      setListUnavailable(false)
       setPrefsUnavailable(!!preferences.error)
-      if (list.error || preferences.error) { setErreur('Impossible de charger les notifications et préférences. Réessaie.'); return }
-      setNotifications((list.data ?? []).sort(compareNotificationDates))
+      if (preferences.error) { setErreur('Impossible de charger les notifications et préférences. Réessaie.'); return }
+      setNotifications(list)
       setPrefs(resolvePreferences(preferences.data))
     } catch {
       if (scope.current()) { setListUnavailable(true); setErreur('Impossible de charger les notifications. Réessaie.') }
@@ -111,11 +114,10 @@ export default function CentreNotifications() {
     if (ownerId === userId && source !== 'centre') void chargerTout()
   }), [userId, chargerTout])
 
-  async function marquerLue(id: string) {
+  async function marquerLue(notification: Notification) {
     const scope = scopeRef.current
     try {
-      const { error } = await supabase.from('notifications').update({ lue: true }).eq('id', id).eq('user_id', userId)
-      if (error) throw error
+      await markNotificationRead(supabase, userId, notification)
       if (scope.current()) { await chargerTout(); notifyNotificationsChanged(userId, 'centre') }
     } catch { if (scope.current()) setErreur('Impossible de marquer comme lu. Réessaie.') }
   }
@@ -138,7 +140,7 @@ export default function CentreNotifications() {
     try {
       const { error } = await supabase.from('notifications').delete().eq('user_id', userId)
       if (error) throw error
-      if (scope.current()) { setModaleSuppression(false); await chargerTout(); notifyNotificationsChanged(userId, 'centre'); flash('succes', 'Toutes les notifications ont été supprimées.') }
+      if (scope.current()) { setModaleSuppression(false); await chargerTout(); notifyNotificationsChanged(userId, 'centre'); flash('succes', 'Les rappels ont été supprimés.') }
     } catch { if (scope.current()) setErreur('La suppression a échoué. Tes notifications sont toujours là. Réessaie.') }
   }
   async function changerPref(cle: keyof Preferences, valeur: boolean) {
@@ -174,8 +176,8 @@ export default function CentreNotifications() {
     </div>
     {chargement ? <div className="space-y-3">{[1, 2, 3].map(i => <div key={i} className="h-20 rounded-2xl bg-ink/[0.03] border border-line animate-pulse" />)}</div> : <>
       {onglet === 'liste' && <div>
-        {notifications.length > 0 && <div className="flex flex-wrap justify-between items-center gap-3 mb-3"><p className="text-xs text-muted">Les plus récentes en premier</p><div className="flex gap-4 ml-auto">{nonLues > 0 && <button onClick={toutMarquerLu} className="text-xs text-info hover:text-info font-semibold transition">✓ Tout marquer comme lu</button>}<button onClick={() => setModaleSuppression(true)} className="text-xs text-danger hover:text-danger font-semibold transition">🗑 Tout supprimer</button></div></div>}
-        {listUnavailable ? <p role="alert">Chargement incomplet. Recharge la page pour retrouver toutes tes notifications.</p> : notifications.length === 0 ? <div className="text-center py-16 bg-ink/[0.03] border border-line rounded-2xl"><span className="text-5xl">📭</span><p className="text-ink font-semibold mt-4">Aucune notification</p><p className="text-muted text-sm mt-1">Tes prochains événements apparaîtront ici.</p></div> : <div className="space-y-3">{notifications.map(notif => <div key={notif.id} className={`p-4 rounded-2xl border transition ${notif.lue ? 'bg-ink/[0.02] border-line' : 'bg-indigo-500/10 border-indigo-500/30'}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className={`text-sm break-words ${notif.lue ? 'text-muted' : 'text-ink font-medium'}`}>{!notif.lue && <span className="inline-block w-2 h-2 bg-indigo-400 rounded-full mr-2" />}{notif.message}</p><div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5"><span className="text-muted text-xs">📅 {formaterDate(notif.event_date)}</span><span className="text-muted text-xs">• reçue {depuisQuand(notif.created_at)}</span></div></div><div className="flex flex-col gap-2 flex-shrink-0">{!notif.lue && <button onClick={() => marquerLue(notif.id)} className="px-3 py-1.5 text-sm text-info hover:text-info font-semibold whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition" title="Marquer comme lu">✓ Lu</button>}<button onClick={() => supprimer(notif.id)} className="p-2 text-danger hover:text-danger hover:bg-rose-500/10 rounded-lg transition" title="Supprimer"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button></div></div></div>)}</div>}
+        {notifications.length > 0 && <div className="flex flex-wrap justify-between items-center gap-3 mb-3"><p className="text-xs text-muted">Les plus récentes en premier</p><div className="flex gap-4 ml-auto">{nonLues > 0 && <button disabled={social.offline} onClick={toutMarquerLu} className="text-xs text-info hover:text-info font-semibold transition">✓ Tout marquer comme lu</button>}<button onClick={() => setModaleSuppression(true)} className="text-xs text-danger hover:text-danger font-semibold transition">🗑 Supprimer les rappels</button></div></div>}
+        {listUnavailable ? <p role="alert">Chargement incomplet. Recharge la page pour retrouver toutes tes notifications.</p> : notifications.length === 0 ? <div className="text-center py-16 bg-ink/[0.03] border border-line rounded-2xl"><span className="text-5xl">📭</span><p className="text-ink font-semibold mt-4">Aucune notification</p><p className="text-muted text-sm mt-1">Tes prochains événements apparaîtront ici.</p></div> : <div className="space-y-3">{notifications.map(notif => <div key={notificationKey(notif)} className={`p-4 rounded-2xl border transition ${notif.lue ? 'bg-ink/[0.02] border-line' : 'bg-indigo-500/10 border-indigo-500/30'}`}><div className="flex items-start justify-between gap-3"><div className="min-w-0 flex-1"><p className={`text-sm break-words ${notif.lue ? 'text-muted' : 'text-ink font-medium'}`}>{!notif.lue && <span className="inline-block w-2 h-2 bg-indigo-400 rounded-full mr-2" />}{notif.message}</p><p className="text-xs text-accent mt-1">{notif.source === 'etoile' ? <Link href="/dashboard/etoiles">✦ Mes étoiles · ouvrir</Link> : 'Rappel'}</p><div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">{notif.source === 'rappel' && <span className="text-muted text-xs">📅 {formaterDate(notif.event_date)}</span>}<span className="text-muted text-xs">• reçue {depuisQuand(notif.created_at)}</span></div></div><div className="flex flex-col gap-2 flex-shrink-0">{!notif.lue && <button disabled={social.offline} onClick={() => marquerLue(notif)} className="px-3 py-1.5 text-sm text-info hover:text-info font-semibold whitespace-nowrap bg-indigo-500/10 hover:bg-indigo-500/20 rounded-lg transition" title="Marquer comme lu">✓ Lu</button>}{notif.source === 'rappel' && <button onClick={() => supprimer(notif.id)} className="p-2 text-danger hover:text-danger hover:bg-rose-500/10 rounded-lg transition" title="Supprimer"><svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg></button>}</div></div></div>)}</div>}
       </div>}
       {onglet === 'parametres' && <div className="space-y-6">
         <div className="h-4 text-right">{sauvegardePrefs && <p className="text-xs text-muted">💾 Sauvegarde…</p>}</div>
@@ -185,6 +187,6 @@ export default function CentreNotifications() {
         <div className="mt-8 p-6 bg-ink/[0.03] rounded-xl border border-line"><h3 className="text-lg font-semibold mb-2 flex items-center gap-2 text-ink"><span>🧪</span><span>Tester les notifications</span></h3><p className="text-sm text-muted mb-4">Simule les rappels de votre compte sans créer de notification ni envoyer d&apos;email.</p><button onClick={testerMaintenant} disabled={testLoading} className="px-6 py-3 bg-ink/10 text-ink font-semibold rounded-lg hover:bg-ink/15 disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 touch-manipulation">{testLoading ? <span className="flex items-center gap-2"><div className="w-4 h-4 border-2 border-line border-t-line rounded-full animate-spin" />Test en cours...</span> : '🚀 Tester maintenant'}</button>{testResult && <div className={`mt-4 p-4 rounded-lg ${testResult.success ? 'bg-ink/[0.06] border border-line text-muted' : 'bg-ink/[0.06] border border-line text-muted'}`}>{testResult.success && testResult.preview ? <DiagnosticPreview preview={testResult.preview} recipient={testResult.recipient ?? null} /> : testResult.message}</div>}</div>
       </div>}
     </>}
-    {modaleSuppression && <Modal open={modaleSuppression} onClose={() => setModaleSuppression(false)} title="Supprimer toutes les notifications ?"><div className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-ink font-bold text-lg sm:text-xl mt-4">Supprimer toutes les notifications ?</h3><p className="text-muted text-sm mt-2">Cette action est <strong className="text-danger">irréversible</strong>.<br />Tu as actuellement <strong className="text-ink">{notifications.length}</strong> notification{notifications.length > 1 ? 's' : ''}.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink bg-ink/5 hover:bg-ink/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Oui, tout supprimer</button></div></div></Modal>}
+    {modaleSuppression && <Modal open={modaleSuppression} onClose={() => setModaleSuppression(false)} title="Supprimer les rappels ?"><div className="bg-surface border border-line rounded-2xl p-6 max-w-md w-full shadow-2xl"><div className="text-center"><span className="text-5xl">⚠️</span><h3 className="text-ink font-bold text-lg sm:text-xl mt-4">Supprimer les rappels ?</h3><p className="text-muted text-sm mt-2">Cette action est <strong className="text-danger">irréversible</strong>.<br />Tu as actuellement <strong className="text-ink">{notifications.filter(n => n.source === 'rappel').length}</strong> rappel(s). Les notifications sociales sont conservées.</p></div><div className="flex gap-3 mt-6"><button onClick={() => setModaleSuppression(false)} className="flex-1 px-4 py-2.5 text-sm font-semibold text-muted hover:text-ink bg-ink/5 hover:bg-ink/10 rounded-xl transition">Annuler</button><button onClick={toutSupprimer} className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition">Supprimer les rappels</button></div></div></Modal>}
   </div></div>
 }

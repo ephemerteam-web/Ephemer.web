@@ -6,7 +6,12 @@ import React from 'react'
 import ts from 'typescript'
 const nativeRequire=createRequire(import.meta.url)
 export function harness(file,{overrides={},globals={},extra='',sources={}}={}) {
-  const emptyAvatar={config:null,updateAvatar:()=>{}}
+  const emptyAvatar={config:null,savedConfig:null,updateAvatar:()=>{}}
+  // Les tests UI n'utilisent jamais une connexion Supabase réelle implicitement.
+  const unavailableUnivers=async()=>{throw new Error('Transport univers non fourni dans cette simulation')}
+  overrides={ '@/lib/univers-data':{readUniversPartage:unavailableUnivers,universService:{lire:unavailableUnivers,commander:unavailableUnivers}},...overrides }
+  const emptySocial={actives:[],recues:[],associations:[],loading:false,error:'',offline:false,refresh:async()=>{},contactSeed:null,setContactSeed:()=>{}}
+  overrides = { '@/components/etoiles/EtoilesContext': { useEtoiles:()=>emptySocial, default:({children})=>children }, ...overrides }
   overrides = { '@/components/DashboardUserContext': { useDashboardUser: () => ({ id: 'u1', email: 'test@example.invalid' }) }, '@/components/avatars/DashboardAvatarContext':{useDashboardAvatar:()=>emptyAvatar,default:({children})=>children}, ...overrides }
   const slots=[], effects=[], modules=new Map(); let cursor=0,tree
   const hooks={...React,

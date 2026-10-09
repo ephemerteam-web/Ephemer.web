@@ -1,10 +1,10 @@
 'use client'
 import { useDashboardUser } from '@/components/DashboardUserContext'
+import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 import LoadFailure from '@/components/LoadFailure'
 import { createRequestScope } from '@/lib/request-scope'
-import { markAllNotificationsRead, compareNotificationDates } from '@/lib/notifications'
+import { readNotifications, markNotificationRead, markAllMergedNotificationsRead as markAllNotificationsRead, notificationKey, type UnifiedNotification } from '@/lib/social-notifications'
 import { notifyNotificationsChanged, subscribeNotificationChanges } from '@/lib/notification-changes'
-import { readAllResult } from '@/lib/pagination'
 // "use client" veut dire : ce composant tourne dans le NAVIGATEUR (pas sur le serveur)
 // Il a besoin de React, des clics utilisateur, etc.
 
@@ -14,12 +14,13 @@ import { useDrawer } from '@/components/DrawerContext'
 import { useRouter } from 'next/navigation'
 
 // ── Types (définitions de la forme de nos données) ────────────────
-type Notification = Pick<import('@/types/database').Notification, 'id' | 'message' | 'lue' | 'created_at' | 'contact_id' | 'jours_restants' | 'type'>
+type Notification = UnifiedNotification
 
 // ── Composant principal ───────────────────────────────────────────
 export default function NotificationBell() {
   const router = useRouter()
   const user = useDashboardUser()
+  const social = useEtoiles()
   const scopeRef = useRef(createRequestScope())
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [ouvert, setOuvert] = useState(false)
@@ -50,19 +51,10 @@ export default function NotificationBell() {
     setLoading(true)
     try {
 
-      const { data, error: fetchError } = await readAllResult(() => supabase
-        .from('notifications')
-        .select('id, message, lue, created_at, contact_id, jours_restants, type')
-        .eq('user_id', user.id))
+      const data = await readNotifications(supabase, user.id)
       if (!scope.current()) return
-
-      if (fetchError) {
-        console.error('Erreur chargement notifs:', fetchError.message)
-        setError('Impossible de charger les notifications')
-      } else if (data) {
-        setNotifications(data.sort(compareNotificationDates))
-        setError(null)
-      }
+      setNotifications(data)
+      setError(null)
     } catch (err) {
       console.error('Erreur chargement notifications:', err)
       if (scope.current()) setError('Erreur de connexion')
@@ -112,23 +104,24 @@ export default function NotificationBell() {
   }, [ouvert])
 
   // ── Marquer une notification comme lue ──────────────────────
-  async function marquerLue(id: string) {
+  async function marquerLue(notification: Notification) {
+    const scope = scopeRef.current
     try {
-      const { error } = await supabase.from('notifications').update({ lue: true }).eq('id', id).eq('user_id', user.id)
-      if (error) throw error
-      if (!scopeRef.current.current()) return
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, lue: true } : n))
+      await markNotificationRead(supabase, user.id, notification)
+      if (!scope.current()) return
+      setNotifications(prev => prev.map(n => notificationKey(n) === notificationKey(notification) ? { ...n, lue: true } : n))
       notifyNotificationsChanged(user.id, 'bell')
     } catch (err) {
       console.error('Erreur marquer lue:', err)
-      if (scopeRef.current.current()) setError('Impossible de marquer cette notification comme lue. Réessaie.')
+      if (scope.current()) setError('Impossible de marquer cette notification comme lue. Réessaie.')
     }
   }
 
   // ── Clic sur une notification ───────────────────────────────
   async function handleNotificationClick(notif: Notification) {
-    marquerLue(notif.id)
+    void marquerLue(notif)
     setOuvert(false)
+    if (notif.source === 'etoile') { router.push('/dashboard/etoiles'); return }
     if (notif.contact_id === null) return
 
 
@@ -231,17 +224,15 @@ export default function NotificationBell() {
               <div className="overflow-y-auto flex-1 divide-y divide-gray-800">
                 {notifications.map((notif) => (
                   <div
-                    key={notif.id}
-                    onClick={() => handleNotificationClick(notif)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleNotificationClick(notif) }}
+                    key={notificationKey(notif)}
                     className={`p-4 cursor-pointer hover:bg-surface/70 transition-all ${
                       notif.lue
                         ? 'opacity-70'
                         : `${notif.type === 'invitation_remplie' ? 'bg-emerald-900/15' : 'bg-purple-900/10'} border-l-4 ${getCouleurUrgence(notif)}`
                     }`}
-                    role="button"
-                    tabIndex={0}
                   >
+                    <button type="button" className="w-full min-h-11 text-left" disabled={social.offline} onClick={() => void handleNotificationClick(notif)}>
+                    <p className="text-xs text-accent">{notif.source === 'etoile' ? '✦ Mes étoiles' : 'Rappel'}</p>
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
                     <p className="text-xs text-muted mt-2">
                       {notif.created_at ? new Date(notif.created_at).toLocaleString('fr-FR', {
@@ -251,6 +242,8 @@ export default function NotificationBell() {
                         minute: '2-digit',
                       }) : 'Date inconnue'}
                     </p>
+                    </button>
+                    {notif.source === 'etoile' && !notif.lue && <button disabled={social.offline} className="mt-2 min-h-11 rounded-lg border border-line px-3" onClick={() => void marquerLue(notif)}>✓ Lu</button>}
                   </div>
                 ))}
               </div>

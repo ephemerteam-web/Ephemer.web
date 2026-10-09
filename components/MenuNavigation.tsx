@@ -1,6 +1,7 @@
 'use client'
 import Modal from '@/components/Modal'
 import { useContactDraft } from '@/components/ContactDraftProvider'
+import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -49,13 +50,16 @@ const GROUPES: Groupe[] = [
     titre: 'Mes données',
     pages: [
       { label: 'Contacts', chemin: '/dashboard/contacts', icone: '👥' },
-      { label: 'Inviter des contacts', chemin: '/dashboard/inviter', icone: '📩' }
+      { label: 'Mes étoiles', chemin: '/dashboard/etoiles', icone: '✦' },
+      { label: 'Mon univers', chemin: '/dashboard/univers', icone: '✧' },
+      { label: 'Inviter à compléter sa fiche', chemin: '/dashboard/inviter', icone: '📩' }
     ],
   },
 ]
 
 export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps) {
   const { navigate } = useContactDraft()
+  const social = useEtoiles()
   const pathname = usePathname()
 
   // États pour le swipe tactile
@@ -216,6 +220,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
                     </span>
                     <span className="transition-transform duration-300 group-hover:translate-x-1">
                       {page.label}
+                      {page.chemin === '/dashboard/etoiles' && !social.loading && !social.error && social.recues.length > 0 && <span className="ml-2 rounded-full bg-action px-2 text-on-action" aria-label={`${social.recues.length} demandes reçues`}>{social.recues.length}</span>}
                     </span>
 
                     {/* Point lumineux qui pulse sur la page active */}

@@ -602,6 +602,36 @@ export type Database = {
           },
         ]
       }
+      notifications_etoiles: {
+        Row: {
+          created_at: string
+          demande_id: string | null
+          id: string
+          lue: boolean
+          relation_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          demande_id?: string | null
+          id?: string
+          lue?: boolean
+          relation_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          demande_id?: string | null
+          id?: string
+          lue?: boolean
+          relation_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       occurrences_evenements: {
         Row: {
           annulee: boolean
@@ -1279,7 +1309,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      commander_etoiles: {
+        Args: { p_action: string; p_donnees: Json; p_operation: string }
+        Returns: Json
+      }
+      commander_mon_univers: {
+        Args: {
+          p_action: string
+          p_donnees: Json
+          p_operation: string
+          p_revision: number
+        }
+        Returns: Json
+      }
       consulter_carte_lot08: { Args: { p_empreinte: string }; Returns: Json }
+      consulter_univers_etoile: { Args: { p_etoile: string }; Returns: Json }
       creer_invitation: {
         Args: { p_label?: string }
         Returns: {
@@ -1350,6 +1394,10 @@ export type Database = {
         Args: { email_du_contact: string; mon_user_id: string }
         Returns: boolean
       }
+      exporter_etoiles: {
+        Args: { p_apres?: string; p_limite?: number; p_vue: string }
+        Returns: Json
+      }
       exporter_liens_cartes_lot08: {
         Args: { p_apres?: string; p_limite?: number; p_user_id: string }
         Returns: {
@@ -1378,6 +1426,15 @@ export type Database = {
         Returns: Json
       }
       incrementer_quota_ia: { Args: { p_user_id: string }; Returns: number }
+      lire_associations_etoiles: {
+        Args: { p_apres?: number; p_limite?: number }
+        Returns: Json
+      }
+      lire_etoiles: {
+        Args: { p_apres?: string; p_limite?: number; p_vue: string }
+        Returns: Json
+      }
+      lire_mon_univers: { Args: never; Returns: Json }
       lire_partage_carte_lot08: {
         Args: { p_avec_secret?: boolean; p_carte: string; p_user_id: string }
         Returns: Json
@@ -1512,6 +1569,10 @@ export type Database = {
           p_tag: string
           p_user_id: string
         }
+        Returns: Json
+      }
+      reconnaitre_etoiles: {
+        Args: { p_apres?: number; p_limite?: number }
         Returns: Json
       }
       repondre_invitation: {

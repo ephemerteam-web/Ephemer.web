@@ -187,12 +187,12 @@ test('fête choisie retrouvée après réouverture et aucun RPC exécuté dans u
   }
 })
 
-test('export version 7 : tous les ensembles nouveaux, propriétaire unique et arrêt si la session change', async () => {
+test('export version 9 : tous les ensembles nouveaux, propriétaire unique et arrêt si la session change', async () => {
   const db = pageDatabase({ listes_personnelles: [{ id: 'l1', user_id: 'A' }, { id: 'l2', user_id: 'B' }], evenements_personnels: [event] })
   let identity = 'A'; db.auth = { getUser: async () => ({ data: { user: { id: identity } } }) }
   const { exportOwnData } = loadPure('lib/user-data.ts', 'exportOwnData', { ...h, supabase: db })
   const result = await exportOwnData()
-  assert.equal(result.version, 7); assert.equal(result.listes_personnelles.length, 1)
+  assert.equal(result.version, 9); assert.equal(result.listes_personnelles.length, 1)
   for (const key of ['appartenances_listes', 'evenements_personnels', 'regles_evenements', 'occurrences_evenements']) assert.ok(Array.isArray(result[key]))
   let calls = 0; db.auth.getUser = async () => ({ data: { user: { id: ++calls === 1 ? 'A' : 'B' } } })
   await assert.rejects(exportOwnData(), /session a changé/)

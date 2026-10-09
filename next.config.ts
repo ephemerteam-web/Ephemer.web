@@ -83,6 +83,15 @@ const nextConfig: NextConfig = {
         { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
         { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
       ] })),
+      ...['/etoile', '/dashboard/etoiles', '/api/etoiles/:path*'].map(source => ({ source, headers: [
+        { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+        { key: 'Referrer-Policy', value: 'no-referrer' },
+        { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive' },
+      ] })),
+      { source: '/etoile', headers: [
+        // Auth Supabase uniquement ; aucune ressource publicitaire ou analytique.
+        { key: 'Content-Security-Policy', value: `default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}; style-src 'self' 'unsafe-inline'; connect-src 'self' ${process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin : ''}; img-src 'self' data:; font-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'` },
+      ] },
       // Le shell et toutes les réponses cartes (y compris refus de méthode) restent privés.
       ...['/carte', '/api/cartes/:path*'].map(source => ({ source, headers: [
         { key: 'Cache-Control', value: 'private, no-store, max-age=0' },

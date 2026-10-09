@@ -172,11 +172,11 @@ test('client : réponse d’un ancien compte ignorée et panne réseau expliqué
   const offline=loadPure('lib/card-data.ts','cardRequest',{supabase:db,requireOwner:async()=>{},AbortController,setTimeout,clearTimeout,fetch:async()=>{throw new TypeError('Failed to fetch')}})
   await assert.rejects(offline.cardRequest(ownerId,'/api/cartes/'+cardId+'/lien'),/Réponse non confirmée/)
 })
-test('export version 7 : cartes/versions isolées, droits paginés et secrets exclus',async()=>{
+test('export version 9 : cartes/versions isolées, droits paginés et secrets exclus',async()=>{
   const db=pageDatabase({cartes_individuelles:[row(),row({id:randomUUID(),user_id:otherId})],versions_cartes:[{id:versionId,carte_id:cardId,user_id:ownerId,contenu:snapshot}]})
   db.auth={getUser:async()=>({data:{user:{id:ownerId}}})}
   const exported=await loadPure('lib/user-data.ts','exportOwnData,readOwnRows',{...p2Helpers,supabase:db,exportCardLinks:async()=>[{id:randomUUID(),statut:'revoque'}]}).exportOwnData()
-  assert.equal(exported.version,7);assert.equal(exported.cartes_individuelles.length,1);assert.equal(exported.versions_cartes.length,1);assert.equal(exported.liens_cartes[0].statut,'revoque')
+  assert.equal(exported.version, 9);assert.equal(exported.cartes_individuelles.length,1);assert.equal(exported.versions_cartes.length,1);assert.equal(exported.liens_cartes[0].statut,'revoque')
   const pages=[{rows:[{id:'b',statut:'actif',secret:'FORBIDDEN',empreinte:'FORBIDDEN'}]},{rows:[{id:'c',statut:'expire',secret_chiffre:'FORBIDDEN'}]},{rows:[]}],paths=[]
   const source=harness('lib/card-data.ts',{overrides:{'@/lib/supabase-browser':{supabase:{auth:{getSession:async()=>({data:{session:{user:{id:ownerId},access_token:'fictive'}}})}}},'@/lib/attention-data':{requireOwner:async()=>{}}},globals:{AbortController,fetch:async path=>{paths.push(path);return Response.json(pages.shift())}}}).component
   const rights=await source.exportCardLinks(ownerId);assert.equal(rights.length,2);assert.doesNotMatch(JSON.stringify(rights),/FORBIDDEN|secret|empreinte/);assert.ok(paths[1].endsWith('?apres=b'))

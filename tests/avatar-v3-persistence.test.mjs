@@ -78,7 +78,7 @@ test('profil V3 : panne de lecture bloque l’édition, relecture explicite et r
   const render=()=>h.render({ownerId:'A'},'ProfileAvatarEditor')
   render();await h.flush();render();assert.match(h.text(),/Impossible de lire/)
   assert.ok(!h.nodes().some(n=>n.type==='button'&&h.text(n)==='Personnaliser mon avatar'))
-  fail=false;h.find(n=>n.type==='button'&&h.text(n)==='Recharger mon avatar').props.onClick();await h.flush();render()
+  fail=false;h.find(n=>n.type==='button'&&h.text(n)==='Recharger avatar').props.onClick();await h.flush();render()
   h.unmount();resolveLate({user_id:'A',revision:1,configuration:config({mouthId:'coin'})});await h.flush();render()
   assert.ok(!h.nodes().some(n=>n.props.config?.mouthId==='coin'));assert.equal(writes,0)
 })
