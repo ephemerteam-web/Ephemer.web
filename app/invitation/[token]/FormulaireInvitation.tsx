@@ -361,7 +361,7 @@ function InvitationForm({
                   Étape 2 sur {TOTAL_ETAPES}
                 </p>
                 <h2 className="text-lg font-medium text-ink">
-                  {prenomHote} et toi, c&apos;est…
+                  {prenomHote}&nbsp;et toi, c&apos;est …
                 </h2>
                 <p className="text-sm text-muted mt-1.5">
                   Ça l&apos;aidera à trouver le bon ton.

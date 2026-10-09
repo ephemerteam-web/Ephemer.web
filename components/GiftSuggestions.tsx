@@ -1,6 +1,11 @@
 'use client'
 // 🎁 Une recherche explicite ; intérêts et historique filtrés dans le navigateur.
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useEtoiles } from './etoiles/EtoilesContext'
+import { useCadeauxSource } from '@/lib/hooks/useCadeauxSource'
+import { selectionDepuisProjection, IA_CADEAUX_NOTICE } from '@/lib/cadeaux-social-contract'
+import UniversCadeauxSelection from './cadeaux/UniversCadeauxSelection'
+import { limitedJSON } from '@/lib/ai-transport'
 import { useDashboardUser } from './DashboardUserContext'
 import { useContactDraft } from './ContactDraftProvider'
 import { useRequestLifetime } from '@/lib/hooks/useRequestLifetime'
@@ -14,7 +19,8 @@ import { GIFT_MODES, type GiftMode } from '@/lib/ai-options'
 import { filterGiftIdeas, giftTitleKey, usableGiftIdeas, type GiftIdea } from '@/lib/gift-ideas'
 import { CATEGORIES_CADEAU, marchandsPourCategorie, type CategorieCadeau } from '@/lib/gift-config'
 import { AI_NOTICE, minimalAIInput } from '@/lib/ai-privacy'
-import type { AIContactField } from '@/lib/ai-consent'
+import { contactAIContext, type AIContactField } from '@/lib/ai-consent'
+import { parisDay } from '@/lib/calendar-day'
 import { TYPES_EVENEMENT } from '@/lib/constants'
 import { isUuid } from '@/lib/private-lists'
 import { KeepGeneratedIdea } from './GeneratorAttention'
@@ -40,25 +46,37 @@ function SuggestionCard({ idea, contactId, recipient, occurrenceId, noPurchase, 
     {saved && <p role="status" className="text-sm text-success">Don enregistré. Aucun achat déclaré automatiquement.</p>}
   </article>
 }
-export default function GiftSuggestions({ initialContactId = null, initialEventType = 'anniversaire', occurrenceId = null }: { initialContactId?: string | null; initialEventType?: string; occurrenceId?: string | null }) {
+type GiftSuggestionsProps = { initialContactId?: string | null; initialEtoileId?: string | null; initialEventType?: string; occurrenceId?: string | null }
+export default function GiftSuggestions(props: GiftSuggestionsProps) {
+  const user = useDashboardUser()
+  return <AccountGiftSuggestions key={user.id} {...props} />
+}
+export function AccountGiftSuggestions({ initialContactId = null, initialEtoileId = null, initialEventType = 'anniversaire', occurrenceId = null }: GiftSuggestionsProps) {
   const user = useDashboardUser(), lifetime = useRequestLifetime(), pending = useRef(false)
+  const social = useEtoiles(), generationAbort = useRef<AbortController | null>(null)
   const { hasPrivateDraft } = useContactDraft()
   const loaded = useAttentionLoad(user.id + ':suggestions:' + occurrenceId, async () => {
     const [contacts, gifts, preparation, interests] = await Promise.all([
-      readAllRows(() => supabase.from('contacts').select('id,prenom,nom,relation').eq('user_id', user.id)),
+      readAllRows(() => supabase.from('contacts').select('id,prenom,nom,relation,note,date_naissance').eq('user_id', user.id)),
       attentionRows('cadeaux_offerts', user.id),
       occurrenceId ? (isUuid(occurrenceId) ? loadPreparation(user.id, occurrenceId) : Promise.reject(new Error('Occurrence invalide.'))) : Promise.resolve(null),
       preferenceRows('preferences_cadeaux_contacts', user.id),
     ])
     return { contacts, gifts, preparation, interests }
   })
-  const [contactId, setContactId] = useState(initialContactId ?? ''), [eventType, setEventType] = useState(TYPES_EVENEMENT.some(e => e.value === initialEventType) ? initialEventType : 'anniversaire')
+  const [contactId, setContactId] = useState(initialEtoileId ? 'star:' + initialEtoileId : initialContactId ?? ''), [linkedContact, setLinkedContact] = useState(initialEtoileId ? initialContactId ?? '' : ''), [eventType, setEventType] = useState(TYPES_EVENEMENT.some(e => e.value === initialEventType) ? initialEventType : 'anniversaire')
   const [giftMode, setGiftMode] = useState<GiftMode>('classic'), [budget, setBudget] = useState(''), [currency, setCurrency] = useState('EUR')
   const [categoryOverride, setCategoryOverride] = useState<{ scope: string; values: string[] } | null>(null), [hidePrevious, setHidePrevious] = useState(false), [consent, setConsent] = useState<AIContactField[]>([])
   const [interestsSaved, setInterestsSaved] = useState('')
   const [result, setResult] = useState<{ ideas: GiftIdea[]; noPurchase: boolean; run: number } | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState('')
   const preparedContact = loaded.data?.preparation?.contact
-  const contact = loaded.data?.contacts.find(c => preparedContact ? c.id === preparedContact.id : String(c.id) === contactId)
+  const starRecipient = contactId.startsWith('star:') ? contactId.slice(5) : null
+  const contact = loaded.data?.contacts.find(c => preparedContact ? c.id === preparedContact.id : String(c.id) === (starRecipient ? linkedContact : contactId))
+  const association = contact ? social.associations.find(a => a.contact_id === String(contact.id) && (!starRecipient || a.etoile_id === starRecipient)) : null
+  const star = social.actives.find(s => s.etoile_id === (starRecipient ?? association?.etoile_id) && (!association || s.id === association.relation_id))
+  const sourceId = star && !social.error && !social.offline && (!contact || association) ? star.etoile_id : null
+  const source = useCadeauxSource(user.id, sourceId, `${star?.id ?? ''}:${star?.revision ?? ''}:${contact?.id ?? ''}`, () => { generationAbort.current?.abort(); setResult(null); setConsent([]) })
+  useEffect(() => () => generationAbort.current?.abort(), [])
   const interests = loaded.data?.interests.find(p => p.contact_id === contact?.id) ?? null
   const categoryScope = user.id + ':' + (contact?.id ?? contactId)
   const categories = categoryOverride?.scope === categoryScope ? categoryOverride.values : interests?.categories ?? []
@@ -67,34 +85,46 @@ export default function GiftSuggestions({ initialContactId = null, initialEventT
   const visible = result ? filterGiftIdeas(result.ideas, categories, previousTitles, hidePrevious) : []
   const discard = () => !hasPrivateDraft() || window.confirm('Abandonner les saisies non enregistrées avant cette action ?')
   async function generate() {
-    if (pending.current || !loaded.data || !discard()) return
+    if (pending.current || !loaded.data || navigator.onLine === false || !discard()) return
     pending.current = true; setBusy(true); setError('')
     const scope = lifetime.current
     try {
-      if ((contactId || preparedContact) && !contact) throw new Error('Ce contact est inaccessible. Choisis un autre destinataire.')
+      if (((contactId && !starRecipient) || preparedContact || linkedContact) && !contact) throw new Error('Ce contact est inaccessible. Choisis un autre destinataire.')
+      if (starRecipient && !sourceId) throw new Error('Cette étoile est inaccessible. Actualise tes étoiles avant de continuer.')
       const cents = giftMode === 'no_purchase' ? 0 : parseCents(budget)
       const { data: { session } } = await supabase.auth.getSession()
       if (!scope.current()) return
       if (!session || session.user.id !== user.id) throw new Error('Reconnecte-toi pour générer des idées.')
+      const abort = new AbortController(); generationAbort.current = abort
+      const univers = source.fields.length && source.projection && sourceId ? selectionDepuisProjection(sourceId, source.projection, source.fields) : undefined
       const response = await fetch('/api/generate-gift-ideas', {
+        cache: 'no-store', signal: AbortSignal.any([abort.signal, AbortSignal.timeout(60000)]),
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify(minimalAIInput({ eventType: loaded.data.preparation?.event.type_evenement ?? eventType, relation: contact?.relation ?? 'autre', giftMode, budgetCents: cents, currency, contactId: contact?.id, consentFields: consent })),
+        body: JSON.stringify({ ...minimalAIInput({ eventType: loaded.data.preparation?.event.type_evenement ?? eventType, relation: contact?.relation ?? 'autre', giftMode, budgetCents: cents, currency, contactId: contact?.id, consentFields: consent }), ...(univers ? { univers, ...(contact ? { contactId: String(contact.id) } : {}) } : {}) }),
       })
-      const data = await response.json()
+      const data = await limitedJSON(response, 64 * 1024, 502) as { error?: string; ideas?: unknown }
       if (!scope.current()) return
-      if (!response.ok) throw new Error(typeof data.error === 'string' ? data.error : 'La génération a échoué.')
+      const { data: { session: current } } = await supabase.auth.getSession()
+      if (!scope.current() || current?.user.id !== user.id || abort.signal.aborted || !Boolean(navigator.onLine)) return
+      if (!response.ok) {
+        if (response.status === 409 || response.status === 403) { setResult(null); void source.refresh() }
+        throw new Error(typeof data.error === 'string' ? data.error : 'La génération a échoué.')
+      }
       const ideas = usableGiftIdeas(data.ideas)
       if (!ideas.length) throw new Error('Aucune idée utilisable. Réessaie.')
       setResult(previous => ({ ideas, noPurchase: giftMode === 'no_purchase', run: (previous?.run ?? 0) + 1 }))
-    } catch (e) { if (scope.current()) setError(e instanceof Error ? e.message : 'Impossible de générer ces idées.') }
-    finally { pending.current = false; if (scope.current()) { setBusy(false); setConsent([]) } }
+    } catch (e) { if (scope.current()) setError(e instanceof Error && (e.name === 'AbortError' || e.name === 'TimeoutError') ? 'La génération a été interrompue. Sélectionne à nouveau les informations pour réessayer.' : e instanceof Error ? e.message : 'Impossible de générer ces idées.') }
+    finally { pending.current = false; if (scope.current()) { setBusy(false); setConsent([]); source.reset() } }
   }
   if (!loaded.data) return <LoadState error={loaded.error} retry={loaded.reload} />
   return <section aria-label="Suggestions cadeaux" className="grid min-w-0 items-start gap-6 lg:grid-cols-[minmax(0,320px)_minmax(0,1fr)]">
     <div className={panel + ' rounded-2xl space-y-4'}><h2 className="text-xl font-bold">Trouver une attention</h2><p className="text-sm text-muted">Des pistes pour préparer un moment qui compte.</p>
       <fieldset disabled={busy} className="min-w-0 space-y-4">
-        {preparedContact ? <p className="text-sm">Pour {[preparedContact.prenom, preparedContact.nom].filter(Boolean).join(' ') || 'le contact de cette préparation'}</p> : <label className="block text-sm">Pour qui ?<select className={field} value={contactId} onChange={e => { if (discard()) { setContactId(e.target.value); setConsent([]); setCategoryOverride(null); setResult(null); setError('') } }}><option value="">Sans contact</option>{loaded.data.contacts.map(c => <option key={c.id} value={c.id}>{[c.prenom, c.nom].filter(Boolean).join(' ') || 'Contact sans nom'}</option>)}</select></label>}
-        {contactId && !contact && <p role="alert" className="text-sm text-danger">Ce contact n’est plus disponible. Choisis un autre destinataire.</p>}
+        {preparedContact ? <p className="text-sm">Pour {[preparedContact.prenom, preparedContact.nom].filter(Boolean).join(' ') || 'le contact de cette préparation'}</p> : <label className="block text-sm">Pour qui ?<select className={field} value={contactId} onChange={e => { if (discard()) { setContactId(e.target.value); setLinkedContact(''); setConsent([]); source.reset(); setCategoryOverride(null); setResult(null); setError('') } }}><option value="">Sans contact</option>{starRecipient && !star && <option value={contactId} disabled>Étoile inaccessible</option>}<optgroup label="Mes contacts privés">{loaded.data.contacts.map(c => <option key={c.id} value={c.id}>{[c.prenom, c.nom].filter(Boolean).join(' ') || 'Contact sans nom'}</option>)}</optgroup><optgroup label="Mes étoiles">{social.actives.map(s => <option key={s.id} value={'star:' + s.etoile_id}>{s.identite}</option>)}</optgroup></select></label>}
+        {starRecipient && <label className="block text-sm">Associer les informations d’une fiche existante<select className={field} value={linkedContact} onChange={e => { if (discard()) { setLinkedContact(e.target.value); setConsent([]); source.reset(); setResult(null) } }}><option value="">Sans fiche contact</option>{linkedContact && (!association || !contact) && <option value={linkedContact} disabled>Fiche non associée</option>}{loaded.data.contacts.filter(c => social.associations.some(a => a.contact_id === String(c.id) && a.etoile_id === starRecipient && a.relation_id === star?.id)).map(c => <option key={c.id} value={c.id}>{[c.prenom, c.nom].filter(Boolean).join(' ')}</option>)}</select><span className="text-xs text-muted">Aucune fiche n’est créée. Seules les fiches déjà associées à cette étoile peuvent être combinées.</span></label>}
+        {contactId && !starRecipient && !contact && <p role="alert" className="text-sm text-danger">Ce contact n’est plus disponible. Choisis un autre destinataire.</p>}
+        {starRecipient && linkedContact && (!association || !contact) && <div className="space-y-2"><p role="alert" className="text-sm text-muted">Cette fiche n’est plus associée à cette étoile. Les deux sources ne peuvent plus être combinées.</p><button type="button" className={button} onClick={() => { if (discard()) { setLinkedContact(''); setConsent([]); source.reset(); setResult(null) } }}>Continuer sans fiche contact</button></div>}
+        {starRecipient && !star && !social.loading && <p role="alert" className="text-sm text-muted">Cette étoile n’est plus accessible. Choisis un autre destinataire ou actualise tes étoiles.</p>}
         {loaded.data.preparation ? <p className="text-sm">Préparation : {loaded.data.preparation.event.titre}</p> : <label className="block text-sm">Occasion<select className={field} value={eventType} onChange={e => { if (discard()) { setEventType(e.target.value); setResult(null) } }}>{TYPES_EVENEMENT.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}</select></label>}
         <label className="block text-sm">Type d’attention<select className={field} value={giftMode} onChange={e => { if (discard()) { setGiftMode(e.target.value as GiftMode); setResult(null) } }}>{GIFT_MODES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}</select></label>
         {giftMode !== 'no_purchase' && <div className="grid grid-cols-[minmax(0,1fr)_90px] gap-2"><label className="text-sm">Plafond de recherche<input className={field} inputMode="decimal" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Facultatif" maxLength={30} /></label><label className="text-sm">Devise<select className={field} value={currency} onChange={e => setCurrency(e.target.value)}>{CURRENCIES.map(c => <option key={c}>{c}</option>)}</select></label></div>}
@@ -103,10 +133,12 @@ export default function GiftSuggestions({ initialContactId = null, initialEventT
         {contact && <RememberGiftInterests key={user.id + ':' + contact.id} owner={user.id} contactId={contact.id} categories={categories} preference={interests} onSaved={() => { setInterestsSaved(categoryScope); loaded.reload() }} />}
         {interestsSaved === categoryScope && <p role="status" className="text-sm text-success">Intérêts enregistrés pour ce contact.</p>}
         {contact && <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={hidePrevious} onChange={e => { if (discard()) setHidePrevious(e.target.checked) }} />Masquer les titres déjà offerts</label>}
-        {contact && <AIConsent fields={consent} onChange={setConsent} disabled={busy} />}
+        {contact && <AIConsent title="Mes informations privées sur ce contact" values={contactAIContext(contact, ['firstName', 'age', 'note'], parisDay())} fields={consent} onChange={setConsent} disabled={busy || source.offline} />}
+        {(starRecipient || association) && <UniversCadeauxSelection projection={source.projection} fields={source.fields} onChange={source.setFields} disabled={busy || source.offline} loading={source.loading} />}
       </fieldset>
-      <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-3">Ce qui est envoyé à l’IA</summary><p>{AI_NOTICE}</p></details>
-      <button className={button + ' w-full border-accent bg-action font-semibold text-on-action'} disabled={busy} onClick={() => void generate()}>{busy ? 'Recherche en cours…' : 'Trouver des idées'}</button>
+      <details className="text-xs text-muted"><summary className="min-h-11 cursor-pointer py-3">Ce qui est envoyé à l’IA</summary><p>{AI_NOTICE}</p><p className="mt-2">{IA_CADEAUX_NOTICE}</p></details>
+      <button className={button + ' w-full border-accent bg-action font-semibold text-on-action'} disabled={busy || source.offline || (!!starRecipient && !sourceId)} onClick={() => void generate()}>{busy ? 'Recherche en cours…' : 'Trouver des idées'}</button>
+      {source.offline && <p role="status" className="text-sm text-muted">Hors ligne : reconnecte-toi pour générer des idées.</p>}
       {error && <p role="alert" className="text-sm text-danger">{error}{result && ' Les suggestions précédentes sont conservées.'}</p>}
     </div>
     <div className="min-w-0 space-y-4" aria-live="polite">

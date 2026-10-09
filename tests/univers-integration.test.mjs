@@ -4,10 +4,11 @@ import assert from 'node:assert/strict'
 import { harness } from './ui-harness.mjs'
 import { loadPure, p2Helpers, pageDatabase } from './p2-helpers.mjs'
 const c = harness('lib/univers-contract.ts', { globals: { TextEncoder } }).component
+const d = harness('lib/cadeaux-social-contract.ts', { globals: { TextEncoder } }).component
 const A='10000000-0000-4000-8000-000000000001', B='10000000-0000-4000-8000-000000000002'
-const copy=v=>JSON.parse(JSON.stringify(v)), own=()=>copy(c.universInitial('Lune'))
+const copy=v=>JSON.parse(JSON.stringify(v)), own=()=>copy(d.universCadeauxInitial(c.universInitial('Lune')))
 const uuidEtoile=loadPure('lib/etoiles-contract.ts','uuidEtoile').uuidEtoile
-const api=loadPure('lib/univers-server.ts','universEndpoint',{...c,uuidEtoile,limitedJSON:p2Helpers.limitedJSON,URL,Response,ETOILES_HEADERS:{'Cache-Control':'private, no-store',Vary:'Authorization'},socialTransport:()=>{throw new Error('Transport manquant')}})
+const api=loadPure('lib/univers-server.ts','universEndpoint',{...c,monUnivers:d.monUniversCadeaux,commandeUnivers:d.commandeUniversCadeaux,universPourCadeaux:d.universPourCadeaux,uuidEtoile,limitedJSON:p2Helpers.limitedJSON,URL,Response,ETOILES_HEADERS:{'Cache-Control':'private, no-store',Vary:'Authorization'},socialTransport:()=>{throw new Error('Transport manquant')}})
 const request=(path='',body,headers={})=>new Request('https://ephemer.test/api/univers'+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer fake-jwt',...headers},...(body===undefined?{}:{body:typeof body==='string'?body:JSON.stringify(body)})})
 function transport(result=own(),user={id:A,email_confirmed_at:'2026-10-09T10:00:00Z'}) {
  const calls=[];return {calls,factory:token=>({verify:async()=>{calls.push(['verify',token]);return user},rpc:async(name,args)=>{calls.push([name,copy(args)]);if(result instanceof Error)throw result;return copy(result)}})}
@@ -41,9 +42,9 @@ test('univers navigateur : compte changé, hors ligne et annulation refusent les
  await assert.rejects(browser.socialRequest(A,'/api/univers'),/session a changé/);after=A;online=false;await assert.rejects(browser.socialRequest(A,'/api/univers'),/Hors ligne/);online=true
  const abort=new AbortController();abort.abort();await assert.rejects(browser.socialRequest(A,'/api/univers',undefined,abort.signal),/abandonnée/)
 })
-test('export 9 : univers propriétaire complet, aucun tiers/journal et erreur refuse export partiel',async()=>{
+test('export 10 : univers propriétaire complet, aucun tiers/journal et erreur refuse export partiel',async()=>{
  const db=pageDatabase({});db.auth={getUser:async()=>({data:{user:{id:A,email:'a@example.invalid'}},error:null})};const owner=own();owner.revision=4;owner.valeurs.eviter='Valeur privée';owner.valeurs.anniversaire={jour:29,mois:2,annee:2000}
- const data=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async id=>{assert.equal(id,A);return copy(owner)}});const result=await data.exportOwnData();assert.equal(result.version,9);assert.deepEqual(result.mon_univers,owner);assert.equal(result.univers_etoiles,undefined);assert.equal(result.operations_univers,undefined)
+ const data=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async id=>{assert.equal(id,A);return copy(owner)}});const result=await data.exportOwnData();assert.equal(result.version,10);assert.deepEqual(result.mon_univers,owner);assert.equal(result.univers_etoiles,undefined);assert.equal(result.operations_univers,undefined)
  await assert.rejects(loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async()=>{throw new Error('Univers indisponible')}}).exportOwnData(),/Univers indisponible/)
 })
 function panelSetup() {

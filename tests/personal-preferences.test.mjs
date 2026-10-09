@@ -107,7 +107,7 @@ test('export 8 : styles, affectations et intérêts du propriétaire uniquement,
   const data = Object.fromEntries(tables.map(table => [table, [{ id: 'a', user_id: 'A', signature: 'PRIVATE_A' }, { id: 'b', user_id: 'B', signature: 'PRIVATE_B' }]]))
   const db = pageDatabase(data); db.auth = { getUser: async () => ({ data: { user: { id: 'A' } } }) }
   const api = loadPure('lib/user-data.ts', 'exportOwnData,readOwnRows', { ...p2Helpers, supabase: db })
-  const exported = await api.exportOwnData(); assert.equal(exported.version, 9)
+  const exported = await api.exportOwnData(); assert.equal(exported.version, 10)
   for (const table of tables) assert.equal(exported[table].length, 1)
   assert.doesNotMatch(JSON.stringify(exported), /PRIVATE_B/)
   const failed = pageDatabase(data, { failAt: 1 }); failed.auth = db.auth
@@ -116,7 +116,8 @@ test('export 8 : styles, affectations et intérêts du propriétaire uniquement,
 test('suggestions : catégories enregistrées reprises, temporaire sans sauvegarde ni transmission IA', async () => {
   const db = pageDatabase({ contacts: [{ id: 1, user_id: 'u1', prenom: 'Léa', relation: 'ami' }], preferences_cadeaux_contacts: [{ id: 'p', user_id: 'u1', contact_id: 1, revision: 1, categories: ['tech'] }] })
   db.auth = { getUser: async () => ({ data: { user: { id: 'u1' } } }), getSession: async () => ({ data: { session: { user: { id: 'u1' }, access_token: 'mock' } } }) }
-  const bodies = [], h = harness('components/GiftSuggestions.tsx', { overrides: { '@/lib/supabase-browser': { supabase: db }, '@/components/ContactDraftProvider': { useContactDraft: () => ({ hasPrivateDraft: () => false }) } }, globals: { fetch: async (url, init) => { bodies.push(JSON.parse(init.body)); return { ok: true, json: async () => ({ ideas: [{ idee: 'Livre', raison: 'Lecture', categorie: 'loisir', recherche: 'livre' }] }) } } } })
+  const bodies = [], h = harness('components/GiftSuggestions.tsx', { overrides: { '@/lib/supabase-browser': { supabase: db }, '@/components/ContactDraftProvider': { useContactDraft: () => ({ hasPrivateDraft: () => false }) } }, globals: { fetch: async (url, init) => { bodies.push(JSON.parse(init.body)); return Response.json({ ideas: [{ idee: 'Livre', raison: 'Lecture', categorie: 'loisir', recherche: 'livre' }] }) } } })
+  h.component.default = h.component.AccountGiftSuggestions
   h.render({ initialContactId: '1' }); await h.flush(); h.render({ initialContactId: '1' })
   const checks = h.nodes().filter(n => n.type === 'input' && n.props.type === 'checkbox')
   assert.equal(checks[2].props.checked, true)

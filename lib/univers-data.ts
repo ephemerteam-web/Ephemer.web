@@ -1,6 +1,7 @@
 // 🌌 Aucun cache ni stockage navigateur ; session avant et après chaque réponse.
 import { socialRequest } from './etoiles-data'
-import { commandeUnivers, monUnivers, resultatUnivers, universPartage, type CommandeUnivers } from './univers-contract'
+import { resultatUnivers, universPartage } from './univers-contract'
+import { commandeUniversCadeaux as commandeUnivers, monUniversCadeaux as monUnivers, universPourCadeaux, type CommandeUniversCadeaux as CommandeUnivers } from './cadeaux-social-contract'
 import { uuidEtoile } from './etoiles-contract'
 function request(ownerId: string, path: string, body?: unknown, signal?: AbortSignal) {
   const timeout = AbortSignal.timeout(15000)
@@ -16,3 +17,6 @@ export async function readUniversPartage(ownerId: string, etoileId: string, sign
   return universPartage(await request(ownerId, '/etoile?' + new URLSearchParams({ etoileId: uuidEtoile(etoileId) }), undefined, signal))
 }
 export const universService = { lire: readMonUnivers, commander: sendUniversCommand }
+export async function readUniversCadeaux(ownerId: string, etoileId: string, signal?: AbortSignal) {
+  return universPourCadeaux(await request(ownerId, '/cadeaux?' + new URLSearchParams({ etoileId: uuidEtoile(etoileId) }), undefined, signal))
+}

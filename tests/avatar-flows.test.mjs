@@ -107,7 +107,7 @@ test('export 8 : avatar V3 complet et copies de carte inclus, B exclu et aucune 
   const db=pageDatabase({avatars_utilisateurs:[{user_id:owner,configuration:avatar},{user_id:other,configuration:config({hairId:'long'})}],cartes_individuelles:[{id:'c',user_id:owner,avatar_signature:avatar}],versions_cartes:[{id:'v',user_id:owner,contenu:content}]},{cap:1})
   db.auth={getUser:async()=>({data:{user:{id:owner}},error:null})}
   const api=loadPure('lib/user-data.ts','exportOwnData,readOwnRows',{...p2Helpers,supabase:db,exportCardLinks:async()=>[{id:'l',statut:'revoque'}]})
-  const result=await api.exportOwnData();assert.equal(result.version, 9);assert.equal(result.avatars_utilisateurs.length,1)
+  const result=await api.exportOwnData();assert.equal(result.version, 10);assert.equal(result.avatars_utilisateurs.length,1)
   assert.equal(result.avatars_utilisateurs[0].user_id,owner);assert.deepEqual(result.cartes_individuelles[0].avatar_signature,avatar)
   assert.deepEqual(copy(snapshots.supportedCardSnapshot(result.versions_cartes[0].contenu,true).avatar),avatar)
 })

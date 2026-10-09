@@ -26,7 +26,9 @@ export function harness(file,{overrides={},globals={},extra='',sources={}}={}) {
     const compiled=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,jsx:ts.JsxEmit.ReactJSX,target:ts.ScriptTarget.ES2022}}).outputText
     const compiledModule={exports:{}}; modules.set(path,compiledModule.exports)
     const require=name=>name==='react'?hooks:overrides[name]??(name.startsWith('@/')?load(name.slice(2)):name.startsWith('.')?(overrides['@/'+new URL(name,`https://test/${resolved}`).pathname.slice(1)]??load(new URL(name,`https://test/${resolved}`).pathname.slice(1))):nativeRequire(name))
-    runInNewContext(compiled,{module:compiledModule,exports:compiledModule.exports,require,console:{error(){},warn(){},log(){}},process:{env:{}},setTimeout,clearTimeout,crypto:{randomUUID:()=> 'draft-id'},...globals})
+    const mockWindow = new EventTarget(); mockWindow.setInterval=()=>1; mockWindow.clearInterval=()=>{}
+    const mockDocument = new EventTarget(); mockDocument.visibilityState='visible'
+    runInNewContext(compiled,{module:compiledModule,exports:compiledModule.exports,require,URLSearchParams,TextEncoder,TextDecoder,Response,AbortSignal,AbortController,window:mockWindow,document:mockDocument,navigator:{onLine:true},console:{error(){},warn(){},log(){}},process:{env:{}},setTimeout,clearTimeout,crypto:{randomUUID:()=> 'draft-id'},...globals})
     return compiledModule.exports
   }
   const component=load(file)

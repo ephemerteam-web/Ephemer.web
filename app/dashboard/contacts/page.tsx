@@ -238,17 +238,12 @@ export default function ContactsPage() {
             <div className="flex gap-2">
               <Link
                 href="/dashboard/contacts/nouveau"
-                className="flex min-h-11 min-w-11 items-center justify-center bg-gradient-to-r from-action to-action/80 text-on-action font-bold text-xs px-3 py-2 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
+                className="flex items-center gap-1.5 min-h-11 min-w-11 bg-gradient-to-r from-action to-action/80 text-on-action font-bold text-xs px-3 py-2 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
                 title="Ajout rapide"
-                aria-label="Ajouter rapidement des contacts"
+                aria-label="Ajouter un contact"
               >
-                ⚡
-              </Link>
-              <Link
-                href="/dashboard/contacts/nouveau"
-                className="hidden sm:inline-block bg-ink/5 hover:bg-ink/10 border border-line text-ink font-bold text-xs px-3 py-2 rounded-xl transition"
-              >
-                + Nouveau
+                <span>⚡</span>
+                <span className="hidden sm:inline">Nouveau</span>
               </Link>
             </div>
           </div>
@@ -260,18 +255,13 @@ export default function ContactsPage() {
             <span className="text-6xl mb-4 block">👥</span>
             <p className="text-info">Aucun contact pour le moment.</p>
             
-            <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="mt-6 flex justify-center">
               <Link
                 href="/dashboard/contacts/nouveau"
-                className="bg-gradient-to-r from-action to-action/80 text-on-action font-bold px-6 py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
+                className="flex items-center justify-center gap-2 bg-gradient-to-r from-action to-action/80 text-on-action font-bold px-6 py-3 rounded-xl transition shadow-lg hover:shadow-xl active:scale-95"
               >
-                ⚡ Ajout rapide
-              </Link>
-              <Link
-                href="/dashboard/contacts/nouveau"
-                className="bg-ink/5 hover:bg-ink/10 border border-line text-ink font-bold px-6 py-3 rounded-xl transition"
-              >
-                + Nouveau contact
+                <span>⚡</span>
+                <span>Nouveau contact</span>
               </Link>
             </div>
           </div>

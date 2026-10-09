@@ -1,6 +1,7 @@
 'use client'
 // 🌌 Contenu tiers éphémère : retrait, association perdue, erreur et hors ligne l'effacent.
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 import { readUniversPartage } from '@/lib/univers-data'
@@ -47,6 +48,7 @@ export function AccountUniversPartage({ ownerId, etoileId, initialOpen = false, 
       {loading && <p role="status" className="text-sm text-muted">Actualisation de son univers…</p>}
       {error && <p role="alert" className="text-sm text-muted">{error}</p>}
       {value && <UniversView value={value} />}
+      {value && <Link href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId })} className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 py-2 text-sm font-semibold text-accent">Trouver une attention</Link>}
       {!value && !error && !loading && <p className="text-sm text-muted">Reconnecte-toi pour consulter son univers partagé.</p>}
     </div>}
   </div>

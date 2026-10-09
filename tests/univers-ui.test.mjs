@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { harness } from './ui-harness.mjs'
 const copy = v => JSON.parse(JSON.stringify(v))
 const c = harness('lib/univers-contract.ts', { globals: { TextEncoder } }).component
+const initial = c.universInitial
+c.universInitial = name => ({ ...initial(name), iaCadeaux: { identite: false, presentation: false, passions: false, plaisirs: false, eviter: false } })
 function setup() {
   const window = new EventTarget(), document = new EventTarget(), navigator = { onLine: true }
   window.setInterval = () => 1; window.clearInterval = () => {}; document.visibilityState = 'visible'
@@ -13,7 +15,7 @@ function setup() {
     if (fail) { fail = false; throw new Error('Panne avant écriture') }
     if (conflict) { row.revision++; row.identite = 'Autre onglet'; throw new Error('Conflit') }
     if (!operations.has(command.operation)) {
-      row = command.action === 'enregistrer' ? { ...copy(command.donnees), revision: row.revision + 1 } : { ...row, revision: row.revision + (row.revision ? 1 : 0), partage: copy(c.PARTAGE_UNIVERS_VIDE) }
+      row = command.action === 'enregistrer' ? { ...copy(command.donnees), revision: row.revision + 1 } : { ...row, revision: row.revision + (row.revision ? 1 : 0), partage: copy(c.PARTAGE_UNIVERS_VIDE), iaCadeaux: { ...row.iaCadeaux, presentation: false, passions: false, plaisirs: false, eviter: false } }
       operations.set(command.operation, { ok: true, revision: row.revision })
     }
     if (lost) { lost = false; throw new Error('Réponse perdue') }
@@ -45,11 +47,13 @@ test('univers formulaire : réponse perdue reconnue par lecture, sans deuxième 
   await s.click(save); assert.equal(s.commands.length, 1); assert.equal(s.row.revision, 1); assert.ok(s.h.text().includes('sont enregistrés')); s.h.unmount()
 })
 test('univers formulaire : double clic sérialisé ; masquage conserve saisies et valeurs enregistrées', async () => {
-  const s = await loaded(); s.edit(v => { v.valeurs.passions = 'Privé enregistré'; v.partage.passions = true })
+  const s = await loaded(); s.edit(v => { v.valeurs.passions = 'Privé enregistré'; v.partage.passions = true; v.iaCadeaux.passions = true; v.iaCadeaux.identite = true })
   const button = s.h.find(n => n.type === 'button' && s.h.text(n) === save); button.props.onClick(); button.props.onClick(); await s.h.flush(); s.render()
   assert.equal(s.commands.length, 1)
   s.edit(v => { v.valeurs.passions = 'Brouillon non enregistré' }); await s.click(mask)
   assert.equal(s.row.valeurs.passions, 'Privé enregistré'); assert.ok(Object.values(s.row.partage).every(v => !v))
+  assert.equal(s.row.iaCadeaux.passions, false); assert.equal(s.row.iaCadeaux.identite, true)
+  assert.equal(s.h.find(n => !!n.props.draft).props.draft.iaCadeaux.passions, false)
   assert.equal(s.h.find(n => !!n.props.draft).props.draft.valeurs.passions, 'Brouillon non enregistré'); assert.equal(s.confirmations.length, 1); s.h.unmount()
 })
 test('univers formulaire : conflit conservé, relecture volontaire et changement de contenu', async () => {
@@ -73,4 +77,17 @@ test('univers éditeur : retirer anniversaire retire année, aperçu invalide n�
   h.find(n => n.type === 'label' && h.text(n).includes('Partager le jour')).props.children[0].props.onChange({ target: { checked: false } })
   assert.equal(value.partage.annee, false)
   value.valeurs.anniversaire.annee = 2001; render(); assert.ok(h.text().includes('Aperçu à vérifier')); h.unmount()
+})
+test('10C formulaire : permissions, valeurs et partage sauvegardés ensemble ; texte suivant conserve son accord', async () => {
+  const s = await loaded(); s.edit(v => { v.valeurs.passions = 'Musique'; v.partage.passions = true; v.iaCadeaux.passions = true })
+  assert.equal(s.commands.length, 0); await s.click(save)
+  assert.equal(s.commands[0].donnees.iaCadeaux.passions, true); assert.equal(s.commands[0].donnees.valeurs.passions, 'Musique'); assert.equal(s.commands[0].donnees.partage.passions, true)
+  s.edit(v => { v.valeurs.passions = 'Livres' }); await s.click(save); assert.equal(s.row.iaCadeaux.passions, true); assert.equal(s.row.valeurs.passions, 'Livres'); s.h.unmount()
+})
+test('10C éditeur : retirer le partage décoche seulement son accord IA et garde le texte', () => {
+  let value = copy(c.universInitial('Lune')); value.valeurs.passions = 'Livres'; value.partage.passions = true; value.iaCadeaux.passions = true; value.iaCadeaux.identite = true
+  const h = harness('components/univers/UniversEditor.tsx', { overrides: { 'next/link': { default: 'a' } } })
+  h.render({ draft: value, onChange: next => { value = next } })
+  h.find(n => n.type === 'label' && h.text(n) === 'Partager mes passions').props.children[0].props.onChange({ target: { checked: false } })
+  assert.equal(value.iaCadeaux.passions, false); assert.equal(value.iaCadeaux.identite, true); assert.equal(value.valeurs.passions, 'Livres'); h.unmount()
 })

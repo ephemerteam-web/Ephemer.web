@@ -3,7 +3,9 @@
 import { useId } from 'react'
 import Link from 'next/link'
 import { emailEtoile } from '@/lib/etoiles-contract'
-import { apercuUnivers, UNIVERS_TEXTES, type MonUnivers, type PartageUnivers, type UniversPartage } from '@/lib/univers-contract'
+import { UNIVERS_TEXTES, type PartageUnivers, type UniversPartage } from '@/lib/univers-contract'
+import { apercuUniversCadeaux as apercuUnivers, type MonUniversCadeaux as MonUnivers } from '@/lib/cadeaux-social-contract'
+import UniversCadeauxPermissions from '@/components/cadeaux/UniversCadeauxPermissions'
 import UniversView from './UniversView'
 
 const labels = { presentation: 'Présentation personnelle', passions: 'Mes passions', plaisirs: 'Ce qui me fait plaisir', eviter: 'Mes préférences à éviter' } as const
@@ -15,7 +17,9 @@ export default function UniversEditor({ draft, onChange, avatarEnregistre = null
   let preview: UniversPartage | null = null, error = ''
   try { preview = apercuUnivers(draft, avatarEnregistre) } catch (failure) { error = failure instanceof Error ? failure.message : 'Vérifie les informations saisies.' }
   function toggle(key: PartageUnivers, value: boolean) {
-    onChange({ ...draft, partage: { ...draft.partage, [key]: value, ...(key === 'anniversaire' && !value ? { annee: false } : {}) } })
+    const iaCadeaux = { ...draft.iaCadeaux }
+    if (!value && (UNIVERS_TEXTES as readonly string[]).includes(key)) iaCadeaux[key as typeof UNIVERS_TEXTES[number]] = false
+    onChange({ ...draft, iaCadeaux, partage: { ...draft.partage, [key]: value, ...(key === 'anniversaire' && !value ? { annee: false } : {}) } })
   }
   function sharing(key: PartageUnivers, label: string) {
     return <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-ink">
@@ -74,12 +78,13 @@ export default function UniversEditor({ draft, onChange, avatarEnregistre = null
           {sharing(key, key === 'email' ? 'Partager cet email' : 'Partager ce téléphone')}
         </div>)}
       </fieldset>
+      <UniversCadeauxPermissions univers={draft} onChange={iaCadeaux => onChange({ ...draft, iaCadeaux })} disabled={disabled} />
     </div>
     <aside className="min-w-0 space-y-4 self-start lg:sticky lg:top-6">
       <p className="rounded-xl border border-line bg-surface p-4 text-sm text-muted">Visible par toutes tes étoiles actuelles et futures. Les changements seront appliqués ensemble lors de l’enregistrement.</p>
       {preview ? <UniversView value={preview} title="Ce que mes étoiles verront après enregistrement" /> :
         <div role="status" className="rounded-xl border border-line p-4 text-sm text-ink"><p className="font-semibold">Aperçu à vérifier</p><p>{error}</p></div>}
-      <p className="text-xs text-muted">Ces informations ne sont pas utilisées par les générateurs IA dans cette version.</p>
+      <p className="text-xs text-muted">Pour les cadeaux IA, seules les informations que tu autorises et que ton étoile sélectionne pour sa demande seront transmises à Mammouth AI.</p>
     </aside>
   </div>
 }

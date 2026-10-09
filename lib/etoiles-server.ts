@@ -8,7 +8,7 @@ import { commandeEtoile, lectureEtoiles, contactIdEtoile, uuidEtoile, etoilesIte
 export const ETOILES_HEADERS = { 'Cache-Control': 'private, no-store, max-age=0', 'Referrer-Policy': 'no-referrer', 'X-Robots-Tag': 'noindex, nofollow, noarchive', Vary: 'Authorization' }
 class EtoilesHTTPError extends Error { status: number; constructor(status: number, message: string) { super(message); this.status = status } }
 export type EtoilesEndpoint = 'liste' | 'commande' | 'reconnaitre' | 'associations' | 'export'
-type Rpc = 'lire_etoiles' | 'commander_etoiles' | 'reconnaitre_etoiles' | 'lire_associations_etoiles' | 'exporter_etoiles' | 'lire_mon_univers' | 'consulter_univers_etoile' | 'commander_mon_univers'
+type Rpc = 'lire_etoiles' | 'commander_etoiles' | 'reconnaitre_etoiles' | 'lire_associations_etoiles' | 'exporter_etoiles' | 'lire_mon_univers' | 'consulter_univers_etoile' | 'commander_mon_univers' | 'consulter_univers_cadeaux' | 'resoudre_univers_cadeaux'
 export type EtoilesTransport = { verify: () => Promise<{ id: string; email_confirmed_at?: string; is_anonymous?: boolean } | null>; rpc: (name: Rpc, args: Record<string, Json>) => Promise<unknown> }
 function failDatabase(code: unknown): never {
   if (code === '28000') throw new EtoilesHTTPError(403, 'Une adresse de connexion vérifiée est nécessaire.')

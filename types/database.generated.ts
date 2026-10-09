@@ -1323,6 +1323,7 @@ export type Database = {
         Returns: Json
       }
       consulter_carte_lot08: { Args: { p_empreinte: string }; Returns: Json }
+      consulter_univers_cadeaux: { Args: { p_etoile: string }; Returns: Json }
       consulter_univers_etoile: { Args: { p_etoile: string }; Returns: Json }
       creer_invitation: {
         Args: { p_label?: string }
@@ -1592,6 +1593,16 @@ export type Database = {
           raison: string
           succes: boolean
         }[]
+      }
+      resoudre_univers_cadeaux: {
+        Args: {
+          p_champs: string[]
+          p_contact: number
+          p_etoile: string
+          p_revision: number
+          p_revision_relation: number
+        }
+        Returns: Json
       }
       soumettre_invitation: {
         Args: {

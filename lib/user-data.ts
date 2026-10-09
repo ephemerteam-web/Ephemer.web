@@ -23,7 +23,7 @@ export async function exportOwnData() {
   if (error || !user) throw new Error('Reconnecte-toi pour exporter tes données.')
   const tables = ['profiles', 'contacts', 'rappels', 'notifications', 'notification_preferences', 'invitations', 'listes_personnelles', 'appartenances_listes', 'evenements_personnels', 'regles_evenements', 'occurrences_evenements', 'preparations_evenements', 'taches_preparation', 'idees_cadeaux', 'choix_cadeaux', 'cadeaux_offerts', 'styles_messages', 'preferences_styles_messages', 'styles_messages_contacts', 'preferences_cadeaux_contacts', 'cartes_individuelles', 'versions_cartes', 'avatars_utilisateurs'] as const
   const result: Record<string, unknown> = {
-    format: 'ephemer-personal-export', version: 9, exported_at: new Date().toISOString(),
+    format: 'ephemer-personal-export', version: 10, exported_at: new Date().toISOString(),
     account: { id: user.id, email: user.email },
     limitations: 'Lecture paginée sans instantané transactionnel. Mon univers inclut les valeurs et permissions du propriétaire uniquement ; univers et avatars des étoiles exclus. Tokens d’invitation, empreintes et secrets des cartes (même chiffrés), secrets des liens sociaux, journaux d’opérations, identités résolues des destinataires de demandes envoyées, secrets de session et clés push exclus. Les journaux des prestataires et sauvegardes ne sont pas inclus.',
   }

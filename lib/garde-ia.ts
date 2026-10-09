@@ -41,13 +41,17 @@ export async function verifierGardeIA(request: Request): Promise<ResultatGarde> 
   //    (on utilise supabaseAdmin : l'utilisateur ne doit
   //     pas pouvoir modifier son propre compteur)
   // ─────────────────────────────────────────────
+  return consommerQuotaIA(user.id);
+}
+
+// L'identifiant provient d'une session vérifiée, jamais du corps navigateur.
+export async function consommerQuotaIA(userId: string): Promise<ResultatGarde> {
   const { data: nbAppels, error } = await supabaseAdmin.rpc(
     'incrementer_quota_ia',
-    { p_user_id: user.id }
+    { p_user_id: userId }
   );
 
   if (error) {
-    console.error('[GARDE IA] Erreur quota:', error);
     return { ok: false, status: 500, message: 'Erreur serveur. Réessaie.' };
   }
 
@@ -59,5 +63,5 @@ export async function verifierGardeIA(request: Request): Promise<ResultatGarde> 
     };
   }
 
-  return { ok: true, userId: user.id };
+  return { ok: true, userId };
 }

@@ -148,7 +148,8 @@ test('cadeaux : occasion spéciale sans date ni description, requête sans notes
   const params=new URLSearchParams('contactId=12&eventType=jour_special'),requests=[]
   let tokenCalls=0
   const client={...pageDatabase({contacts:[{id:12,user_id:'u1',prenom:null,nom:null,relation:'ami',date_naissance:null,note:'Privé',interets:'Privé',est_favori:null}]}),auth:{getUser:async()=>({data:{user:{id:'u1'}}}),getSession:async()=>{tokenCalls++;return {data:{session:{user:{id:'u1'},access_token:'simulation'}}}}}}
-  const h=harness('components/GiftSuggestions.tsx',{overrides:{'@/lib/supabase-browser':{supabase:client},'@/components/ContactDraftProvider':{useContactDraft:()=>({hasPrivateDraft:()=>false})}},globals:{fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));return {ok:true,json:async()=>({ideas:[{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'}]})}}}})
+  const h=harness('components/GiftSuggestions.tsx',{overrides:{'@/lib/supabase-browser':{supabase:client},'@/components/ContactDraftProvider':{useContactDraft:()=>({hasPrivateDraft:()=>false})}},globals:{fetch:async(_url,options)=>{requests.push(JSON.parse(options.body));return Response.json({ideas:[{idee:'Livre',raison:'Lecture',categorie:'loisir',recherche:'livre'}]})}}})
+  h.component.default = h.component.AccountGiftSuggestions
   const props={initialContactId:params.get('contactId'),initialEventType:params.get('eventType')}
   h.render(props);await h.flush();h.render(props)
   assert.equal(tokenCalls,0)
@@ -156,7 +157,7 @@ test('cadeaux : occasion spéciale sans date ni description, requête sans notes
   assert.equal(h.nodes().filter(n=>n.type==='input'&&n.props.type==='date').length,0)
   const generate=h.find(n=>n.type==='button'&&h.text(n).includes('Trouver des idées'))
   assert.equal(generate.props.disabled,false);await generate.props.onClick();await h.flush();h.render(props)
-  assert.equal(tokenCalls,1);assert.equal(requests.length,1);assert.equal(requests[0].eventType,'jour_special')
+  assert.equal(tokenCalls,2);assert.equal(requests.length,1);assert.equal(requests[0].eventType,'jour_special')
   assert.deepEqual(Object.keys(requests[0]).sort(),['budgetCents','currency','eventType','giftMode','relation'])
   assert.doesNotMatch(JSON.stringify(requests),/Privé|date|note|interet|prenom/)
 })

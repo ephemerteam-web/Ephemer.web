@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { loadPure, p2Helpers, pageDatabase } from './p2-helpers.mjs'
 import { harness } from './ui-harness.mjs'
+import { giftRoute } from './cadeaux-test-helpers.mjs'
 
 const amounts = loadPure('lib/attention-utils.ts','CURRENCIES,parseCents,centsInput,merchantLink')
 const options = p2Helpers
@@ -11,6 +12,7 @@ const safe = loadPure('lib/ai-privacy.ts','minimalAIInput',p2Helpers)
 const idea={idee:'Livre',raison:'Un moment de lecture',categorie:'loisir',recherche:'livre',emoji:'📖'}
 const request=body=>new Request('https://test.invalid',{method:'POST',body:JSON.stringify(body)})
 function route(name,{context='',responseText,gate={ok:true,userId:'A'},providerResponse}={}) {
+  if (name === 'generate-gift-ideas') return giftRoute({responseText,gate,providerResponse})
   const sent=[],seen=[]
   const loaded=loadPure(`app/api/${name}/route.ts`,'POST',{
     ...p2Helpers, MESSAGES_UI:{erreur_genérique:'Erreur'}, AbortSignal,

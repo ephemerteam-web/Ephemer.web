@@ -1,4 +1,5 @@
 import { p2Helpers, pageDatabase } from './p2-helpers.mjs'
+import { giftRoute } from './cadeaux-test-helpers.mjs'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
@@ -33,13 +34,13 @@ test('IA : les champs personnels sont exclus même dans une requête directe hos
   const constants = { TYPES_EVENEMENT: [{ value: 'anniversaire', label: 'Anniversaire' }], TYPES_RELATION: [{ value: 'ami', label: 'Ami' }], TONS_MESSAGE: [{ value: 'familier', label: 'Familier' }], MESSAGES_UI: { erreur_genérique: 'Erreur' } }
   for (const route of ['generate-message', 'generate-gift-ideas']) {
     const requests = []
-    const { POST } = load(`app/api/${route}/route.ts`, 'POST', { ...constants, verifierGardeIA: async () => ({ ok: true }), NextResponse: { json: (body, opts) => ({ body, status: opts?.status ?? 200 }) }, AbortSignal, process: { env: {} }, console,
+    const { POST } = route === 'generate-gift-ideas' ? giftRoute() : load(`app/api/${route}/route.ts`, 'POST', { ...constants, verifierGardeIA: async () => ({ ok: true }), NextResponse: { json: (body, opts) => ({ body, status: opts?.status ?? 200 }) }, AbortSignal, process: { env: {} }, console,
       fetch: async (url, options) => { requests.push(options.body); return Response.json({ choices: [{ message: { content: route === 'generate-message' ? 'Bonne journée !' : JSON.stringify([{ idee:'Livre', raison:'Lecture', categorie:'loisir', recherche:'livre' }]) } }] }) },
     })
     const response = await POST(new Request('https://test.invalid', { method: 'POST', body: JSON.stringify({ ...secrets, relation: 'ami', eventType: 'anniversaire', tone: 'familier' }) }))
-    assert.equal(response.status, 200)
-    assert.equal(requests.length, 1)
-    for (const value of Object.values(secrets)) assert.ok(!requests[0].includes(value), value)
+    assert.equal(response.status, route === 'generate-gift-ideas' ? 400 : 200)
+    assert.equal(requests.length, route === 'generate-gift-ideas' ? 0 : 1)
+    for (const value of Object.values(secrets)) assert.ok(!requests.some(body => body.includes(value)), value)
   }
 })
 test('export : pagination, filtres propriétaire et arrêt sur erreur sans résultat partiel', async () => {

@@ -2,7 +2,8 @@
 // Orchestration indépendante du transport : révision, reprise et brouillon privé.
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { useContactDraft } from '@/components/ContactDraftProvider'
-import { commandeUnivers, monUnivers, resultatUnivers, type CommandeUnivers, type MonUnivers } from '@/lib/univers-contract'
+import { resultatUnivers } from '@/lib/univers-contract'
+import { commandeUniversCadeaux as commandeUnivers, monUniversCadeaux as monUnivers, type CommandeUniversCadeaux as CommandeUnivers, type MonUniversCadeaux as MonUnivers } from '@/lib/cadeaux-social-contract'
 import UniversEditor from './UniversEditor'
 
 export type UniversService = {
@@ -87,13 +88,13 @@ export function AccountUniversForm({ ownerId, api, avatarEnregistre = null }: { 
       // Même après erreur/réponse perdue : lire sans réémettre une nouvelle commande.
       const row = await read()
       const expected = command.revision + (action === 'masquer' && command.revision === 0 ? 0 : 1)
-      const masked = Object.values(row.partage).every(value => !value)
+      const masked = Object.values(row.partage).every(value => !value) && ['presentation', 'passions', 'plaisirs', 'eviter'].every(key => !row.iaCadeaux[key as keyof typeof row.iaCadeaux])
       // L'ordre des clés reçu ne constitue pas une preuve : comparaison canonique métier.
       const same = action === 'enregistrer' && JSON.stringify(monUnivers({ ...command.donnees, revision: expected })) === JSON.stringify(row)
       if (row.revision === expected && (same || (action === 'masquer' && masked)) && (!result || result.revision === row.revision)) {
         setSaved(row)
         if (action === 'enregistrer') setDraft(row)
-        else setDraft(previous => previous ? { ...previous, revision: row.revision, partage: { ...row.partage } } : row)
+        else setDraft(previous => previous ? { ...previous, revision: row.revision, partage: { ...row.partage }, iaCadeaux: { ...row.iaCadeaux } } : row)
         setConflict(false); attempt.current = null; setNotice(action === 'enregistrer' ? 'Tes informations et ton partage sont enregistrés.' : 'Toutes tes informations facultatives sont masquées.')
       } else {
         if (row.revision !== saved.revision) setConflict(true)

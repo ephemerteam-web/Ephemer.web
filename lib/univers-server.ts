@@ -3,13 +3,14 @@ import 'server-only'
 import { ETOILES_HEADERS, socialTransport, type EtoilesTransport } from './etoiles-server'
 import { limitedJSON } from './ai-transport'
 import { uuidEtoile } from './etoiles-contract'
-import { commandeUnivers, monUnivers, resultatUnivers, universPartage, UNIVERS_LIMITES } from './univers-contract'
+import { resultatUnivers, universPartage, UNIVERS_LIMITES } from './univers-contract'
+import { commandeUniversCadeaux as commandeUnivers, monUniversCadeaux as monUnivers, universPourCadeaux } from './cadeaux-social-contract'
 
 class UniversHTTPError extends Error {
   status: number
   constructor(status: number, message: string) { super(message); this.status = status }
 }
-export async function universEndpoint(request: Request, mode: 'proprietaire' | 'commande' | 'etoile', factory: (token: string) => EtoilesTransport = socialTransport): Promise<Response> {
+export async function universEndpoint(request: Request, mode: 'proprietaire' | 'commande' | 'etoile' | 'cadeaux', factory: (token: string) => EtoilesTransport = socialTransport): Promise<Response> {
   const reply = (body: unknown, status = 200) => Response.json(body, { status, headers: ETOILES_HEADERS })
   try {
     if (request.method !== (mode === 'commande' ? 'POST' : 'GET')) throw new UniversHTTPError(405, 'Méthode refusée.')
@@ -21,13 +22,13 @@ export async function universEndpoint(request: Request, mode: 'proprietaire' | '
     if (!user) throw new UniversHTTPError(401, 'Reconnecte-toi pour accéder aux univers.')
     if (!user.email_confirmed_at || user.is_anonymous) throw new UniversHTTPError(403, 'Une adresse de connexion vérifiée est nécessaire.')
     const params = url.searchParams
-    if ([...params.keys()].some(key => mode !== 'etoile' || key !== 'etoileId' || params.getAll(key).length !== 1)) throw new UniversHTTPError(400, 'Paramètres invalides.')
+    if ([...params.keys()].some(key => !['etoile', 'cadeaux'].includes(mode) || key !== 'etoileId' || params.getAll(key).length !== 1)) throw new UniversHTTPError(400, 'Paramètres invalides.')
     if (mode === 'proprietaire') return reply(monUnivers(await api.rpc('lire_mon_univers', {})))
-    if (mode === 'etoile') {
+    if (mode === 'etoile' || mode === 'cadeaux') {
       let etoileId: string
       try { etoileId = uuidEtoile(params.get('etoileId')) } catch { throw new UniversHTTPError(400, 'Étoile invalide.') }
       if (etoileId === user.id) throw new UniversHTTPError(403, 'Univers indisponible.')
-      return reply(universPartage(await api.rpc('consulter_univers_etoile', { p_etoile: etoileId })))
+      return reply(mode === 'cadeaux' ? universPourCadeaux(await api.rpc('consulter_univers_cadeaux', { p_etoile: etoileId })) : universPartage(await api.rpc('consulter_univers_etoile', { p_etoile: etoileId })))
     }
     let command
     try { command = commandeUnivers(await limitedJSON(request, UNIVERS_LIMITES.corps, 400)) }

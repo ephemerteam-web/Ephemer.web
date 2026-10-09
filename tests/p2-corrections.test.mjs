@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { loadPure, p2Helpers as h, pageDatabase } from './p2-helpers.mjs'
+import { giftRoute } from './cadeaux-test-helpers.mjs'
 
 test('préférences : défauts confirmés, valeurs enregistrées préservées, J-3 basculable', () => {
   assert.deepEqual(JSON.parse(JSON.stringify(h.resolvePreferences(null))), { canal_email: true, canal_push: false, rappel_j7: true, rappel_j3: true, rappel_j1: false, rappel_jourj: true, newsletter_mensuelle: false })
@@ -37,11 +38,7 @@ test('cadeaux : éliminer les idées inutilisables et limiter à six', () => {
 test('API cadeaux : JSON invalide, tableau vide et idées rejetées renvoient 502 ; chaque occasion réussit', async () => {
   const valid = { idee:'Livre', raison:'Lecture', categorie:'loisir', recherche:'livre' }
   for (const [content,status] of [['{incorrect',502],['[]',502],[JSON.stringify([{...valid,raison:''}]),502],[JSON.stringify([valid]),200]]) {
-    const { POST } = loadPure('app/api/generate-gift-ideas/route.ts','POST',{
-      ...h, verifierGardeIA:async()=>({ok:true}), process:{env:{}}, AbortSignal,
-      NextResponse:{json:(body,options)=>({body,status:options?.status??200})},
-      fetch:async()=>Response.json({choices:[{message:{content}}]}),console:{error(){},log(){}}
-    })
+    const { POST } = giftRoute({ responseText:content })
     for (const occasion of [...h.TYPES_EVENEMENT.map(o=>o.value),'fete_prenom']) {
       const response=await POST(new Request('https://test.invalid', { method: 'POST', body: JSON.stringify({eventType:occasion,relation:'amis'}) }))
       assert.equal(response.status,status)

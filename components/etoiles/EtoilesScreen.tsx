@@ -97,6 +97,7 @@ export default function EtoilesScreen() {
           <EtoileAction action="retirer" donnees={{ etoileId: star.etoile_id }} confirmation="Retirer cette étoile ? La relation ne reviendra pas automatiquement. Une nouvelle demande acceptée sera nécessaire.">Retirer</EtoileAction>
           <EtoileAction action="bloquer" donnees={{ etoileId: star.etoile_id }} confirmation="Bloquer cette étoile et retirer votre relation ? Débloquer ne restaurera pas l’amitié.">Bloquer</EtoileAction></div>
         <UniversPartagePanel etoileId={star.etoile_id} />
+        <Link className={bouton} href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId: star.etoile_id })}>Trouver une attention</Link>
       </article> })}
       {tab === 'recues' && social.recues.map(d => <article key={d.id} className={carte}><h2 className="break-words text-lg font-semibold">{d.identite}</h2><p className="mt-1 text-sm text-muted">Demande valable jusqu’au {expiration(d.expires_at)}</p>
         <div className="mt-4 flex flex-wrap gap-2"><EtoileAction action="accepter" donnees={{ demandeId: d.id }} onResult={() => setTab('actives')}>Accepter</EtoileAction><EtoileAction action="refuser" donnees={{ demandeId: d.id }}>Refuser</EtoileAction>

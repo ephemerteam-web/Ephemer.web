@@ -82,10 +82,10 @@ test('export social : les cinq vues paginées, sans secret, profil tiers ni cibl
  const api=client({result:path=>{const p=new URL(path,'https://test').searchParams,vue=p.get('vue');const count=vue==='liens'&&!p.has('apres')?100:1;return {items:Array.from({length:count},(_,i)=>({id:uid(p.has('apres')?100+i:i),created_at:D,updated_at:D,expires_at:D,etoile_id:B,contact_id:'9007199254740993',etat:vue==='relations'?'retiree':'expiree',origine:'demande',direction:'envoyee',adresse_cible:'a@ex.org',auteur_id:B,destinataire_id:B,revoque:true,token:TOKEN,empreinte:'SECRET',profil:'SECRET'}))}}})
  const result=await api.exportEtoiles(A);assert.equal(result.liens.length,101);assert.equal(api.calls.length,6);assert.equal(result.demandes[0].auteur_id,null);assert.equal(result.associations[0].contact_id,'9007199254740993');assert.doesNotMatch(JSON.stringify(result),/token|empreinte|profil|destinataire|SECRET/)
 })
-test('export version 9 : notifications des deux sources isolées et export social obligatoire',async()=>{
+test('export version 10 : notifications des deux sources isolées et export social obligatoire',async()=>{
  const db=pageDatabase({notifications_etoiles:[{id:A,user_id:A,type:'demande_etoile',lue:false},{id:B,user_id:B,lue:false}]});db.auth={getUser:async()=>({data:{user:{id:A,email:'a@ex.org'}},error:null})}
  const api=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,exportEtoiles:async owner=>{assert.equal(owner,A);return {relations:[{id:B,etat:'retiree'}]}}})
- const exported=await api.exportOwnData();assert.equal(exported.version, 9);assert.equal(exported.notifications_etoiles.length,1);assert.equal(exported.etoiles.relations[0].etat,'retiree')
+ const exported=await api.exportOwnData();assert.equal(exported.version, 10);assert.equal(exported.notifications_etoiles.length,1);assert.equal(exported.etoiles.relations[0].etat,'retiree')
  await assert.rejects(loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,exportEtoiles:async()=>{throw new Error('Étoiles indisponibles')}}).exportOwnData(),/indisponibles/)
 })
 test('notifications : mêmes IDs séparés par source, marquage propriétaire et aucune suppression sociale',async()=>{
