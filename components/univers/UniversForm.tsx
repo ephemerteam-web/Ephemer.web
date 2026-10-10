@@ -5,6 +5,9 @@ import { useContactDraft } from '@/components/ContactDraftProvider'
 import { resultatUnivers } from '@/lib/univers-contract'
 import { commandeUniversCadeaux as commandeUnivers, monUniversCadeaux as monUnivers, type CommandeUniversCadeaux as CommandeUnivers, type MonUniversCadeaux as MonUnivers } from '@/lib/cadeaux-social-contract'
 import UniversEditor from './UniversEditor'
+import ShareImageButton from '../ShareImageButton'
+import { ownUniversImageFields } from '@/lib/image-projections'
+import { avatarRenderConfig } from '@/lib/avatar-render-config'
 
 export type UniversService = {
   lire: (ownerId: string, signal: AbortSignal) => Promise<unknown>
@@ -22,6 +25,8 @@ export function AccountUniversForm({ ownerId, api, avatarEnregistre = null }: { 
   const readAbort = useRef<AbortController | null>(null), writeAbort = useRef<AbortController | null>(null)
   const attempt = useRef<{ fingerprint: string; command: CommandeUnivers } | null>(null), savedRef = useRef<MonUnivers | null>(null)
   const dirty = !!draft && JSON.stringify(draft) !== JSON.stringify(saved)
+  let imageAvatar = null
+  if (avatarEnregistre) { try { imageAvatar = avatarRenderConfig(avatarEnregistre) } catch { /* Pas de copie d'une configuration invalide. */ } }
   useEffect(() => { dirtyRef.current = dirty; savedRef.current = saved }, [dirty, saved])
   const invalidate = useCallback(() => { epoch.current++; readAbort.current?.abort(); writeAbort.current?.abort(); attempt.current = null }, [])
   const read = useCallback(async () => {
@@ -105,6 +110,7 @@ export function AccountUniversForm({ ownerId, api, avatarEnregistre = null }: { 
   }
   return <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
     <header><h1 className="text-2xl font-semibold text-ink">Mon univers</h1><p className="mt-2 text-sm text-muted">Présente-toi à tes étoiles et choisis ce que tu partages.</p></header>
+    {saved && <ShareImageButton title="Mon univers" fields={ownUniversImageFields(saved)} avatarSnapshot={imageAvatar} />}
     {offline && <p role="status" className="text-sm text-muted">Hors ligne : tes modifications restent en mémoire pendant cette session.</p>}
     {error && <p role="alert" className="rounded-xl border border-line p-3 text-ink">{error}</p>}
     {notice && <p role="status" className="text-sm text-ink">{notice}</p>}

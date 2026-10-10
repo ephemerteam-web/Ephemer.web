@@ -55,7 +55,9 @@ self.addEventListener('push', event => {
   if (!data || typeof data !== 'object') data = {};
   // Le détail reste dans l'application authentifiée, pas sur un écran verrouillé.
   const options = {
-    body: 'Une activité est disponible dans votre application.',
+    body: data.kind === 'daily'
+      ? [data.hasEvents === true ? 'Des dates sont à célébrer aujourd’hui. Ouvre Ephemer pour les découvrir.' : '', typeof data.publicSaints === 'string' && data.publicSaints ? `Nous fêtons ${data.publicSaints.slice(0, 180)}.` : ''].filter(Boolean).join(' ') || 'Ton résumé du jour est disponible dans Ephemer.'
+      : 'Une activité est disponible dans votre application.',
     icon: '/icon-192.png', badge: '/icon-192.png',
     data: { url: safeNotificationURL(data.url) },
     ...(typeof data.tag === 'string' && data.tag ? { tag: data.tag } : {}),

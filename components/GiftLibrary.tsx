@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase-browser'
 import { parisDay } from '@/lib/calendar-day'
 import { useContactDraft } from './ContactDraftProvider'
 import { readAllRows } from '@/lib/pagination'
+import ShareImageButton from './ShareImageButton'
 
 export function AmountFields({ prefix, label, cents = null, currency = 'EUR' }: { prefix: string; label: string; cents?: number | null; currency?: string | null }) {
   return <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
@@ -100,6 +101,7 @@ export function IdeaLibrary({ contactId, preparationId, onChanged }: { contactId
       {!visible.length && <p className="rounded-xl bg-canvas p-5 text-sm text-muted">Aucune idée ne correspond. Ajoute une inspiration ou élargis les filtres.</p>}
       {visible.map(idea => <article key={idea.id} className="space-y-3 rounded-2xl border border-line bg-canvas p-4 sm:p-5">
         <h3 className="break-words font-semibold">{idea.titre}{idea.archivee && ' · Archivée'}</h3>
+        <ShareImageButton title={idea.titre} fields={[{ id: 'link', label: 'Lien marchand', value: idea.lien_marchand }, { id: 'note', label: 'Note', value: idea.note, sensitive: true }, { id: 'amount', label: 'Prix estimé', value: money(idea.prix_estime_centimes, idea.devise_estimee), sensitive: true }]} />
         <p>{money(idea.prix_estime_centimes, idea.devise_estimee)} estimé</p>
         {idea.note && <p className="whitespace-pre-wrap break-words text-sm">{idea.note}</p>}
         {idea.lien_marchand && <a className={button} href={merchantLink(idea.lien_marchand) ?? undefined} target="_blank" rel="noopener noreferrer">Voir chez le marchand</a>}
@@ -155,6 +157,7 @@ export function GiftChoices({ preparationId, refresh = 0 }: { preparationId: str
       {!loaded.data.choices.some(c => c.preparation_id === preparationId) && <p>Choisis une idée ci-dessous pour commencer.</p>}
       {loaded.data.choices.filter(c => c.preparation_id === preparationId).map(choice => <article className="space-y-3 border-t border-line pt-3" key={choice.id + ':' + choice.revision}>
         <h3 className="break-words font-semibold">{choice.titre} · {choice.etat === 'achete' ? 'Acheté' : choice.etat === 'abandonne' ? 'Abandonné' : 'Prévu'}</h3>
+        <ShareImageButton title={choice.titre} fields={[{ id: 'state', label: 'État', value: choice.etat }, { id: 'estimate', label: 'Prix estimé', value: money(choice.prix_estime_centimes, choice.devise_estimee), sensitive: true }, { id: 'paid', label: 'Montant dépensé', value: money(choice.montant_depense_centimes, choice.devise_depensee), sensitive: true }]} />
         <p>{money(choice.prix_estime_centimes, choice.devise_estimee)} estimé{choice.etat === 'achete' && ' · ' + money(choice.montant_depense_centimes, choice.devise_depensee) + ' dépensé'}</p>
         <details><summary className="min-h-11 cursor-pointer py-2">Modifier le choix ou déclarer l’achat</summary><ChoiceEditor choice={choice} onSaved={loaded.reload} /></details>
         {loaded.data!.gifts.some(g => g.choix_id === choice.id) ? <p className="text-success">Cadeau offert déclaré</p> : <details><summary className="min-h-11 cursor-pointer py-2">Noter le cadeau offert</summary><DonateChoice choice={choice} onSaved={loaded.reload} /></details>}
@@ -205,6 +208,7 @@ export function GiftHistory({ contactId, recipient = '' }: { contactId?: number;
         const source = gift.choix_id ? loaded.data!.choices.find(c => c.id === gift.choix_id) : gift
         return <article className="space-y-2 border-t border-line pt-3" key={gift.id}>
           <h3 className="break-words font-semibold">{gift.titre} · {gift.destinataire_historique}</h3>
+          <ShareImageButton title={gift.titre} fields={[{ id: 'recipient', label: 'Pour', value: gift.destinataire_historique }, { id: 'date', label: 'Offert le', value: gift.date_don }, { id: 'reaction', label: 'Réaction', value: gift.reaction, sensitive: true }, { id: 'amount', label: 'Montant', value: source ? money(source.montant_depense_centimes, source.devise_depensee) : '', sensitive: true }]} />
           <p>Offert le {gift.date_don}{source && ' · ' + money(source.montant_depense_centimes, source.devise_depensee)}</p>
           {gift.reaction && <p className="whitespace-pre-wrap break-words">{gift.reaction}</p>}
           <div className="flex flex-wrap gap-2"><button className={button} onClick={() => edit(gift)}>Modifier</button>

@@ -2,8 +2,9 @@
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
 import MissingContactBanner from '@/components/MissingContactBanner'
+import DatesNav from '@/components/DatesNav'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { formaterDateFR } from '@/lib/date-utils'
 import { parisDay, daysBetween, parseLocalDay } from '@/lib/calendar-day'
@@ -59,13 +60,16 @@ export default function AnniversairesPage() {
   const router = useRouter()
   const { contacts: allContacts, loading, error: listError, retry } = useContacts()
   const lists = usePrivateLists()
-  const today = parisDay()
+  const [today, setToday] = useState(parisDay)
   const dates = usePersonalEvents(today, shiftDay(today, 399))
   const contacts = lists.filter(allContacts)
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
-  const { ouvrirDrawer } = useDrawer()
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(parisDay()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   // ── Chargement des contacts ──
 
@@ -124,6 +128,7 @@ export default function AnniversairesPage() {
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
 
       <main className="max-w-5xl mx-auto space-y-6">
+        <DatesNav />
         <ListSelector state={lists} />
 
         {/* En-tête */}
@@ -150,6 +155,7 @@ export default function AnniversairesPage() {
             {(['all', 'today', 'week', 'month'] as FilterMode[]).map(mode => (
               <button
                 key={mode}
+                aria-pressed={filterMode === mode}
                 onClick={() => setFilterMode(mode)}
                 className={`px-3 py-1.5 rounded-full text-xs sm:text-sm transition ${
                   filterMode === mode
@@ -165,6 +171,7 @@ export default function AnniversairesPage() {
           <div className="flex-1" />
 
           <select
+            aria-label="Trier les anniversaires"
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="bg-ink/5 border border-line text-muted text-xs sm:text-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -234,10 +241,6 @@ function CardAnniv({
   onMessage: (id: string | number) => void
 }) {
   const { ouvrirDrawer } = useDrawer()
-
-  const badge = anniv.joursRestants === 0 ? BADGE_CONFIG.today
-    : anniv.joursRestants <= 7 ? BADGE_CONFIG.soon
-    : BADGE_CONFIG.later
 
   const dateLabel = anniv.prochainAnniv.toLocaleDateString('fr-FR', {
     weekday: 'short',

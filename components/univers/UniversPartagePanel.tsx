@@ -48,7 +48,7 @@ export function AccountUniversPartage({ ownerId, etoileId, initialOpen = false, 
       {loading && <p role="status" className="text-sm text-muted">Actualisation de son univers…</p>}
       {error && <p role="alert" className="text-sm text-muted">{error}</p>}
       {value && <UniversView value={value} />}
-      {value && <Link href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId })} className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 py-2 text-sm font-semibold text-accent">Trouver une attention</Link>}
+      {value && <Link href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId })} className="inline-flex min-h-11 items-center rounded-xl border border-line px-3 py-2 text-sm font-semibold text-accent">Trouver un cadeau</Link>}
       {!value && !error && !loading && <p className="text-sm text-muted">Reconnecte-toi pour consulter son univers partagé.</p>}
     </div>}
   </div>

@@ -185,6 +185,7 @@ export default function NotificationBell() {
                   setOuvert(false)
                   router.push('/dashboard/notifications')
                 }}
+                id="notifications-title"
                 className="font-semibold hover:text-accent transition active:scale-95 flex items-center gap-2"
               >
                 Notifications → 📬

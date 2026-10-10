@@ -17,6 +17,7 @@ import NotificationBell from '@/components/NotificationBell'
 import MenuLateral from '@/components/MenuLateral'
 import MenuNavigation from '@/components/MenuNavigation'
 import OfflineBanner from '@/components/OfflineBanner';
+import MainSpaces from '@/components/MainSpaces'
 
 export default function DashboardLayout({
   children,
@@ -143,7 +144,8 @@ export default function DashboardLayout({
   onFermer={() => setNavOuverte(false)}
 />
 
-        <main className="relative z-10">
+        <MainSpaces />
+        <main className="relative z-10 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </main>
 

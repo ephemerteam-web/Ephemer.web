@@ -1,8 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { downloadImage } from '@/lib/share-image'
 import { supabase } from '@/lib/supabase-browser'
 import LoadFailure from '@/components/LoadFailure'
+import { SAINTS_PAR_DATE } from '@/lib/saints'
 
 type Fete = Pick<import('@/types/database').Tables<'saint_du_jour'>, 'saint' | 'prenom' | 'image_url' | 'caption'>
 
@@ -24,7 +26,7 @@ function texteSansPromotion(caption: string | null) {
   return caption?.split(/(?:https?:\/\/|www\.|\bephemer\.name\b|#[\p{L}\p{N}_]+)/u)[0].trim() ?? ''
 }
 
-export default function SaintDuJour() {
+export default function SaintDuJour({ embedded = false, day }: { embedded?: boolean; day?: string } = {}) {
   const [fete, setFete] = useState<Fete | null>(null)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState(false)
@@ -40,7 +42,7 @@ export default function SaintDuJour() {
       const { data, error } = await supabase
       .from('saint_du_jour')
       .select('saint, prenom, image_url, caption')
-      .eq('date_fete', dateDuJourParis())
+      .eq('date_fete', day ?? dateDuJourParis())
       .maybeSingle()
 
       if (!actif) return
@@ -51,7 +53,7 @@ export default function SaintDuJour() {
 
     void charger().catch(() => { if (actif) { setLoadError(true); setLoading(false) } })
     return () => { actif = false }
-  }, [attempt])
+  }, [attempt, day])
 
   useEffect(() => {
     if (!fete?.image_url) return
@@ -85,11 +87,12 @@ export default function SaintDuJour() {
         if (imageAPartager && navigator.canShare?.({ files: [imageAPartager] })) {
           await navigator.share({ files: [imageAPartager], title: titre, text: texte || titre })
         } else {
-          await navigator.share({ title: titre, text: texte || titre, url: fete.image_url })
+          if (imageAPartager) { downloadImage(imageAPartager); setMessagePartage('Image téléchargée.') }
+          else setMessagePartage('L’image se prépare. Réessaie dans un instant.')
         }
       } else {
-        await navigator.clipboard.writeText(fete.image_url)
-        setMessagePartage('Lien de l’image copié.')
+        if (imageAPartager) { downloadImage(imageAPartager); setMessagePartage('Image téléchargée.') }
+        else { await navigator.clipboard.writeText(fete.image_url); setMessagePartage('Lien de l’image copié. L’image n’est pas encore prête.') }
       }
     } catch (erreur) {
       if (erreur instanceof DOMException && erreur.name === 'AbortError') return
@@ -100,16 +103,20 @@ export default function SaintDuJour() {
   if (loadError) return <LoadFailure message="Impossible de charger la fête du jour." retry={() => { setLoadError(false); setLoading(true); setAttempt(value => value + 1) }} />
   if (loading) {
     return (
-      <div className="mx-auto my-8 h-64 w-full max-w-5xl animate-pulse rounded-3xl bg-ink/5" aria-hidden="true" />
+      <div className={`${embedded ? '' : 'mx-auto my-8 max-w-5xl '}h-64 w-full animate-pulse rounded-3xl bg-ink/5`} aria-hidden="true" />
     )
   }
 
-  if (!fete) return null
+  if (!fete) {
+    const saint = SAINTS_PAR_DATE.get((day ?? dateDuJourParis()).slice(5))
+    return embedded && saint ? <section aria-label="Fête du jour" className="rounded-2xl border border-line bg-surface/60 p-4"><p className="text-xs font-semibold uppercase tracking-wider text-accent">✨ Fête du jour</p><p className="mt-2 font-semibold text-ink">{saint.nomSaint}</p></section> : null
+  }
 
   const texte = texteSansPromotion(fete.caption)
 
   return (
-    <section aria-label={`La fête du jour : ${fete.saint}`} className="mx-auto my-8 w-full max-w-xl px-4 sm:px-6">
+    <section aria-label={`La fête du jour : ${fete.saint}`} className={embedded ? 'w-full min-w-0' : 'mx-auto my-8 w-full max-w-xl px-4 sm:px-6'}>
+      {embedded && <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-accent">✨ Fête du jour</h3>}
       <div className="overflow-hidden rounded-3xl border border-line bg-ink/[0.03]">
         <img
           src={fete.image_url}

@@ -5,11 +5,11 @@ import { supabase } from '../supabase-browser'
 import { readEventData } from '../personal-event-data'
 import { eventViews, type EventData } from '../personal-events'
 
-export function usePersonalEvents(start: string, end: string) {
+export function usePersonalEvents(start: string, end: string, includeHidden = false) {
   const { id } = useDashboardUser()
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState<{ scope: string; data: EventData | null; error: string } | null>(null)
-  const scope = `${id}:${start}:${end}:${attempt}`
+  const scope = `${id}:${start}:${end}:${includeHidden}:${attempt}`
   const retry = useCallback(() => setAttempt(value => value + 1), [])
   useEffect(() => {
     let active = true
@@ -18,5 +18,5 @@ export function usePersonalEvents(start: string, end: string) {
     return () => { active = false }
   }, [id, start, end, scope])
   const current = state?.scope === scope ? state : null
-  return { data: current?.data ?? null, views: current?.data ? eventViews(current.data, start, end) : [], loading: !current, error: current?.error ?? '', retry }
+  return { data: current?.data ?? null, views: current?.data ? eventViews(current.data, start, end, includeHidden) : [], loading: !current, error: current?.error ?? '', retry }
 }

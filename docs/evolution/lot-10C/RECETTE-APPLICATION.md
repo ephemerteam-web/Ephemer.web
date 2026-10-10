@@ -6,7 +6,7 @@
 - Types TypeScript régénérés depuis le schéma installé : `types/database.generated.ts`. Les types bigint du générateur restent numériques, mais les nouveaux transports de contacts utilisent des chaînes pour préserver la précision.
 - `npm run verify` **final réussi : 324 tests, TypeScript et build Next 16.2.6**, zéro erreur lint et 11 avertissements préexistants. Une première tentative de build dans le sandbox a échoué sur une canonicalisation Windows refusée ; la relance hors sandbox autorisée a réussi. Aucun contournement des protections du navigateur.
 - `git diff --check` et `node tools/prepare-lot10c-dossier.mjs --check` : réussis. Le contrôle des fichiers est local ; il n'exécute aucune installation.
-- Aucun commit, déploiement, nouvelle dépendance, migration ou mutation distante par l'assistant. Le changement indépendant dans `app/invitation/[token]/FormulaireInvitation.tsx` est conservé.
+- Aucun commit, déploiement, nouvelle dépendance, migration ou mutation distante par l'assistant. Les changements indépendants dans `app/invitation/[token]/FormulaireInvitation.tsx` et `app/dashboard/contacts/page.tsx` sont conservés.
 
 ## Simulations HTTP, orchestration et React
 
@@ -37,7 +37,7 @@ Exécuté :
 - Modification enregistrée du texte : accord auteur conservé, nouveaux contenus relus et deux sélections effacées.
 - Perte d'association : combinaison désactivée, contenu social retiré ; bouton **Continuer sans fiche contact** rétablit volontairement le parcours social seul.
 - **Garder cette idée** puis **Enregistrer** : une seule écriture fictive dans `idees_cadeaux`, `contact_id:null` ; aucun contact inséré.
-- Hors ligne : projection et résultats issus du social retirés, génération désactivée ; retour en ligne relit les informations. Retrait de relation : source effacée et étoile inaccessible.
+- Hors ligne : projection et résultats issus du social retirés, génération désactivée ; retour en ligne relit les informations. Retrait de relation : source effacée, option « Étoile inaccessible » affichée ; le choix explicite « Sans contact » permet une recherche générale.
 - Changement entre le compte auteur et demandeur : composants remontés par compte, aucun ancien brouillon ou choix réutilisé.
 - Captures : `out/lot10c/preview/integration-mobile.png` et `integration-desktop.png`. Serveur/onglet temporaires arrêtés et viewport rétabli à la fin.
 

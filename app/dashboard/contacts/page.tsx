@@ -1,4 +1,5 @@
 'use client'
+import ClosePeopleNav from '@/components/ClosePeopleNav'
 import { useEtoiles } from '@/components/etoiles/EtoilesContext'
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
@@ -150,7 +151,7 @@ export default function ContactsPage() {
         {/* EN-TETE */}
         <div className="mb-4">
           {/* Titre + compteur */}
-          <h1 className="text-xl font-bold text-ink mb-3">
+          <ClosePeopleNav /><h1 className="text-xl font-bold text-ink mb-3">
             📒 Mes contacts <span className="text-sm font-normal text-info">({contacts.length})</span>
           </h1>
 

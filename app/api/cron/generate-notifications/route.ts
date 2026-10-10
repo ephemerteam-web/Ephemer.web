@@ -13,6 +13,7 @@ import { readEventData } from '@/lib/personal-event-data';
 import { eventViews, shiftDay, type EventData } from '@/lib/personal-events';
 import { occurrenceNotifications, occurrenceRecap } from '@/lib/occurrence-reminders';
 import { persistOccurrenceNotification } from '@/lib/occurrence-notifications';
+import { sendDailyPush } from '@/lib/daily-push';
 
 type User = { id: string; email: string | null; prenom?: string | null; nom?: string | null };
 
@@ -120,6 +121,15 @@ async function processUser(user: User, today = parisDay()) {
     console.error('Échec livraison récapitulatif', user.id, error);
     errors.push('livraison');
     await journal('livraison', false);
+  }
+  // Le canal push a sa propre sélection J0 et son verrou par appareil/jour.
+  if (process.env.EPHEMER_DAILY_PUSH_ENABLED === 'true' && resolvePreferences(prefs).canal_push) {
+    try {
+      const current = await readEventData(supabaseAdmin, user.id, today, today, true, false);
+      await sendDailyPush(user.id, current, today, resolvePreferences(prefs).canal_push);
+    } catch {
+      errors.push('push');
+    }
   }
   return { notifs, emails, errors };
 }

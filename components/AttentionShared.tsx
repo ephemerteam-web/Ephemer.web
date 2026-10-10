@@ -7,9 +7,11 @@ export const field = 'min-h-11 w-full min-w-0 rounded-lg border border-line bg-c
 export const button = 'inline-flex min-h-11 items-center justify-center rounded-lg border border-line px-3 py-2 text-sm text-ink hover:bg-ink/10 disabled:opacity-50'
 export const panel = 'min-w-0 space-y-3 rounded-xl border border-line bg-surface p-4'
 export function AttentionNav() {
-  return <nav aria-label="Mes attentions" className="mb-6 flex flex-wrap gap-2">
+  return <nav aria-label="Célébrations" className="mb-6 flex flex-wrap gap-2">
     <Link className={button} href="/dashboard/preparations">Mes préparations</Link>
     <Link className={button} href="/dashboard/idees">Boîte à idées et cadeaux</Link>
+    <Link className={button} href="/dashboard/generate">Messages</Link>
+    <Link className={button} href="/dashboard/messages-programmes">Messages programmés</Link>
     <Link className={button} href="/dashboard/budget">Budget cadeaux</Link>
     <Link className={button} href="/dashboard/styles">Mes styles</Link>
   </nav>

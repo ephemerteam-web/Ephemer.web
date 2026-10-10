@@ -2,6 +2,8 @@
 import Modal from '@/components/Modal'
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import ContactEtoile from '@/components/etoiles/ContactEtoile'
+import ShareImageButton from './ShareImageButton'
+import { contactImageFields } from '@/lib/image-projections'
 
 import { useState } from 'react'
 import { useDrawer } from '@/components/DrawerContext'
@@ -118,6 +120,7 @@ export default function DrawerGlobal() {
             {/* ── Corps (infos contact) ── */}
             <div className="p-6 flex flex-col gap-4 flex-1">
               <ContactEtoile key={contactAffiche.id} contactId={String(contactAffiche.id)} email={contactAffiche.email} />
+              <ShareImageButton title="Fiche contact" fields={contactImageFields(contactAffiche)} />
               {/* Date de naissance */}
               <div className="bg-ink/5 rounded-xl p-4 border border-line">
                 <p className="text-xs text-info uppercase tracking-wider mb-2">🎂 Date de naissance</p>

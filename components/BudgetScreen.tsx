@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase-browser'
 import { parisDay } from '@/lib/calendar-day'
 import { decimalMoney } from '@/lib/attention-utils'
 import { requireOwner } from '@/lib/attention-data'
+import ShareImageButton from './ShareImageButton'
 
 export function budgetWindow(period: string, mode: string) {
   if (!/^\d{4}-\d{2}$/.test(period)) throw new Error('Mois invalide.')
@@ -31,6 +32,7 @@ export default function BudgetScreen() {
     <p className="text-sm text-muted">Prévu : choix encore prévus, à la date actuelle de l’événement. Dépensé : achats déclarés, à leur date d’achat. Les devises sont séparées, sans conversion. Un montant inconnu reste différent de zéro.</p>
     {!loaded.data ? <LoadState error={loaded.error} retry={loaded.reload} /> : <div className="grid gap-4 sm:grid-cols-2">
       {loaded.data.map(row => <section key={row.devise} className={panel}><h2 className="font-bold">{row.devise === 'SANS_DEVISE' ? 'Devise non connue' : row.devise}</h2>
+        <ShareImageButton title="Budget cadeaux" fields={[{ id: 'period', label: 'Période', value: mode === 'year' ? period.slice(0,4) : period }, { id: 'currency', label: 'Devise', value: row.devise }, { id: 'planned', label: 'Prévu', value: decimalMoney(row.prevu, row.devise), sensitive: true }, { id: 'spent', label: 'Dépensé', value: decimalMoney(row.depense, row.devise), sensitive: true }, { id: 'undated', label: 'Dépenses sans date (hors total)', value: decimalMoney(row.depense_sans_date, row.devise), sensitive: true }]} />
         <dl className="space-y-2"><div><dt>Prévu</dt><dd className="text-xl">{decimalMoney(row.prevu, row.devise)}</dd></div>
           <div><dt>Dépensé</dt><dd className="text-xl">{decimalMoney(row.depense, row.devise)}</dd></div>
           <div><dt>Choix prévus sans montant connu</dt><dd>{row.nb_prevu_inconnu}</dd></div>
@@ -43,4 +45,3 @@ export default function BudgetScreen() {
     </div>}
   </main>
 }
-

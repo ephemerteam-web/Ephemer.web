@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { useContacts } from '@/lib/hooks/useContacts'
 import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents'
 import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
@@ -11,7 +11,7 @@ import { ListSelector } from '@/components/PrivateLists'
 import LoadFailure from '@/components/LoadFailure'
 import CalendarExperience from '@/components/CalendarExperience'
 
-export default function CalendrierPage() {
+function CalendrierPageContent() {
   const [month, setMonth] = useState(() => parisDay().slice(0, 7))
   const { contacts, loading, error, retry } = useContacts()
   const lists = usePrivateLists()
@@ -23,4 +23,8 @@ export default function CalendrierPage() {
     contactIds={lists.selected ? new Set(lists.filter(contacts).map(contact => contact.id)) : null}
     listSelector={<ListSelector state={lists} />}
     manageDates={<PersonalDates contacts={contacts} onSaved={dates.retry} />} />
+}
+
+export default function CalendrierPage() {
+  return <Suspense fallback={<p role="status">Chargement du calendrier…</p>}><CalendrierPageContent /></Suspense>
 }

@@ -1,12 +1,6 @@
-// app/dashboard/ce-mois-ci/page.tsx
-import EvenementsMois from '@/components/EvenementsMois'
+import { redirect } from 'next/navigation'
+import { legacyDestination } from '@/lib/legacy-navigation'
 
-export default function CeMoisCiPage() {
-  return (
-    <div className="min-h-screen bg-canvas/90 px-4 py-5 sm:px-6 sm:py-8">
-      <div className="mx-auto max-w-5xl">
-        <EvenementsMois />
-      </div>
-    </div>
-  )
+export default async function CeMoisCi({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
+  redirect(legacyDestination('month', await searchParams))
 }

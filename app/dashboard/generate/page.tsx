@@ -20,7 +20,7 @@ import type { AIContactField } from '@/lib/ai-consent'
 import { MESSAGE_LENGTHS } from '@/lib/ai-options'
 import { readStyleBook } from '@/lib/personal-preferences'
 import { resolveMessageStyle, styleSettings } from '@/lib/message-styles'
-import { useAttentionLoad } from '@/components/AttentionShared'
+import { AttentionNav, useAttentionLoad } from '@/components/AttentionShared'
 
 const fieldClass = 'min-h-11 w-full min-w-0 max-w-full rounded-xl border border-line bg-canvas px-3 py-2 text-base text-ink focus-visible:outline-2 focus-visible:outline-accent'
 const secondaryButtonClass = 'min-h-11 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink transition-colors hover:bg-ink/10 disabled:opacity-50'
@@ -229,7 +229,7 @@ function GenerateForm({ contactId, initialOccasion, occurrenceId }: { contactId:
   return (
     <div className="min-h-screen w-full min-w-0 max-w-full overflow-x-clip bg-canvas px-3 py-5 text-ink sm:px-4 md:px-8 md:py-8">
       <div className="mx-auto w-full min-w-0 max-w-xl space-y-5">
-        <header className="space-y-1">
+        <AttentionNav /><header className="space-y-1">
           <h1 className="text-xl font-bold sm:text-2xl">Un message pour tes proches</h1>
           <p className="text-sm text-muted">Choisis à qui l’adresser, puis laisse-toi inspirer.</p>
         </header>

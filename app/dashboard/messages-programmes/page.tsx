@@ -1,4 +1,6 @@
 "use client"
+import { AttentionNav } from '@/components/AttentionShared'
+import ShareImageButton from '@/components/ShareImageButton'
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import { emailJournalRpc } from '@/lib/email-journal'
 import { createRequestScope } from '@/lib/request-scope';
@@ -143,7 +145,8 @@ export default function MessagesProgrammesPage() {
       return;
     }
 
-    const { data: emailStatuses, error: journalError } = await emailJournalRpc(supabase, 'my_email_status', {});
+    // Le suivi est facultatif : son absence ne bloque pas la liste des messages.
+    const { data: emailStatuses } = await emailJournalRpc(supabase, 'my_email_status', {});
     if (!scope.current()) return;
     const statuses = new Map<number, { state: string; resend_id: string | null; delivery_status: string }>(
       (emailStatuses || []).map((row: { rappel_id: number; state: string; resend_id: string | null; delivery_status: string }) => [row.rappel_id, row])
@@ -152,7 +155,6 @@ export default function MessagesProgrammesPage() {
       const status = statuses.get(m.id);
       return status ? { ...m, email_state: status.state, resend_id: status.resend_id, delivery_status: status.delivery_status } : m;
     });
-    if (journalError) setErreur("Le suivi des emails est indisponible. Les livraisons restent non confirmées.");
     setMessages(list);
 
     const aVenir = list.filter(
@@ -312,7 +314,7 @@ export default function MessagesProgrammesPage() {
         {/* 🔧 MOBILE FIX : espacement et taille de titre adaptés mobile */}
         <div className="mb-4 sm:mb-6 flex items-center justify-between gap-3 flex-wrap">
           <div className="min-w-0 flex-1">
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-ink">📅 Messages programmés</h1>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-ink">📅 Messages programmés</h1><AttentionNav />
 <p className="text-sm text-muted mt-3">{deliveryLimit}</p>
             <p className="text-muted mt-1 text-xs sm:text-sm">Regroupés par événement. À venir + historique.</p>
           </div>
@@ -550,6 +552,7 @@ function MessageCard({
       onClick={handleCarteClick}
       className="bg-ink/5 border border-line rounded-2xl p-3 sm:p-4 md:p-5 transition hover:bg-ink/10 overflow-hidden"
     >
+      <ShareImageButton title="Message programmé" fields={[{ id: "recipient", label: "Pour", value: contactNom }, { id: "message", label: "Message", value: m.message }, { id: "date", label: "Date prévue", value: dateFR }, { id: "email", label: "Email", value: m.email_destinataire, sensitive: true }]} />
       {/* 🔧 MOBILE FIX : layout en colonne sur très petit écran si nécessaire */}
       <div className="flex items-start justify-between gap-2 sm:gap-3">
         {/* 🔧 MOBILE FIX : min-w-0 essentiel pour que le texte puisse se tronquer/casser */}

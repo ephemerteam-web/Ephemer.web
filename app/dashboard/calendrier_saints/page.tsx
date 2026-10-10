@@ -2,11 +2,16 @@
 import { useContacts } from '@/lib/hooks/useContacts'
 import LoadFailure from '@/components/LoadFailure'
 import MissingContactBanner from '@/components/MissingContactBanner'
+import DatesNav from '@/components/DatesNav'
+import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents'
+import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
+import { ListSelector } from '@/components/PrivateLists'
+import { daysBetween, parisDay, parseLocalDay } from '@/lib/calendar-day'
+import { shiftDay } from '@/lib/personal-events'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { SAINTS } from '@/lib/saints'
-import { TYPES_RELATION } from '@/lib/constants'
+import { SAINTS_PAR_DATE } from '@/lib/saints'
 import { useDrawer } from '@/components/DrawerContext'
 import ProgressRing from '@/components/ProgressRing' // 👈 AJOUT : import de l'anneau
 
@@ -16,11 +21,9 @@ type Contact = Pick<import('@/types/database').Contact, 'id' | 'nom' | 'prenom' 
 
 type FeteAvecContact = {
   nomSaint: string
-  prenoms: string[]
   prochaineFete: Date
   joursRestants: number
   contact: Contact
-  multipleDates?: boolean
 }
 
 type FilterMode = 'all' | 'week' | 'month' | 'today'
@@ -33,34 +36,6 @@ const BADGE_CONFIG = {
   today: { label: "Aujourd'hui", classe: 'bg-action text-on-action' },
   soon: { label: 'Bientôt', classe: 'bg-orange-400/20 text-warning border border-orange-400/40' },
   later: { label: '', classe: 'bg-ink/10 text-muted border border-line' },
-}
-
-function normaliserPrenom(prenom: string): string {
-  return prenom
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .trim()
-}
-
-function prochaineOccurrence(mois: number, jour: number): Date {
-  const aujourdhui = new Date()
-  aujourdhui.setHours(0, 0, 0, 0)
-  const annee = aujourdhui.getFullYear()
-  let date = new Date(annee, mois - 1, jour)
-  if (date < aujourdhui) {
-    date = new Date(annee + 1, mois - 1, jour)
-  }
-  return date
-}
-
-function joursRestants(date: Date): number {
-  const aujourdhui = new Date()
-  aujourdhui.setHours(0, 0, 0, 0)
-  const cible = new Date(date)
-  cible.setHours(0, 0, 0, 0)
-  const diffMs = cible.getTime() - aujourdhui.getTime()
-  return Math.round(diffMs / (1000 * 60 * 60 * 24))
 }
 
 // ─── Skeleton loader (carte grise qui pulse) ──────────────────────────────────
@@ -83,50 +58,45 @@ function SkeletonCard() {
 
 export default function CalendrierSaintsPage() {
   const router = useRouter()
-  const { contacts, loading, error: listError, retry } = useContacts()
+  const { contacts: allContacts, loading, error: listError, retry } = useContacts()
+  const lists = usePrivateLists()
+  const contacts = lists.filter(allContacts)
+  const [today, setToday] = useState(parisDay)
+  const dates = usePersonalEvents(today, shiftDay(today, 399))
   const [filterMode, setFilterMode] = useState<FilterMode>('all')
   const [sortMode, setSortMode] = useState<SortMode>('date')
   const [viewMode, setViewMode] = useState<ViewMode>('cards')
   const [copiedSaint, setCopiedSaint] = useState<string | null>(null)
-  const { ouvrirDrawer } = useDrawer()
+  useEffect(() => {
+    const timer = window.setInterval(() => setToday(parisDay()), 60_000)
+    return () => window.clearInterval(timer)
+  }, [])
 
   // ── Chargement des contacts ──
 
 
-  // ── Calcul des fêtes (avec gestion prénom vide) ──
+  // Même prochaine occurrence que le calendrier, y compris la date confirmée.
   const { fetelist, contactsSansFete } = useMemo(() => {
     const resultats: FeteAvecContact[] = []
     const sansFete: Contact[] = []
 
     for (const contact of contacts) {
-      if (!contact.prenom || contact.prenom.trim() === '') {
+      const next = dates.views.find(view => view.contact?.id === contact.id && view.kind === 'fete_prenomale')
+      if (!next) {
         sansFete.push(contact)
         continue
       }
-
-      const prenomNormalise = normaliserPrenom(contact.prenom)
-      const saint = SAINTS.find(s => s.prenoms.includes(prenomNormalise))
-
-      if (!saint) {
-        sansFete.push(contact)
-        continue
-      }
-
-      const [mois, jour] = saint.date.split('-').map(Number)
-      const prochaineFete = prochaineOccurrence(mois, jour)
-
+      const saint = SAINTS_PAR_DATE.get(next.date.slice(5))
       resultats.push({
-        nomSaint: saint.nomSaint,
-        prenoms: saint.prenoms,
-        prochaineFete,
-        joursRestants: joursRestants(prochaineFete),
+        nomSaint: saint?.nomSaint ?? next.title,
+        prochaineFete: parseLocalDay(next.date),
+        joursRestants: daysBetween(today, next.date),
         contact,
-        multipleDates: saint.prenoms.length > 1,
       })
     }
 
     return { fetelist: resultats, contactsSansFete: sansFete }
-  }, [contacts])
+  }, [contacts, dates.views, today])
 
   // ── Filtrage ──
   const fetelistFiltree = useMemo(() => {
@@ -169,18 +139,22 @@ export default function CalendrierSaintsPage() {
   }, [])
 
   // ── Rendu ──
+  if (dates.error || lists.error) return <LoadFailure message={dates.error || lists.error} retry={() => { dates.retry(); void lists.retry() }} />
+  if (dates.loading || lists.loading) return <p role="status">Chargement des fêtes…</p>
   if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="min-h-screen bg-canvas px-4 py-6 sm:px-6 sm:py-10">
 
       <main className="max-w-5xl mx-auto space-y-6">
+        <DatesNav />
+        <ListSelector state={lists} />
 
         {/* En-tête */}
         <header className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🎂</span>
+            <span className="text-3xl">🌸</span>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-ink">Fêtes des Saints</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-ink">Fêtes des saints</h1>
               <p className="text-xs sm:text-sm text-muted">
                 {counts.today > 0
                   ? `${counts.today} fête${counts.today > 1 ? 's' : ''} aujourd'hui !`
@@ -191,7 +165,7 @@ export default function CalendrierSaintsPage() {
         </header>
 
        {/* ⚠️ Section contacts sans fête référencée */}
-        <MissingContactBanner contacts={contactsSansFete} reason="sans fête référencée" actionLabel="Compléter les prénoms" />
+        <MissingContactBanner contacts={contactsSansFete} reason="sans fête visible à venir" actionLabel="Vérifier les fêtes" />
 
         {/* Barre de filtres + tri + vue */}
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -199,6 +173,7 @@ export default function CalendrierSaintsPage() {
             {(['all', 'today', 'week', 'month'] as FilterMode[]).map(mode => (
               <button
                 key={mode}
+                aria-pressed={filterMode === mode}
                 onClick={() => setFilterMode(mode)}
                 className={`px-3 py-1.5 rounded-full text-xs sm:text-sm transition ${
                   filterMode === mode
@@ -214,6 +189,7 @@ export default function CalendrierSaintsPage() {
           <div className="flex-1" />
 
           <select
+            aria-label="Trier les fêtes"
             value={sortMode}
             onChange={(e) => setSortMode(e.target.value as SortMode)}
             className="bg-ink/5 border border-line text-muted text-xs sm:text-sm rounded-full px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent/50"
@@ -289,10 +265,6 @@ function CardSaint({
   copied: boolean
 }) {
   const { ouvrirDrawer } = useDrawer()
-
-  const badge = fete.joursRestants === 0 ? BADGE_CONFIG.today
-    : fete.joursRestants <= 7 ? BADGE_CONFIG.soon
-    : BADGE_CONFIG.later
 
   const dateLabel = fete.prochaineFete.toLocaleDateString('fr-FR', {
     weekday: 'short',

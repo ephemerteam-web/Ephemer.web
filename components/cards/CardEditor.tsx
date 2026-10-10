@@ -8,6 +8,7 @@ import { supportedCardSnapshot, type SupportedCardSnapshot } from '@/lib/card-sn
 import { avatarForCard } from '@/lib/avatar-data'
 import { cardOperation, cardRequest, draftSnapshot, loadCard, recoverCardLink, saveCard, type CardDraft, type CardOperation, type RecoveredCardLink } from '@/lib/card-data'
 import CardRenderer from './CardRenderer'
+import ShareImageButton from '../ShareImageButton'
 
 const blank: SupportedCardSnapshot = { format: 2, templateId: 'clair_de_lune', templateVersion: 1, renderVersion: 2, message: '', signature: '', avatar: null }
 const sharingNotice = 'Toute personne possédant le lien peut ouvrir la carte, y compris après transfert. Une révocation bloque les consultations suivantes ; elle ne retire pas une copie déjà faite.'
@@ -92,7 +93,7 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
   }
   const statusLabel = share?.state === 'actif' ? 'Lien actif' : share?.state === 'revoque' ? 'Lien désactivé' : share?.state === 'expire' ? 'Lien expiré' : 'Aucun lien publié'
   return <div className="min-w-0 space-y-5">
-    <header className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Une attention sous les étoiles</h2><p className="mt-1 text-sm text-muted">Trois modèles gratuits. Signature choisie par toi.</p></div><button type="button" className={button} disabled={busy} onClick={onClose}>Fermer</button></header>
+    <header className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-bold">Une carte sous les étoiles</h2><p className="mt-1 text-sm text-muted">Trois modèles gratuits. Signature choisie par toi.</p></div><button type="button" className={button} disabled={busy} onClick={onClose}>Fermer</button></header>
     {!loaded && <p role="status">Chargement de ta carte privée…</p>}
     <fieldset disabled={busy || !loaded || !!pendingOperation} className="min-w-0 space-y-4">
       <fieldset className="min-w-0"><legend className="mb-2 font-semibold">Choisir un modèle</legend><div className="grid gap-2 sm:grid-cols-3">{CARD_TEMPLATES.map(item => <label key={item.id} className={'min-h-11 cursor-pointer rounded-xl border p-3 ' + (snapshot.templateId === item.id ? 'border-accent bg-accent/10' : 'border-line')}>
@@ -109,6 +110,7 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
     </fieldset>
     <p className="text-sm text-muted">{dirty ? 'Modifications non enregistrées' : saved ? 'Brouillon enregistré, visible uniquement par toi.' : 'La carte sera créée au premier enregistrement.'}</p>
     <section aria-label="Aperçu du brouillon" className="min-w-0 space-y-2"><h3 className="font-semibold">Aperçu du brouillon privé</h3><CardRenderer snapshot={snapshot} /></section>
+    {loaded && <ShareImageButton title="Ma carte personnelle" snapshot={snapshot} label="Partager le brouillon en image" />}
     {saved && <section className="space-y-3 rounded-xl border border-line p-3"><h3 className="font-semibold">Publication et lien privé</h3><p className="text-sm">{sharingNotice}</p>
       <label className="block text-sm">Expiration du nouveau lien<select className={field + ' mt-1'} value={days} disabled={busy || !!pendingOperation} onChange={event => setDays(Number(event.target.value))}>{CARD_EXPIRY_DAYS.map(day => <option key={day} value={day}>{day} jours{day === 30 ? ' (par défaut)' : ''}</option>)}</select></label>
       <p className="text-sm">{statusLabel}{share?.expiresAt && ' · Échéance : ' + new Date(share.expiresAt).toLocaleString('fr-FR', { timeZone: 'Europe/Paris' })}</p>
@@ -119,7 +121,7 @@ export default function CardEditor({ ownerId, preparationId, preparedMessage, on
       </div>
       {link && <div className="space-y-2"><label className="block text-sm">Lien secret à partager<input className={field + ' mt-1'} readOnly value={url} onFocus={event => event.currentTarget.select()} /></label><div className="flex flex-wrap gap-2"><button className={button} type="button" onClick={() => void copy()}>Copier le lien</button>{typeof navigator !== 'undefined' && typeof navigator.share === 'function' && <button className={button} type="button" onClick={() => void nativeShare()}>Partager…</button>}</div></div>}
     </section>}
-    {share?.published && <section aria-label="Version publiée actuelle" className="space-y-2"><h3 className="font-semibold">Version publiée actuelle</h3><p className="text-sm text-muted">Cette version conserve son message, sa signature, son avatar choisi et sa composition.</p><CardRenderer snapshot={share.published} /></section>}
+    {share?.published && <section aria-label="Version publiée actuelle" className="space-y-2"><h3 className="font-semibold">Version publiée actuelle</h3><p className="text-sm text-muted">Cette version conserve son message, sa signature, son avatar choisi et sa composition.</p><CardRenderer snapshot={share.published} /><ShareImageButton title="Ma carte publiée" snapshot={share.published} label="Partager la version publiée en image" /></section>}
     {pendingOperation && <div role="alert" className="space-y-2"><p>Résultat non confirmé. Reprendre utilise la même opération et ne crée pas un deuxième lien.</p><button className={button} disabled={busy} type="button" onClick={() => void mutate(pendingOperation.action, true)}>Reprendre la même opération</button></div>}
     {error && <p role="alert" className="text-sm text-danger">{error}</p>}{notice && <p role="status" className="text-sm">{notice}</p>}
     <button type="button" className={button} disabled={busy} onClick={() => void reload()}>Relire la carte</button>

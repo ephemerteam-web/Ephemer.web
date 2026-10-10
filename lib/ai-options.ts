@@ -3,7 +3,7 @@ import { TYPES_EVENEMENT, TYPES_RELATION, TONS_MESSAGE, normalizeOccasion, norma
 import { CURRENCIES } from './attention-utils'
 
 export const MESSAGE_LENGTHS = [{ value: 'short', label: 'Court · 1 à 2 phrases' }, { value: 'medium', label: 'Moyen · 3 à 4 phrases' }, { value: 'long', label: 'Long · 5 à 6 phrases' }] as const
-export const GIFT_MODES = [{ value: 'classic', label: 'Classique' }, { value: 'experience', label: 'Une expérience' }, { value: 'personalized', label: 'Une attention personnalisée' }, { value: 'last_minute', label: 'Dernière minute' }, { value: 'no_purchase', label: 'Sans achat' }] as const
+export const GIFT_MODES = [{ value: 'classic', label: 'Classique' }, { value: 'experience', label: 'Une expérience' }, { value: 'personalized', label: 'Un cadeau personnalisé' }, { value: 'last_minute', label: 'Dernière minute' }, { value: 'no_purchase', label: 'Sans achat' }] as const
 export type MessageLength = typeof MESSAGE_LENGTHS[number]['value']
 export type GiftMode = typeof GIFT_MODES[number]['value']
 export class AIInputError extends Error {

@@ -232,7 +232,7 @@ test('éditeur : réponse perdue reprend le même UUID, publié distinct du brou
   const h=editorMock();h.render();await h.flush();h.render();await h.flush();await h.click('Reprendre mon message préparé');await h.click('Enregistrer le brouillon')
   h.loseNextPublish();await h.click('Publier le brouillon enregistré');assert.match(h.text(),/Résultat non confirmé/)
   await h.click('Reprendre la même opération');const publish=h.calls.filter(c=>c.action==='publier');assert.equal(publish[0].operation.operationId,publish[1].operation.operationId)
-  assert.equal(h.nodes().filter(n=>n.props.snapshot).length,2)
+  assert.equal(h.nodes().filter(n=>n.props.snapshot && n.type.name === 'CardRenderer').length,2)
   await h.click('Récupérer mon lien');await h.click('Partager…');assert.match(h.text(),/Partage annulé/)
   h.find(n=>n.type==='textarea').props.onChange({target:{value:'Brouillon suivant'}});h.render();assert.equal(h.nodes().filter(n=>n.props.snapshot).at(-1).props.snapshot.message,'Texte préparé')
   h.unmount();const fresh=editorMock();fresh.render();assert.equal(fresh.find(n=>n.type==='textarea').props.value,'');fresh.unmount()

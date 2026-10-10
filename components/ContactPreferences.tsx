@@ -34,7 +34,7 @@ export default function ContactPreferences({ contactId }: { contactId: number })
   if (!loaded.data) return <LoadState error={loaded.error} retry={loaded.reload} />
   const preference = loaded.data.book.contacts.find(p => p.contact_id === contactId) ?? null, interests = loaded.data.interests.find(p => p.contact_id === contactId) ?? null
   const saved = () => { setNotice('Préférences enregistrées.'); loaded.reload() }
-  return <section className={panel + ' space-y-5'} aria-label="Préférences personnelles du contact"><h2 className="text-xl font-bold">Ses messages et attentions</h2>
+  return <section className={panel + ' space-y-5'} aria-label="Préférences personnelles du contact"><h2 className="text-xl font-bold">Ses messages et célébrations</h2>
     <StyleAssignmentEditor key={'style:' + user.id + ':' + contactId} owner={user.id} contactId={contactId} styles={loaded.data.book.styles} preference={preference} onSaved={saved} />
     <Link className={button} href="/dashboard/styles">Gérer mes styles</Link>
     <InterestEditor key={'interests:' + user.id + ':' + contactId} owner={user.id} contactId={contactId} preference={interests} onSaved={saved} />

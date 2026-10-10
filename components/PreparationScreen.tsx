@@ -11,6 +11,7 @@ import { isUuid } from '@/lib/private-lists'
 import { normalizeOccasion } from '@/lib/constants'
 import { readAllRows } from '@/lib/pagination'
 import CardPreview from './cards/CardPreview'
+import ShareImageButton from './ShareImageButton'
 
 const taskLabels: Record<string, string> = { cadeau: 'Choisir un cadeau', message: 'Préparer un message', appel: 'Prévoir un appel', sortie: 'Prévoir une sortie', libre: 'Tâche libre' }
 function TaskEditor({ task, onSaved }: { task: Task; onSaved: () => void }) {
@@ -64,6 +65,7 @@ export default function PreparationScreen({ occurrenceId }: { occurrenceId: stri
       {(occurrence.annulee || event.archive) && <p className="rounded-lg border border-line p-3">Événement {occurrence.annulee ? 'annulé' : 'archivé'} : ton historique est conservé.</p>}
     </header>
     <section className={panel}><h2 className="text-lg font-bold">Ma préparation</h2>
+      <ShareImageButton title={event.titre} fields={[{ id: 'date', label: 'Date', value: occurrence.date_occurrence }, { id: 'state', label: 'État', value: preparation.etat }, ...tasks.map(task => ({ id: task.id, label: task.titre, value: task.brouillon_texte ?? task.etat, sensitive: true }))]} />
       <EditForm key={preparation.id + ':' + preparation.revision} onSaved={loaded.reload} save={async data => {
         await requireOwner(user.id)
         const result = await supabase.rpc('enregistrer_preparation_lot04', { p_id: preparation.id, p_revision: preparation.revision,
@@ -96,13 +98,13 @@ export function PreparationList() {
     ])
     return { preparations, occurrences, events }
   })
-  return <main className="mx-auto max-w-4xl space-y-4 p-4 text-ink"><h1 className="text-2xl font-bold">Mes préparations</h1><AttentionNav />
+  return <main className="mx-auto max-w-4xl space-y-4 p-4 text-ink"><h1 className="text-2xl font-bold">Célébrations</h1><AttentionNav />
     {!loaded.data ? <LoadState error={loaded.error} retry={loaded.reload} /> : <>
       {!loaded.data.preparations.length && <p>Depuis le calendrier ou une fiche contact, choisis « Préparer cet événement ».</p>}
       {loaded.data.preparations.sort((a,b) => b.updated_at.localeCompare(a.updated_at)).map(preparation => {
         const occurrence = loaded.data!.occurrences.find(o => o.id === preparation.occurrence_id)
         const event = loaded.data!.events.find(e => e.id === occurrence?.evenement_id)
-        return <article className={panel} key={preparation.id}><h2 className="break-words font-bold">{event?.titre ?? 'Événement'}</h2><p>{occurrence?.date_occurrence} · {preparation.etat === 'terminee' ? 'Terminée' : preparation.etat === 'abandonnee' ? 'Abandonnée' : 'Ouverte'}</p><Link className={button} href={'/dashboard/preparer/' + preparation.occurrence_id}>Préparer cet événement</Link></article>
+        return <article className={panel} key={preparation.id}><h2 className="break-words font-bold">{event?.titre ?? 'Événement'}</h2><p>{occurrence?.date_occurrence} · {preparation.etat === 'terminee' ? 'Terminée' : preparation.etat === 'abandonnee' ? 'Abandonnée' : 'Ouverte'}</p><Link className={button} href={'/dashboard/preparer/' + preparation.occurrence_id}>Préparer cet événement</Link><ShareImageButton title={event?.titre ?? 'Événement'} fields={[{ id: 'date', label: 'Date', value: occurrence?.date_occurrence }, { id: 'state', label: 'État', value: preparation.etat }]} /></article>
       })}
     </>}
   </main>

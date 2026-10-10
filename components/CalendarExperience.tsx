@@ -2,6 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode, type KeyboardEvent } from 'react'
 import Modal from './Modal'
+import DatesNav from './DatesNav'
+import { useSearchParams, useRouter } from 'next/navigation'
+import ShareImageButton from './ShareImageButton'
+import { eventImageFields } from '@/lib/image-projections'
 import { SAINTS, SAINTS_PAR_DATE } from '@/lib/saints'
 import { daysBetween, parisDay, parseLocalDay } from '@/lib/calendar-day'
 import { eventLabels, type EventView } from '@/lib/personal-events'
@@ -16,8 +20,12 @@ const normalize = (value: string) => value.normalize('NFD').replace(/[\u0300-\u0
 export default function CalendarExperience({ month, onMonthChange, views, contactIds, listSelector, manageDates, status }: {
   month: string; onMonthChange: (month: string) => void; views: EventView[]; contactIds: Set<number> | null; listSelector: ReactNode; manageDates: ReactNode; status?: ReactNode
 }) {
-  const [mode, setMode] = useState<'month' | 'agenda'>('month')
-  const [filter, setFilter] = useState<CalendarFilter>('all')
+  const params = useSearchParams(), router = useRouter()
+  const mode = params.get('vue') === 'agenda' ? 'agenda' : 'month'
+  const requestedFilter = params.get('filtre')
+  const filter: CalendarFilter = requestedFilter === 'birthday' || requestedFilter === 'feast' || requestedFilter === 'personal' ? requestedFilter : 'all'
+  function setMode(value: 'month' | 'agenda') { const query = new URLSearchParams(params.toString()); query.set('vue', value); router.replace('/dashboard/calendrier?' + query, { scroll: false }) }
+  function setFilter(value: CalendarFilter) { const query = new URLSearchParams(params.toString()); query.set('filtre', value); router.replace('/dashboard/calendrier?' + query, { scroll: false }) }
   const [requested, setRequested] = useState<string | null>(null)
   const [mobileDetails, setMobileDetails] = useState(false)
   const [today, setToday] = useState(parisDay)
@@ -62,11 +70,12 @@ export default function CalendarExperience({ month, onMonthChange, views, contac
   }
   const details = <DayDetails date={selected} events={dayEvents} />
   return <div className="mx-auto max-w-6xl space-y-5 px-3 pb-8 sm:px-6">
+    <DatesNav />
     <header className="relative overflow-hidden rounded-3xl border border-line bg-surface p-5 sm:p-7">
       <div aria-hidden="true" className="pointer-events-none absolute right-6 top-4 select-none text-6xl text-accent/15 sm:text-8xl">✧</div>
       <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-accent">Tes moments précieux</p>
       <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Mon calendrier</h1>
-      <p className="mt-2 max-w-lg text-sm text-muted">Un petit repère pour chaque grande attention.</p>
+      <p className="mt-2 max-w-lg text-sm text-muted">Un petit repère pour chaque célébration.</p>
     </header>
 
     <section aria-label="Navigation et filtres du calendrier" className="space-y-4">
@@ -170,5 +179,6 @@ function EventCard({ event }: { event: EventView }) {
     <p className="mt-2 text-xs text-muted">{event.reminder ? 'Rappels activés' : event.event ? 'Rappels suspendus' : 'Date historique · choix à confirmer'}</p>
     {event.occurrence && <a className="mt-2 flex min-h-11 items-center text-sm text-accent underline" href={'/dashboard/preparer/' + event.occurrence.id}>Préparer cet événement</a>}
     {event.contact && <a className="mt-2 inline-flex min-h-11 items-center text-sm text-accent underline underline-offset-4" href={`/dashboard/contacts/${event.contact.id}/edit`}>Modifier ce contact</a>}
+    <ShareImageButton title={event.title} fields={eventImageFields(event)} />
   </article>
 }

@@ -2,6 +2,8 @@
 import Modal from '@/components/Modal'
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useEtoiles } from '@/components/etoiles/EtoilesContext'
+import { MAIN_SPACES, DATE_PAGES, activeSpace } from '@/lib/navigation'
+import PendingInvitationStar from './PendingInvitationStar'
 
 import { useEffect, useRef, useState } from 'react'
 import { usePathname } from 'next/navigation'
@@ -18,43 +20,15 @@ type Page = { label: string; chemin: string; icone: string }
 type Groupe = { titre: string; pages: Page[] }
 
 const GROUPES: Groupe[] = [
-  { titre: 'Mes attentions', pages: [
-    { label: 'Mes préparations', chemin: '/dashboard/preparations', icone: '✓' },
-    { label: 'Boîte à idées et cadeaux', chemin: '/dashboard/idees', icone: '🎁' },
+  { titre: 'Mes espaces', pages: MAIN_SPACES.map(space => ({ label: space.label, chemin: space.href, icone: space.icon })) },
+  { titre: 'Dates à venir', pages: DATE_PAGES.slice(1).map(page => ({ label: page.label, chemin: page.href, icone: page.icon })) },
+  { titre: 'Outils', pages: [
+    { label: 'Messages', chemin: '/dashboard/generate', icone: '✨' },
+    { label: 'Idées et cadeaux', chemin: '/dashboard/idees', icone: '🎁' },
     { label: 'Budget cadeaux', chemin: '/dashboard/budget', icone: '€' },
+    { label: 'Messages programmés', chemin: '/dashboard/messages-programmes', icone: '📨' },
+    { label: 'Mes étoiles', chemin: '/dashboard/etoiles', icone: '✦' },
   ] },
-  {
-    titre: 'Principal',
-    pages: [
-      { label: 'Dashboard', chemin: '/dashboard', icone: '🏠' },
-    ],
-  },
-  {
-  titre: 'Éphéméride',
-  pages: [
-    { label: 'Ce mois-ci', chemin: '/dashboard/ce-mois-ci', icone: '📆' }, // 🆕 Ajouté ici
-    { label: 'Anniversaires', chemin: '/dashboard/anniversaires', icone: '🎂' },
-    { label: 'Fêtes des Saints', chemin: '/dashboard/calendrier_saints', icone: '✝️' },
-  ],
-},
-  {
-    titre: 'Créer & Planifier',
-    pages: [
-      { label: 'Générer un message', chemin: '/dashboard/generate', icone: '✨' },
-      { label: 'Idées cadeaux', chemin: '/dashboard/gift-ideas', icone: '🎁' },
-      { label: 'Messages programmés', chemin: '/dashboard/messages-programmes', icone: '📨' },
-      { label: 'Calendrier', chemin: '/dashboard/calendrier', icone: '📅' },
-    ],
-  },
-  {
-    titre: 'Mes données',
-    pages: [
-      { label: 'Contacts', chemin: '/dashboard/contacts', icone: '👥' },
-      { label: 'Mes étoiles', chemin: '/dashboard/etoiles', icone: '✦' },
-      { label: 'Mon univers', chemin: '/dashboard/univers', icone: '✧' },
-      { label: 'Inviter à compléter sa fiche', chemin: '/dashboard/inviter', icone: '📩' }
-    ],
-  },
 ]
 
 export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps) {
@@ -194,7 +168,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
 
               {/* Liens du groupe */}
               {groupe.pages.map((page) => {
-                const estActive = pathname === page.chemin
+                const estActive = pathname === page.chemin || (groupe.titre === 'Mes espaces' && activeSpace(pathname) === page.chemin)
                 const delai = compteurLien * 50 // 50ms d'écart entre chaque lien
                 compteurLien++
 
@@ -220,6 +194,7 @@ export default function MenuNavigation({ ouvert, onFermer }: MenuNavigationProps
                     </span>
                     <span className="transition-transform duration-300 group-hover:translate-x-1">
                       {page.label}
+                      {page.chemin === '/dashboard/contacts' && <span className="ml-2"><PendingInvitationStar /></span>}
                       {page.chemin === '/dashboard/etoiles' && !social.loading && !social.error && social.recues.length > 0 && <span className="ml-2 rounded-full bg-action px-2 text-on-action" aria-label={`${social.recues.length} demandes reçues`}>{social.recues.length}</span>}
                     </span>
 

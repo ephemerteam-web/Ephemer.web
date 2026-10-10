@@ -18,7 +18,7 @@ export default function ContactAttentions({ contactId }: { contactId: number }) 
   const dates = usePersonalEvents(today, shiftDay(today,399))
   if (!loaded.data) return <main className="p-4 text-ink"><LoadState error={loaded.error} retry={loaded.reload} /></main>
   const recipient = [loaded.data.prenom, loaded.data.nom].filter(Boolean).join(' ')
-  return <main className="mx-auto max-w-4xl space-y-6 p-4 text-ink"><h1 className="break-words text-2xl font-bold">Les attentions pour {recipient}</h1><AttentionNav />
+  return <main className="mx-auto max-w-4xl space-y-6 p-4 text-ink"><h1 className="break-words text-2xl font-bold">Les célébrations pour {recipient}</h1><AttentionNav />
     {dates.loading ? <p role="status">Chargement des événements…</p> : dates.error ? <LoadState error={dates.error} retry={dates.retry} /> : <EventAgenda views={dates.views.filter(v => v.contact?.id === contactId)} title="Préparer ses prochains événements" />}
     <ContactPreferences key={user.id + ':' + contactId} contactId={contactId} />
     <IdeaLibrary contactId={contactId} /><GiftHistory contactId={contactId} recipient={recipient} />

@@ -166,6 +166,50 @@ button, a, input, select, textarea { -webkit-tap-highlight-color: transparent; }
 /* Petits écrans et PWA : champs rétractables, pas de zoom forcé sur iOS. */
 html, body { min-width: 0; overflow-wrap: anywhere; }
 input, select, textarea { min-width: 0; max-width: 100%; }
+
+/* Champs communs : palette céleste, focus doré et mêmes états sur chaque page.
+   Les marges horizontales des composants restent libres pour leurs icônes.
+   Les contrôles spécialisés (fichiers, couleurs, curseurs, cases) gardent leur forme. */
+@layer base {
+  :where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea) { padding-inline: 1rem; }
+}
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea) {
+  min-height: 2.875rem;
+  border: 1px solid var(--line);
+  border-radius: 0.875rem;
+  background-color: color-mix(in srgb, var(--surface) 96%, var(--accent));
+  color: var(--ink);
+  padding-block: 0.7rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  caret-color: var(--accent);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--ink) 4%, transparent);
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+:where(input, textarea)::placeholder { color: var(--muted); opacity: 0.85; }
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea):hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+}
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]), select, textarea):focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+:where(input, select, textarea):is([aria-invalid="true"], :user-invalid) {
+  border-color: var(--danger);
+}
+:where(input, select, textarea):is([aria-invalid="true"], :user-invalid):focus {
+  outline-color: var(--danger);
+  box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 12%, transparent);
+}
+:where(input, select, textarea):disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+input:is([type="checkbox"], [type="radio"]) { accent-color: var(--accent); }
+select option { background-color: var(--surface); color: var(--ink); }
+
 @media (max-width: 640px) {
   input:not([type="checkbox"]):not([type="radio"]), select, textarea { font-size: 16px; }
 }

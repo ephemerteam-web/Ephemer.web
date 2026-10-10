@@ -30,7 +30,8 @@ test('grille lundi, changement d’année, février bissextile et sélection com
 })
 const browser = { window: { matchMedia: () => ({ matches: true, addEventListener() {}, removeEventListener() {} }) }, setInterval: () => 1, clearInterval() {} }
 test('vue : agenda remplace la grille, filtres conservés pendant chargement, erreurs sans résultat privé', () => {
-  const ui = harness('components/CalendarExperience.tsx', { globals: browser })
+  let query = new URLSearchParams('contactId=42')
+  const ui = harness('components/CalendarExperience.tsx', { globals: browser, overrides: { 'next/navigation': { useSearchParams: () => query, useRouter: () => ({ replace: url => { query = new URLSearchParams(url.split('?')[1]) } }) } } })
   const props = { month: '2026-10', onMonthChange() {}, views, contactIds: null, listSelector: null, manageDates: null }
   ui.render(props)
   assert.ok(ui.nodes().some(node => node.props['aria-label'] === 'Vue mensuelle'))
@@ -44,6 +45,7 @@ test('vue : agenda remplace la grille, filtres conservés pendant chargement, er
   ui.render({ ...props, status: 'Chargement' }); assert.ok(ui.text().includes('Chargement'))
   assert.ok(!ui.nodes().some(node => node.props['aria-label'] === 'Agenda du mois'))
   ui.render(props); assert.equal(ui.find(node => node.type === 'select').props.value, 'personal')
+  assert.equal(query.get('contactId'), '42')
   ui.render({ ...props, status: 'Lecture refusée' }); assert.ok(ui.text().includes('Lecture refusée'))
   assert.ok(!ui.nodes().some(node => node.props['aria-label'] === 'Prochain événement du mois'))
 })

@@ -1,4 +1,5 @@
 'use client'
+import ClosePeopleNav from '@/components/ClosePeopleNav'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import Link from 'next/link'
 import { useDashboardUser } from '@/components/DashboardUserContext'
@@ -79,7 +80,7 @@ export default function EtoilesScreen() {
   const unavailable = social.offline || social.loading || loading || busy || Boolean(social.error || error)
   const counts = { actives: social.actives.length, recues: social.recues.length, envoyees: envoyees.length }
   return <main className="mx-auto max-w-5xl p-4 sm:p-6 md:p-8">
-    <h1 className="text-2xl font-bold sm:text-3xl">⭐ Mes étoiles</h1>
+    <ClosePeopleNav /><h1 className="text-2xl font-bold sm:text-3xl">⭐ Mes étoiles</h1>
     <p className="mt-3 max-w-2xl text-muted">Retrouve tes proches sur Ephemer. Si vos carnets contiennent chacun l’adresse de connexion vérifiée de l’autre, votre lien est reconnu. Tu peux aussi envoyer une demande.</p>
     <p className="mt-2 text-sm text-muted">Ton prénom ou pseudonyme social est visible à tes étoiles et dans tes demandes. Choisis tes informations partagées dans <Link href="/dashboard/univers" className="text-accent underline">Mon univers</Link>. Ton carnet et tes notes restent privés.</p>
     <div className="my-5 flex flex-wrap gap-2"><button className={bouton} disabled={unavailable} onClick={() => setPanel('ajouter')}>Ajouter une étoile</button>
@@ -97,7 +98,7 @@ export default function EtoilesScreen() {
           <EtoileAction action="retirer" donnees={{ etoileId: star.etoile_id }} confirmation="Retirer cette étoile ? La relation ne reviendra pas automatiquement. Une nouvelle demande acceptée sera nécessaire.">Retirer</EtoileAction>
           <EtoileAction action="bloquer" donnees={{ etoileId: star.etoile_id }} confirmation="Bloquer cette étoile et retirer votre relation ? Débloquer ne restaurera pas l’amitié.">Bloquer</EtoileAction></div>
         <UniversPartagePanel etoileId={star.etoile_id} />
-        <Link className={bouton} href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId: star.etoile_id })}>Trouver une attention</Link>
+        <Link className={bouton} href={'/dashboard/gift-ideas?' + new URLSearchParams({ etoileId: star.etoile_id })}>Trouver un cadeau</Link>
       </article> })}
       {tab === 'recues' && social.recues.map(d => <article key={d.id} className={carte}><h2 className="break-words text-lg font-semibold">{d.identite}</h2><p className="mt-1 text-sm text-muted">Demande valable jusqu’au {expiration(d.expires_at)}</p>
         <div className="mt-4 flex flex-wrap gap-2"><EtoileAction action="accepter" donnees={{ demandeId: d.id }} onResult={() => setTab('actives')}>Accepter</EtoileAction><EtoileAction action="refuser" donnees={{ demandeId: d.id }}>Refuser</EtoileAction>

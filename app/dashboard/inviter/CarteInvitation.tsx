@@ -1,6 +1,7 @@
 'use client'
 import { useContactDraft } from '@/components/ContactDraftProvider'
 import { useClock } from '@/lib/hooks/useClock'
+import ShareImageButton from '@/components/ShareImageButton'
 
 type Invitation = Omit<import('@/types/database').Invitation, 'user_id'>
 
@@ -44,6 +45,7 @@ export default function CarteInvitation({
           : 'border-accent/30 hover:border-accent/60 shadow-[0_0_15px_-3px_rgba(200,168,78,0.12)]'
       }`}
     >
+      <ShareImageButton title={invitation.label || 'Invitation Ephemer'} fields={[{ id: 'invite', label: 'Invitation', value: 'Rejoins-moi sur Ephemer pour célébrer les dates importantes.' }, { id: 'link', label: 'Lien d’invitation (donne accès au formulaire)', value: inactif ? '' : url, sensitive: true }]} />
       {/* ─────── LIGNE 1 : titre + compteur ─────── */}
       <div className="flex items-start justify-between gap-3 mb-3">
         <div className="min-w-0 flex-1">

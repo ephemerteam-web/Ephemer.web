@@ -8,13 +8,24 @@ export async function findPushDevice(userId: string, endpoint: string) {
   return data || []
 }
 
-export async function savePushDevice(userId: string, subscription: PushSubscription) {
+export async function savePushDevice(userId: string, subscription: PushSubscription, saints?: boolean) {
   const rows = await findPushDevice(userId, subscription.endpoint)
-  const value = { user_id: userId, subscription: { ...subscription.toJSON(), keys: { ...subscription.toJSON().keys } } }
+  let previous = false
+  if (saints === undefined && rows.length) previous = await readPushSaints(userId, subscription.endpoint)
+  const value = { user_id: userId, subscription: { ...subscription.toJSON(), keys: { ...subscription.toJSON().keys }, ephemer: { saints: saints ?? previous } } }
   const { error } = rows.length
     ? await supabase.from('user_push_subscriptions').update(value).eq('user_id', userId).in('id', rows.map(row => row.id))
     : await supabase.from('user_push_subscriptions').insert(value)
   if (error) throw error
+}
+
+export async function readPushSaints(userId: string, endpoint: string) {
+  const { data, error } = await supabase.from('user_push_subscriptions').select('subscription').eq('user_id', userId).eq('subscription->>endpoint', endpoint)
+  if (error) throw error
+  return data?.some(row => {
+    const subscription = row.subscription as { ephemer?: { saints?: boolean } } | null
+    return subscription?.ephemer?.saints === true
+  }) ?? false
 }
 
 export async function removePushDevice(userId: string, subscription: PushSubscription) {

@@ -5,17 +5,14 @@ import LoadFailure from '@/components/LoadFailure'
 import { parisDay, parseLocalDay, daysBetween } from '@/lib/calendar-day'
 import { shiftDay } from '@/lib/personal-events'
 import { usePersonalEvents } from '@/lib/hooks/usePersonalEvents'
-import { usePrivateLists } from '@/lib/hooks/usePrivateLists'
-import { ListSelector } from '@/components/PrivateLists'
-import PersonalDates, { EventAgenda } from '@/components/PersonalDates'
+import HomeDates from '@/components/HomeDates'
 
-import { useState, useMemo } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { SAINTS } from '@/lib/saints'
 import Link from 'next/link'
 import IconeLuneIA from '@/components/IconeLuneIA'
 import FavorisRow from '@/components/FavorisRow'
-import SaintDuJour from '@/components/SaintDuJour'
+
 
 
 
@@ -25,13 +22,10 @@ export default function Dashboard() {
   const user = useDashboardUser()
   const userName = user.email.split('@')[0] || null
   const { contacts: allContacts, loading, error: listError, retry } = useContacts()
-  const lists = usePrivateLists()
   const today = parisDay()
   const dates = usePersonalEvents(shiftDay(today, -7), shiftDay(today, 399))
-  const filtered = lists.filter(allContacts)
-  const contacts = filtered.filter(contact => contact.est_favori)
-  const ids = new Set(filtered.map(contact => contact.id))
-  const views = dates.views.filter(view => !lists.selected || (view.contact !== null && ids.has(view.contact.id)))
+  const contacts = allContacts.filter(contact => contact.est_favori)
+  const views = dates.views
   const profile = user.prenom ? { prenom: user.prenom } : null
   const [aideOuverte, setAideOuverte] = useState(false)
   const [favoriMenuOuvert, setFavoriMenuOuvert] = useState<string | number | null>(null)
@@ -39,24 +33,13 @@ export default function Dashboard() {
 
 
 
-  const feteDuJour = useMemo(() => {
-    const today = new Date()
-    const mois = String(today.getMonth() + 1).padStart(2, '0')
-    const jour = String(today.getDate()).padStart(2, '0')
-    return SAINTS.filter((s) => s.date === `${mois}-${jour}`)
-  }, [])
-
-  const birthdays = views.filter(view => view.kind === 'anniversaire' && view.contact?.est_favori)
-  const anniversairesAujourdhui = birthdays.filter(view => view.date === today).map(view => view.contact!)
-  const anniversairesPassés = birthdays.filter(view => daysBetween(today, view.date) >= -7 && view.date < today).map(view => ({ ...view.contact!, joursPassés: -daysBetween(today, view.date) }))
-  const anniversairesBientot = birthdays.filter(view => view.date > today && daysBetween(today, view.date) <= 30).map(view => ({ ...view.contact!, joursRestants: daysBetween(today, view.date) }))
   const favoris = contacts.map(contact => {
     const next = views.find(view => view.contact?.id === contact.id && view.date >= today && ['anniversaire', 'fete_prenomale'].includes(view.kind))
     return { ...contact, prochainEvent: next ? { type: next.kind === 'anniversaire' ? 'anniversaire' as const : 'fete_prenom' as const, date: parseLocalDay(next.date), jours: daysBetween(today, next.date) } : null }
   }).sort((a, b) => (a.prochainEvent?.jours ?? Infinity) - (b.prochainEvent?.jours ?? Infinity))
 
-  if (dates.error || lists.error) return <LoadFailure message={dates.error || lists.error} retry={() => { dates.retry(); lists.retry() }} />
-  if (loading || dates.loading || lists.loading) {
+  if (dates.error) return <LoadFailure message={dates.error} retry={dates.retry} />
+  if (loading || dates.loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
@@ -96,7 +79,7 @@ export default function Dashboard() {
   const vedetteCadeaux = {
     titre: 'Idées Cadeaux',
     sous: 'Trouve l\'inspiration parfaite et offre le cadeau idéal adapté à chaque événement.',
-    path: '/dashboard/gift-ideas',
+    path: '/dashboard/idees?vue=suggestions',
     gradient: 'from-gift-start to-gift-end',
     badge: 'Nouveau',
   }
@@ -105,27 +88,19 @@ export default function Dashboard() {
   // 📆 OUTILS ÉPHÉMÉRIDE (tons indigo/violet/cyan)
   // ============================================
   const outilsEphemeride = [
-    { id: 1, icon: '🎂', titre: 'Anniversaires', couleur: 'from-surface to-canvas', path: '/dashboard/anniversaires' },
-    { id: 2, icon: '🙏', titre: 'Fêtes des Saints', couleur: 'from-surface to-canvas', path: '/dashboard/calendrier_saints' },
-    { id: 3, icon: '📅', titre: 'Calendrier', couleur: 'from-surface to-canvas', path: '/dashboard/calendrier' },
+    { id: 1, icon: '📅', titre: 'Mes dates · Mois et agenda', couleur: 'from-surface to-canvas', path: '/dashboard/calendrier' },
   ]
 
   // ============================================
   // ⚙️ GESTION (tons sobres)
   // ============================================
   const outilsGestion = [
-    { id: 3, icon: '✓', titre: 'Mes préparations', sous: 'Retrouve tes attentions', path: '/dashboard/preparations' },
-    { id: 4, icon: '🎁', titre: 'Boîte à idées', sous: 'Idées et cadeaux offerts', path: '/dashboard/idees' },
-    { id: 5, icon: '€', titre: 'Budget cadeaux', sous: 'Prévu et dépensé', path: '/dashboard/budget' },
-    { id: 1, icon: '📒', titre: 'Contacts', sous: 'Gère ton carnet', path: '/dashboard/contacts' },
-    { id: 2, icon: '📨', titre: 'Messages programmés', sous: 'Tes envois en attente', path: '/dashboard/messages-programmes' },
+    { id: 3, icon: '✓', titre: 'Célébrations', sous: 'Préparatifs, idées, cadeaux et messages', path: '/dashboard/preparations' },
   ]
 
   if (listError) return <LoadFailure message={listError} retry={retry} />
   return (
     <div className="p-4 md:p-8 max-w-5xl mx-auto">
-      <div className="flex flex-wrap items-end gap-3"><ListSelector state={lists} /><PersonalDates contacts={allContacts} onSaved={dates.retry} /></div>
-      <EventAgenda views={views.filter(view => view.date >= today && daysBetween(today, view.date) <= 30)} title="Événements à venir" />
 
 
       {/* ============ EN-TÊTE ============ */}
@@ -142,97 +117,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <SaintDuJour />
-
-      {/* ============ BLOC FÊTE + ANNIVERSAIRES ============ */}
-      <div className="bg-purple-500/10 border border-purple-500/20 rounded-3xl p-4 md:p-5 mb-8 flex flex-col gap-5">
-
-        {/* Fête du jour */}
-        <div>
-          <p className="text-xs font-semibold text-info uppercase tracking-wider mb-3">
-            ✨ Fête du jour
-          </p>
-          {feteDuJour.length > 0 ? (
-            <div className="flex flex-wrap gap-2.5">
-              {feteDuJour.map((saint, idx) => (
-                <div key={idx} className="bg-purple-500/10 border border-purple-400/20 rounded-2xl px-4 py-3">
-                  <p className="text-ink font-bold text-sm">{saint.nomSaint}</p>
-                  <p className="text-info text-xs mt-0.5 capitalize">{saint.prenoms.join(', ')}</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted text-sm">Aucune fête répertoriée aujourd&apos;hui.</p>
-          )}
-        </div>
-
-        <div className="border-t border-line" />
-
-        {/* Anniversaires aujourd'hui */}
-        <div>
-          <p className="text-xs font-semibold text-danger uppercase tracking-wider mb-3">
-            🎂 Anniversaire(s) aujourd&apos;hui
-          </p>
-          {anniversairesAujourdhui.length > 0 ? (
-            <div className="flex flex-wrap gap-2.5">
-              {anniversairesAujourdhui.map((c) => (
-                <div key={c.id} className="bg-rose-500/10 border border-rose-400/20 rounded-2xl px-4 py-3">
-                  <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
-                  <p className="text-danger text-xs mt-0.5">🎉 C&apos;est son anniversaire !</p>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-muted text-sm italic">
-              Pas d&apos;anniversaire aujourd&apos;hui — profite de la tranquillité 😄
-            </p>
-          )}
-        </div>
-
-        {/* Anniversaires passés */}
-        {anniversairesPassés.length > 0 && (
-          <>
-            <div className="border-t border-line" />
-            <div>
-              <p className="text-xs font-semibold text-warning uppercase tracking-wider mb-3">
-                ⏳ Anniversaires récents (7 derniers jours)
-              </p>
-              <div className="flex flex-wrap gap-2.5">
-                {anniversairesPassés.map((c) => (
-                  <div key={c.id} className="bg-orange-500/10 border border-orange-400/20 rounded-2xl px-4 py-3">
-                    <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
-                    <p className="text-warning text-xs mt-0.5">
-                      Il y a {c.joursPassés} jour{c.joursPassés > 1 ? 's' : ''} — il est encore temps ! 💌
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Anniversaires à venir */}
-        {anniversairesBientot.length > 0 && (
-          <>
-            <div className="border-t border-line" />
-            <div>
-              <p className="text-xs font-semibold text-info uppercase tracking-wider mb-3">
-                📅 Bientôt (dans les 30 prochains jours)
-              </p>
-              <div className="flex flex-wrap gap-2.5">
-                {anniversairesBientot.map((c) => (
-                  <div key={c.id} className="bg-cyan-500/10 border border-cyan-400/20 rounded-2xl px-4 py-3">
-                    <p className="text-ink font-bold text-sm">{c.prenom} {c.nom}</p>
-                    <p className="text-info text-xs mt-0.5">
-                      Dans {c.joursRestants} jour{c.joursRestants > 1 ? 's' : ''} 🗓️
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+      <HomeDates views={views} today={today} />
 
       {/* ⭐ MES FAVORIS */}
       <FavorisRow
@@ -318,9 +203,9 @@ export default function Dashboard() {
 
         {/* ============ 📆 OUTILS ÉPHÉMÉRIDE (3 au même niveau) ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Dates & éphéméride</h2>
+        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Dates</h2>
 
-        <div className="grid grid-cols-1 min-[380px]:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 min-[380px]:grid-cols-1 gap-3">
           {outilsEphemeride.map((carte) => (
             <button
               key={carte.id}
@@ -340,7 +225,7 @@ export default function Dashboard() {
 
       {/* ============ ⚙️ GESTION (2 au même niveau) ============ */}
       <div className="mb-8">
-        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Gérer mes envois</h2>
+        <h2 className="text-base md:text-lg font-bold text-ink mb-4">Mes célébrations</h2>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {outilsGestion.map((carte) => (

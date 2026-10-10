@@ -1,4 +1,5 @@
 'use client'
+import ClosePeopleNav from '@/components/ClosePeopleNav'
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import { useRequestLifetime } from '@/lib/hooks/useRequestLifetime'
 import LoadFailure from '@/components/LoadFailure'
@@ -162,7 +163,7 @@ export default function InviterPage() {
         {/* ─────── EN-TÊTE ─────── */}
         <div className="text-center mb-8">
           <span className="text-5xl mb-3 block">✨</span>
-          <h1 className="text-2xl md:text-3xl font-bold text-ink mb-3">
+          <ClosePeopleNav /><h1 className="text-2xl md:text-3xl font-bold text-ink mb-3">
             Invite tes proches
           </h1>
           <p className="text-info text-sm max-w-md mx-auto leading-relaxed">

@@ -9,6 +9,8 @@ import { parisDay, parseLocalDay } from '@/lib/calendar-day'
 import { eventLabels, shiftDay, type EventView, type PersonalEvent } from '@/lib/personal-events'
 import type { Contact, Json } from '@/types/database'
 import Link from 'next/link'
+import ShareImageButton from './ShareImageButton'
+import { eventImageFields } from '@/lib/image-projections'
 
 const input = 'block min-h-11 w-full rounded-lg border border-line bg-surface p-2 text-ink'
 export function EventAgenda({ views, title = 'Dates personnelles' }: { views: EventView[]; title?: string }) {
@@ -18,6 +20,7 @@ export function EventAgenda({ views, title = 'Dates personnelles' }: { views: Ev
       <p>{parseLocalDay(view.date).toLocaleDateString('fr-FR')} · {view.title}</p>
       <p className="text-sm text-muted">{view.contact ? `${view.contact.prenom ?? ''} ${view.contact.nom ?? ''}` : 'Ma date'}{view.age !== null ? ` · ${view.age} ans` : ''}{!view.reminder && view.event ? ' · Rappels suspendus' : ''}</p>
       {view.occurrence && <Link className="inline-flex min-h-11 items-center text-sm text-accent underline" href={'/dashboard/preparer/' + view.occurrence.id}>Préparer cet événement</Link>}
+      <ShareImageButton title={view.title} fields={eventImageFields(view)} />
     </div>)}
   </section>
 }
