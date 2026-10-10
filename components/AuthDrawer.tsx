@@ -1,4 +1,5 @@
 "use client"
+import { browserAuthReturn, authPage } from '@/lib/auth-return'
 import Modal from "@/components/Modal"
 import { supabase } from "@/lib/supabase-browser"
 import { useRouter } from "next/navigation"
@@ -55,7 +56,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${window.location.origin}/auth/callback?${new URLSearchParams({ next: browserAuthReturn() })}`
       }
     })
     if (error) console.error("Erreur OAuth:", error.message)
@@ -213,7 +214,7 @@ export default function AuthDrawer({ isOpen, onClose, mode, onSwitchMode }: Auth
         <button
           onClick={() => {
             onClose()
-            router.push(mode === "inscription" ? "/inscription" : "/connexion")
+            router.push(authPage(mode === "inscription" ? "/inscription" : "/connexion", browserAuthReturn()))
           }}
           className={`w-full py-3 rounded-xl border text-sm font-medium transition-all duration-200 relative z-10 ${themeConfig.borderColor} ${themeConfig.hoverBg}`}
           style={{color: themeConfig.accentColor}}

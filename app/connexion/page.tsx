@@ -1,5 +1,7 @@
 'use client'
 
+import { authPage, browserAuthReturn } from '@/lib/auth-return'
+import { continueAfterAuth } from '@/lib/invitation-data'
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
@@ -9,6 +11,7 @@ import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
 
 export default function ConnexionPage() {
   const router = useRouter()
+  const nextDestination = useBrowserValue(browserAuthReturn, '/dashboard')
   const callbackFailed = useBrowserValue(() => new URLSearchParams(window.location.search).has('auth_error'), false)
 
   const [email, setEmail] = useState('')
@@ -25,6 +28,7 @@ export default function ConnexionPage() {
     setIsError(false)
     setLoading(true)
 
+    try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
@@ -44,37 +48,14 @@ export default function ConnexionPage() {
       return
     }
 
-    const userId = data.user.id
-
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('prenom, nom, date_naissance')
-      .eq('id', userId)
-      .maybeSingle()
-
-    if (profileError) {
+    try {
+      router.replace(await continueAfterAuth(data.user.id, browserAuthReturn()))
+    } catch (failure) {
       setIsError(true)
-      setMessage('Connexion établie, mais le profil est indisponible. Réessaie.')
+      setMessage(failure instanceof Error ? failure.message : 'Connexion indisponible. Réessaie.')
       setLoading(false)
-      return
     }
-
-    const profilIncomplet =
-      !profile ||
-      !profile.prenom ||
-      !profile.nom ||
-      !profile.date_naissance
-
-    setIsError(false)
-
-    if (profilIncomplet) {
-      setMessage('✅ Complète ton profil')
-      setTimeout(() => router.push('/completer-profil'), 800)
-      return
-    }
-
-    setMessage('✅ Connexion réussie')
-    setTimeout(() => router.push('/dashboard'), 800)
+    } catch { setIsError(true); setMessage('Connexion indisponible. Vérifie ta connexion et réessaie.'); setLoading(false) }
   }
 
   const handleMotDePasseOublie = async () => {
@@ -209,7 +190,7 @@ export default function ConnexionPage() {
             {/* SIGNUP */}
             <p className="text-center text-sm text-muted mt-6">
               Pas encore de compte ?{' '}
-              <Link href="/inscription" className="text-accent">
+              <Link href={authPage("/inscription", nextDestination)} className="text-accent">
                 S&apos;inscrire
               </Link>
             </p>

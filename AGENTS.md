@@ -12,15 +12,17 @@ Mise à jour : 10 octobre 2026. Ce document décrit le code local ; il ne certif
 
 Ephemer — Ne rate plus aucune date importante — est une application web et PWA française.
 
-Les quatre espaces principaux sont **Accueil · Dates · Mes proches · Célébrations**. `components/MainSpaces.tsx` affiche quatre onglets en bas sur mobile et une barre sur ordinateur. Une petite étoile brillante signale sur Mes proches les invitations reçues en attente ; elle disparaît après traitement et respecte la réduction des animations. `MenuNavigation` donne les accès aux espaces, décomptes et outils ; `MenuLateral` réunit profil, univers, thème, notifications, données et déconnexion.
+Les quatre espaces principaux sont **Accueil · Dates · Mes proches · Célébrations**. `components/MainSpaces.tsx` affiche quatre onglets en bas sur mobile et une barre sur ordinateur. Une petite étoile brillante signale sur Mes proches les invitations reçues en attente ; elle disparaît après traitement et respecte la réduction des animations. `MenuNavigation` donne les accès aux espaces, décomptes et outils ; `MenuLateral` réunit Mon profil, thème, notifications, données et déconnexion.
 
 - **Accueil** : un seul bloc `HomeDates` « Aujourd'hui et à venir » réunit la carte illustrée SaintDuJour, anniversaires/fêtes/dates personnelles du jour et des trente prochains jours, puis les anniversaires récents. Chaque occurrence apparaît une fois ; un seul message vide pour les dates personnelles. Tous les contacts sont inclus (pas seulement les favoris), les favoris ont leur rangée distincte. Aucun sélecteur de liste ni bouton de gestion des dates personnelles sur l'accueil ; ces outils restent dans Dates/Contacts.
 - **Dates** : calendrier Mois/Agenda, filtres anniversaires/fêtes/dates personnelles, recherche publique de saints. Les pages `/dashboard/anniversaires` et `/dashboard/calendrier_saints` présentent de nouveau les décomptes J‑… en cartes ou liste compacte, avec filtres et tri. Elles utilisent les mêmes occurrences que le calendrier et sont accessibles par `DatesNav` et le menu. Seule l'ancienne URL ce-mois-ci redirige vers l'agenda ; paramètres conservés.
 - **Mes proches** : Contacts privés, Étoiles sociales et Invitations réunis par une navigation, avec des modèles et autorisations distincts. Une étoile n’est pas automatiquement une fiche contact.
 - **Célébrations** : préparations par occurrence, tâches et messages privés, cartes personnelles, idées/cadeaux offerts, budget par devise, styles et messages programmés. Une préparation ne constitue jamais une preuve d’envoi. L’ancienne URL gift-ideas redirige vers `/dashboard/idees?vue=suggestions`, en gardant contactId, etoileId, eventType et occurrenceId.
-- **Mon univers** : identité, présentation et préférences du propriétaire ; champs partagés et permissions IA cadeaux explicites. Le rendu d’un univers tiers reste une projection limitée par son propriétaire.
+- **Mon profil** : page unique `/dashboard/profil` (ancienne URL Univers redirigée), identité/anniversaire, goûts, partage et compte. Profil prime automatiquement sur les anciennes coordonnées/naissance d’Univers ; les champs vides sont repris. Anniversaire canonique dans Dates, e-mail vérifié dans Auth, prénom/nom/téléphone dans profiles, goûts/pseudonyme/permissions dans univers_utilisateurs. Dix critères de partage, nom désactivé par défaut. La case générale mémorise les critères en masquant les champs facultatifs et révoque tous les accords IA ; prénom social ou pseudonyme minimal reste visible. SQL Profil unifié installé humainement, catalogue contrôlé en lecture seule ; voir `docs/PROFIL-UNIFIE.md`.
 
 Le libellé produit retenu est **Célébrations**. Les noms techniques historiques `AttentionShared`, `attention-data` et `/contacts/[id]/attentions` restent compatibles.
+
+**Invitations V2 (code local, SQL à installer manuellement)** : le lien étoile garde son secret dans sessionStorage de l’onglet pour trente minutes, après retrait du fragment. Connexion/inscription/premier profil transportent seulement une destination autorisée, puis reviennent à l’invitation ; demande toujours manuelle. Contexte effacé au succès, à l’expiration, à la déconnexion ou au changement de compte. La réponse au carnet peut être conservée explicitement trente jours et reprise après vérification du même e-mail Auth, sur un autre appareil ; aucune note privée de l’hôte n’est copiée. Même UUID au réessai et verrou par hôte ; correspondance certaine complète seulement les champs vides, différences/homonymes dans Mes proches → Invitations. Premier profil en trois étapes avec bulles : prénom seul obligatoire, année nullable, passions/présentation dans Mon profil, priorité aux sources personnelles, critères remplacés suspendus et nouveaux accords désactivés. Les anciens profils avec prénom sont marqués terminés. Voir `docs/INVITATIONS.md` pour activation, limites et recette.
 
 ## 2. Stack et dépendances
 
@@ -39,11 +41,14 @@ Les nouvelles bibliothèques n’ajoutent aucun service payant. Les quotas d’h
 
 **Champs de formulaire** : les styles communs dans `app/globals.css` harmonisent les champs de saisie, sélecteurs et zones de texte avec la palette céleste. Fond doux, angles de 14 px, taille de texte de 16 px, focus doré visible, erreur via `aria-invalid` ou validation native après interaction, état désactivé et réduction des animations. Les espacements horizontaux restent adaptés aux icônes ; les contrôles spécialisés gardent leur forme. Aucun composant ni code Uiverse n'est importé : exemples utilisés comme inspiration, sans dépendance supplémentaire. Voir `docs/FORMULAIRES.md`.
 
+Dans Mon profil, les coches « IA cadeaux » se trouvent à côté des rubriques de goûts (un accord Passions commun aux bulles et au texte libre), et l’accord d’identité près du choix prénom/pseudonyme. Une seule explication IA figure sous les goûts, sans seconde liste. Partage et autorisation IA restent distincts ; aucun accord automatique.
+
 ## 3. Structure et index utile
 
 | Domaine | Fichiers principaux |
 |---|---|
 | Auth privée | `proxy.ts`, `app/dashboard/layout.tsx`, `DashboardUserContext`, `lib/supabase-browser.ts`, `lib/supabase-admin.ts` |
+| Retour Auth/invitations | `lib/auth-return.ts`, `etoile-context.ts`, `invitation-contract.ts`, `invitation-data.ts`, `InvitationAuthGuard`, `BirthdayFields`, `InterestPicker`, `InvitationAnswers`, `app/auth/confirm/`, `auth/continuer/`, `completer-profil/`, `invitation/[token]/`, `dashboard/inviter/` |
 | Navigation | `lib/navigation.ts`, `lib/legacy-navigation.ts`, `MainSpaces`, `DatesNav`, `PendingInvitationStar`, `ClosePeopleNav`, `MenuNavigation`, `MenuLateral`, `AttentionShared` |
 | Contacts/listes | `app/dashboard/contacts/`, `DrawerGlobal`, `PrivateLists`, `lib/private-lists.ts`, `lib/hooks/useContacts.ts`, `usePrivateLists.ts` |
 | Événements datés | `lib/personal-events.ts`, `personal-event-data.ts`, `calendar-day.ts`, `occurrence-reminders.ts`, `components/PersonalDates.tsx` |
@@ -53,6 +58,7 @@ Les nouvelles bibliothèques n’ajoutent aucun service payant. Les quotas d’h
 | Cartes personnelles | `components/cards/`, `lib/cards.ts`, `card-data.ts`, `card-server.ts`, `card-snapshot-v2.ts`, `card-link-crypto.ts`, `app/api/cartes/`, `app/carte/` |
 | Export image | `ShareImageButton`, `lib/share-image.ts`, `lib/image-projections.ts` |
 | Étoiles/univers | `components/etoiles/`, `components/univers/`, `lib/etoiles-*`, `univers-*`, `cadeaux-social-contract.ts`, `app/api/etoiles/`, `app/api/univers/` |
+| Profil unifié | `components/profil/`, `lib/profile-contract.ts`, `profile-data.ts`, `app/dashboard/profil/`, `docs/PROFIL-UNIFIE.md`, `docs/sql/profil-unifie.sql` |
 | Avatar | `app/dashboard/avatar/`, `components/avatars/`, `lib/avatar-*`, `lib/avatars.ts` |
 | Notifications | `NotificationBell`, `DailySummary`, `app/dashboard/notifications/`, `lib/social-notifications.ts`, `notification-preferences.ts` |
 | Push quotidien | `PushPermissionButton`, `PushNotificationsGuide`, `lib/push-device.ts`, `daily-digest.ts`, `daily-push.ts`, `daily-push-journal.ts`, `app/api/push/status/route.ts` |
@@ -74,6 +80,8 @@ Les propositions SQL dans `docs/` sont des dossiers à valider/installer humaine
 
 Tous les crons exigent `CRON_SECRET` dans le header Authorization. Le jour métier est en Europe/Paris ; 08:00 UTC correspond à 09:00 en hiver et 10:00 en été. Aucun cron supplémentaire n’est ajouté. Le POST test-notifications est une simulation authentifiée, sans vrai email/push.
 
+Le cron de 08:00 purge également les copies de reprise d’invitation expirées et leur journal public de plus de trente jours. Il signale `invitationCleanup` ; une panne de purge laisse les rappels continuer et rend le résultat global en erreur. Le SQL V2 ferme les anciennes écritures publiques d’invitation ; les nouveaux formulaires attendent son installation et les anciens onglets doivent être rechargés. Aucune base distante n’a été modifiée dans cette livraison.
+
 **Messages programmés** : l'absence du journal email ne déclenche plus le bandeau général « Le suivi des emails est indisponible » ni son bouton Réessayer. La liste reste accessible avec les statuts disponibles, sans déduire une livraison confirmée. Les erreurs de chargement ou d'action restent affichées.
 
 **Push quotidien** : canal_push doit être actif, appareil autorisé et journal serveur disponible. Une tentative au maximum par compte/endpoint/jour ; un refus, crash ou résultat incertain après réservation ne déclenche aucun renvoi ce jour. Les réservations sont conservées trente jours. Le push regroupe seulement J0 avec rappels actifs : anniversaires, fêtes confirmées et dates personnelles ; pas de fête déduite non confirmée, date archivée/annulée ou série à reconfirmer. Une date masquée au calendrier peut garder ses rappels actifs et apparaît alors dans le résumé authentifié.
@@ -88,7 +96,7 @@ Sans événement, aucun push par défaut. L’option « Inclure les saints du jo
 
 La préparation crée des fichiers PNG localement (1280 px de large, pages de 4096 px de haut maximum, coupure entre lignes/illustrations). Pas de capture de boutons, de menus ou de la page entière ; pas de publication, d’URL créée ni d’image privée envoyée au serveur. Le dernier clic Partager appelle l’API native avec les fichiers déjà préparés ; sinon téléchargement explicite. Fermeture/changement de contenu/compte invalide les fichiers et résultats tardifs. Les URLs blob sont révoquées.
 
-Entrées : carte privée/publiée, contact dans sa fiche, agenda/calendrier, préparation/tâches, idées/suggestions/cadeaux, budget, invitation, messages programmés et **son propre univers enregistré**. Aucun export d’univers tiers. SaintDuJour partage son image originale et propose le téléchargement quand le partage fichier est indisponible.
+Entrées : carte privée/publiée, contact dans sa fiche, agenda/calendrier, préparation/tâches, idées/suggestions/cadeaux, budget, invitation, messages programmés et **son propre profil enregistré**, nom facultatif décoché par défaut. Aucun export d’univers tiers. SaintDuJour partage son image originale et propose le téléchargement quand le partage fichier est indisponible.
 
 La recette navigateur utilise des données fictives ; Safari/iPhone/Android réels restent à valider. Les données privées ne sont pas conservées pour pouvoir les relire après rechargement hors ligne.
 
@@ -155,3 +163,11 @@ Le préfixe public n’est jamais utilisé pour une clé privée. La paire VAPID
 ## 11. État de recette et documents
 
 Voir `docs/AUDIT-PARCOURS-2026-10-10.md` pour les scénarios, corrections et limites de cette livraison. Voir `docs/NOTIFICATIONS-PUSH-QUOTIDIENNES.md` pour l’activation manuelle. Ne pas confondre un build et des transports simulés réussis avec une validation Supabase ou une réception sur téléphone réel.
+
+Invitations : `docs/INVITATIONS.md`, `docs/sql/invitations-v2.sql` et `invitations-v2-recette.sql`. Tests locaux et recette navigateur avec données fictives (320/390/1440 px, deux thèmes) ; installation SQL, vraie confirmation sur autre appareil et concurrence PostgreSQL restent à valider sur copie. Le template Supabase Confirm signup doit utiliser le hash à usage unique et RedirectTo du parcours ; la réinitialisation du mot de passe garde son callback. Aucun paquet ni script npm ajouté, aucun commit.
+
+Profil unifié : `lire_mon_profil` / `enregistrer_mon_profil`, contrat fermé, UUID stable et empreinte couvrant profil/univers/règles d’anniversaire ; sauvegarde transactionnelle. Les anciens appels d’écriture Univers demandent de recharger. `profil_unifie_at`, `partage_actif`, `partage_nom` sont installées après application humaine et contrôle du catalogue. L’onboarding/reprise utilise les mêmes sources. Export personnel version 11 ajoute `mon_profil` sans empreinte de concurrence et conserve `mon_univers` historique, aucun tiers/journal/secret ; pas d’instantané global. SQL et recette sur copie dans `docs/sql/profil-unifie*.sql`. Ni migration automatique ni suppression physique des copies historiques.
+
+Après confirmation humaine du 10/10/2026, le catalogue distant Profil unifié est confirmé en lecture seule : trois colonnes/RPC/helpers et droits vérifiés. Les types publics ont été régénérés ; le dossier SQL reste la procédure d’installation sur une autre base. Recette fonctionnelle et concurrence sur copie restent à effectuer ; aucun contenu personnel distant lu/modifié et aucun commit.
+
+Recette locale finale Profil unifié : `npm run verify` réussi, 361 tests et build, zéro erreur lint/cinq avertissements préexistants. Navigateur 320/390/1440 px et deux thèmes, partage/réseau/conflit/changement de compte vérifiés sur données fictives. Compilation syntaxique seule des neuf corps PL/pgSQL et sept blocs de recette en READ ONLY, sans installation ni exécution métier ; droits, RLS et concurrence réelle à valider sur copie. Détail dans `docs/PROFIL-UNIFIE.md`.

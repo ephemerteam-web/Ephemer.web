@@ -25,12 +25,11 @@ export default async function PageInvitation({
   )
 
   const { data, error } = await supabase
-    .rpc('verifier_invitation', { p_token: token })
-    .single()
+    .rpc('verifier_invitation_v2' as never, { p_token: token } as never)
 
   // Une panne doit permettre un réessai ; elle ne rend pas le lien invalide.
   if (error) throw new Error('Invitation indisponible')
-  const info = data
+  const info = data as { valide: boolean; raison?: string; prenom_hote?: string } | null
   if (!info || !info.valide) {
     return <LienInvalide raison={info?.raison ?? 'introuvable'} />
   }

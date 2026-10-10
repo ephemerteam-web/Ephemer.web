@@ -2,7 +2,7 @@
 import { universPartage, type UniversPartage } from '@/lib/univers-contract'
 import AvatarRenderer from '@/components/avatars/AvatarRenderer'
 
-const labels = { presentation: 'Présentation', passions: 'Passions', plaisirs: 'Ce qui me fait plaisir', eviter: 'Préférences à éviter', email: 'Email', telephone: 'Téléphone' } as const
+const labels = { nom: 'Nom de famille', presentation: 'Présentation', passions: 'Passions', plaisirs: 'Ce qui me fait plaisir', eviter: 'Préférences à éviter', email: 'Email', telephone: 'Téléphone' } as const
 export default function UniversView({ value, title = 'Son univers partagé' }: { value: UniversPartage; title?: string }) {
   const univers = universPartage(value), anniversaire = univers.champs.anniversaire
   return <section className="min-w-0 space-y-4 rounded-2xl border border-line bg-surface p-4 sm:p-6" aria-label={title}>

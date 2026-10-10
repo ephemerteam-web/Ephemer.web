@@ -122,6 +122,7 @@ export default function NotificationBell() {
     void marquerLue(notif)
     setOuvert(false)
     if (notif.source === 'etoile') { router.push('/dashboard/etoiles'); return }
+    if (notif.type === 'invitation_a_verifier') { router.push('/dashboard/inviter'); return }
     if (notif.contact_id === null) return
 
 
@@ -233,7 +234,7 @@ export default function NotificationBell() {
                     }`}
                   >
                     <button type="button" className="w-full min-h-11 text-left" disabled={social.offline} onClick={() => void handleNotificationClick(notif)}>
-                    <p className="text-xs text-accent">{notif.source === 'etoile' ? '✦ Mes étoiles' : 'Rappel'}</p>
+                    <p className="text-xs text-accent">{notif.source === 'etoile' ? '✦ Mes étoiles' : notif.type === 'invitation_a_verifier' ? 'Invitations' : 'Rappel'}</p>
                     <p className="text-[15px] leading-relaxed">{notif.message}</p>
                     <p className="text-xs text-muted mt-2">
                       {notif.created_at ? new Date(notif.created_at).toLocaleString('fr-FR', {

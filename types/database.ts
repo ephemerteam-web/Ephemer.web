@@ -7,3 +7,6 @@ export type Notification = Tables<'notifications'>
 export type Rappel = Tables<'rappels'>
 export type PatchNote = Tables<'patch_notes'>
 export type Invitation = Tables<'invitations'>
+// Contrats du parcours V2 proposé : séparés des colonnes réellement installées.
+export type { InvitationAnswer, InvitationRecovery, InvitationCandidate, PendingAnswer } from '@/lib/invitation-contract'
+export type { ProfilUnifie, CommandeProfil } from '@/lib/profile-contract'

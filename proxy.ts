@@ -1,6 +1,7 @@
 import type { Database } from '@/types/database.generated'
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { authPage } from '@/lib/auth-return'
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
@@ -20,7 +21,9 @@ export async function proxy(request: NextRequest) {
     // Vérification auprès d'Auth : ne pas faire confiance au contenu du cookie.
     const { data: { user }, error } = await supabase.auth.getUser()
     if (error || !user) {
-      const redirect = NextResponse.redirect(new URL('/connexion', request.url))
+      const address = new URL(request.url)
+      const destination = address.pathname === '/completer-profil' ? authPage('/connexion', address.searchParams.get('next')) : '/connexion'
+      const redirect = NextResponse.redirect(new URL(destination, request.url))
       response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie))
       response = redirect
     }

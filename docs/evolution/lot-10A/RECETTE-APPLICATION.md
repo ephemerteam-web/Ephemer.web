@@ -47,6 +47,8 @@ Après retrait, rejouer un ancien UUID d’acceptation : résultat ancien possib
 
 ## Interface et données personnelles
 
+Mise à jour du 10/10 : le seul contexte d’entrée étoile fait exception à l’absence de persistance, dans sessionStorage de l’onglet pendant trente minutes, avec invalidation au changement de compte/déconnexion/succès/expiration. Les listes sociales restent en mémoire. La reprise consentie d’une réponse au carnet est côté serveur, trente jours après envoi, avec e-mail Auth vérifié. Voir [la nouvelle recette Invitations V2](../../INVITATIONS.md) ; son SQL et sa concurrence réelle ne sont pas encore exécutés.
+
 Recette à 320 px et sur desktop, thèmes clair/sombre : pas de débordement, onglets accessibles, commandes au clavier, focus et confirmations, dates d’expiration lisibles. Tester vide/chargement/erreur et perte de réseau. Une attente ou annulation ne doit pas afficher un faux succès.
 
 Grands carnets de plus de 100 contacts : reconnaissance et associations épuisent les pages, sans omission ou doublon. Plusieurs fiches pour une étoile restent privées ; proposer l’ajout manuel si aucune fiche, sans insertion ni duplication automatique.

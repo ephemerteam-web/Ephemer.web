@@ -9,7 +9,7 @@ export type PartageUnivers = typeof UNIVERS_PARTAGES[number]
 export type AnniversaireUnivers = { jour: number; mois: number; annee: number | null }
 export type ValeursUnivers = Record<TexteUnivers, string> & { anniversaire: AnniversaireUnivers | null; email: string; telephone: string }
 export type MonUnivers = { revision: number; modeIdentite: 'prenom' | 'pseudonyme'; identite: string; valeurs: ValeursUnivers; partage: Record<PartageUnivers, boolean> }
-export type UniversPartage = { identite: string; champs: Partial<Record<TexteUnivers | 'email' | 'telephone', string>> & { anniversaire?: { jour: number; mois: number; annee?: number }; avatar?: AvatarRenderConfig } }
+export type UniversPartage = { identite: string; champs: Partial<Record<TexteUnivers | 'email' | 'telephone' | 'nom', string>> & { anniversaire?: { jour: number; mois: number; annee?: number }; avatar?: AvatarRenderConfig } }
 export type CommandeUnivers = { action: 'enregistrer'; revision: number; operation: string; donnees: Omit<MonUnivers, 'revision'> } | { action: 'masquer'; revision: number; operation: string; donnees: Record<string, never> }
 export const UNIVERS_LIMITES = { texte: 1000, identite: 80, email: 320, telephone: 32, corps: 32768, valeurs: 24576 } as const
 export const PARTAGE_UNIVERS_VIDE: Readonly<Record<PartageUnivers, boolean>> = Object.freeze(Object.fromEntries(UNIVERS_PARTAGES.map(k => [k, false])) as Record<PartageUnivers, boolean>)
@@ -87,7 +87,7 @@ export function apercuUnivers(value: MonUnivers, avatarEnregistre: unknown = nul
   return { identite: owner.identite, champs }
 }
 export function universPartage(value: unknown): UniversPartage {
-  const row = objet(value, ['identite', 'champs']), input = objet(row.champs, [...UNIVERS_TEXTES, 'anniversaire', 'email', 'telephone', 'avatar'], true)
+  const row = objet(value, ['identite', 'champs']), input = objet(row.champs, [...UNIVERS_TEXTES, 'anniversaire', 'email', 'telephone', 'avatar', 'nom'], true)
   const champs: UniversPartage['champs'] = {}
   for (const key of [...UNIVERS_TEXTES, 'email', 'telephone'] as const) if (key in input) {
     champs[key] = texte(input[key], key === 'email' ? 320 : key === 'telephone' ? 32 : 1000, true)
@@ -101,5 +101,6 @@ export function universPartage(value: unknown): UniversPartage {
     champs.anniversaire = { jour: validated.jour, mois: validated.mois, ...('annee' in birthday ? { annee: validated.annee! } : {}) }
   }
   if ('avatar' in input) champs.avatar = avatarRenderConfig(input.avatar)
+  if ('nom' in input) champs.nom = texte(input.nom,80,true)
   return { identite: texte(row.identite, 80, true), champs }
 }

@@ -1,10 +1,12 @@
 'use client'
 
+import { authPage, browserAuthReturn } from '@/lib/auth-return'
 import { useState, useMemo } from 'react'
 import { supabase } from '@/lib/supabase-browser'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import StarryBackground from '@/components/StarryBackground'
+import { useBrowserValue } from '@/lib/hooks/useBrowserValue'
 
 const isValidEmail = (email: string) => /\S+@\S+\.\S+/.test(email)
 
@@ -19,6 +21,7 @@ const getPasswordStrength = (password: string) => {
 
 export default function InscriptionPage() {
   const router = useRouter()
+  const nextDestination = useBrowserValue(browserAuthReturn, '/dashboard')
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -77,10 +80,11 @@ export default function InscriptionPage() {
 
     setLoading(true)
 
+    try {
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/auth/confirm?${new URLSearchParams({ next: browserAuthReturn() })}` },
     })
 
     if (error) {
@@ -100,7 +104,7 @@ export default function InscriptionPage() {
 
     setIsError(false)
     if (data.session) {
-      router.replace('/completer-profil')
+      router.replace('/auth/continuer?' + new URLSearchParams({ next: browserAuthReturn() }))
       return
     }
     setMessage('✅ Compte créé ! Vérifie ton email 📧 puis connecte-toi.')
@@ -111,6 +115,7 @@ export default function InscriptionPage() {
 
     startCooldown()
     setLoading(false)
+    } catch { setIsError(true); setMessage('Inscription indisponible. Vérifie ta connexion et réessaie.'); setLoading(false) }
   }
 
   return (
@@ -261,7 +266,7 @@ export default function InscriptionPage() {
 
             <p className="text-center text-sm text-muted mt-6">
               Déjà un compte ?{' '}
-              <Link href="/connexion" className="text-accent hover:underline">
+              <Link href={authPage("/connexion", nextDestination)} className="text-accent hover:underline">
                 Se connecter
               </Link>
             </p>

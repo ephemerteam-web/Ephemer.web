@@ -152,16 +152,16 @@ test('reprise après chaque échec : des lignes déjà absentes ne bloquent pas 
 })
 
 // Le gestionnaire du formulaire est évalué sans monter React ni importer le client réel.
-function formulaire({ session = { access_token: 'jeton-simule' }, status = 200, body = { success: true }, panneReseau = false } = {}) {
+function formulaire({ session = { access_token: 'jeton-simule', user: { id: identifiant } }, status = 200, body = { success: true }, panneReseau = false } = {}) {
   const appels = [], messages = [], chargement = []
-  const source = lire('app/dashboard/profil/page.tsx')
-  const debut = source.indexOf('  const handleDeleteAccount = async () => {')
-  const fin = source.indexOf('// ÉTAT CHARGEMENT', debut)
+  const source = lire('components/profil/AccountSettings.tsx')
+  const debut = source.indexOf('  async function run(remove:boolean) {')
+  const fin = source.indexOf('  return <section', debut)
   assert.ok(debut >= 0 && fin > debut)
-  const { handleDeleteAccount } = runInNewContext(`${stripTypeScriptTypes(source.slice(debut, fin))}\n;({ handleDeleteAccount })`, {
-    setDeleting: valeur => chargement.push(valeur), setMessage: message => messages.push(message),
+  const { handleDeleteAccount } = runInNewContext(`${stripTypeScriptTypes(source.slice(debut, fin))}\n;({ handleDeleteAccount: () => run(true) })`, {
+    owner: identifiant, email: 'fixture@example.invalid', lock: {current:false}, alive: {current:true}, setBusy: valeur => chargement.push(valeur), setNotice() {}, setError: text => { if(text) messages.push({type:'error',text}) },
     supabase: { auth: {
-      getSession: async () => ({ data: { session } }),
+      getUser: async () => ({data:{user:{id:identifiant}},error:null}), getSession: async () => ({ data: { session } }),
       signOut: async () => { appels.push('deconnexion') },
     } },
     fetch: async () => {
@@ -169,7 +169,7 @@ function formulaire({ session = { access_token: 'jeton-simule' }, status = 200, 
       if (panneReseau) throw new Error('Réseau indisponible')
       return Response.json(body, { status })
     },
-    router: { push: url => appels.push(url) },
+    router: { replace: url => appels.push(url) },
   })
   return { handleDeleteAccount, appels, messages, chargement }
 }

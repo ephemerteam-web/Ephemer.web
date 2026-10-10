@@ -70,7 +70,9 @@ export default function DashboardLayout({
       }
     })
     void verify()
-    return () => { active = false; generation++; subscription.unsubscribe(); timers.forEach(clearTimeout) }
+    const profileChanged = () => { if (accountId.current) void verify(accountId.current) }
+    window.addEventListener('ephemer-profile-changed', profileChanged)
+    return () => { active = false; generation++; subscription.unsubscribe(); timers.forEach(clearTimeout); window.removeEventListener('ephemer-profile-changed', profileChanged) }
   }, [router, retryAuth])
 
   // Calcule l'initiale à afficher dans le bouton

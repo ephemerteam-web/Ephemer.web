@@ -1,3 +1,4 @@
+import { profileFixture } from './profile-fixture.mjs'
 // Synchronisation des composants réels, comptes/lectures simulés.
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -47,16 +48,18 @@ test('avatar enregistré : trois badges actualisés après validation, aucune di
 
 test('navigation avatar : profil sans éditeur, rectangle et cercle du menu ouvrent /avatar',async()=>{
   const db=pageDatabase({profiles:[{id:'u1',prenom:'Alex',email:'test@example.invalid'}],evenements_personnels:[]})
-  const profile=harness('app/dashboard/profil/page.tsx',{overrides:{'next/navigation':{useRouter:()=>({})},'@/lib/supabase-browser':{supabase:db}}})
-  profile.render();await profile.flush();profile.render()
+  const profile=harness('components/profil/ProfileEditor.tsx',{overrides:{'next/navigation':{useRouter:()=>({})},'@/lib/supabase-browser':{supabase:db}}})
+  profile.render({draft:profileFixture(),onChange(){},disabled:false});await profile.flush();profile.render({draft:profileFixture(),onChange(){},disabled:false})
   assert.ok(!profile.nodes().some(n=>typeof n.type==='function'&&n.type.name==='ProfileAvatar'))
   assert.equal(profile.find(n=>n.props['aria-label']==='Personnaliser mon avatar').props.href,'/avatar')
   const paths=[],menu=harness('components/MenuLateral.tsx',{overrides:{'@/lib/supabase-browser':{supabase:{}},'next/navigation':{usePathname:()=>'/dashboard/profil'},'@/components/ContactDraftProvider':{useContactDraft:()=>({navigate:async(path,close)=>{paths.push(path);close()},contacts:[],prenom:'',hasPrivateDraft:()=>false})}},globals:{document:{body:{style:{}}}}})
   let closed=false;menu.render({ouvert:true,onFermer:()=>{closed=true},user:{prenom:'Alex',email:'test@example.invalid'}})
   menu.find(n=>n.type==='button'&&n.props['aria-label']==='Personnaliser mon avatar').props.onClick();assert.deepEqual(paths,['/avatar']);assert.equal(closed,true)
-  const page=harness('components/avatars/AvatarPage.tsx',{overrides:{'@/lib/avatar-data':{}}});page.render()
-  assert.equal(page.find(n=>typeof n.type==='function'&&n.type.name==='ProfileAvatar').props.ownerId,'u1')
+  const page=harness('components/avatars/AvatarPage.tsx',{overrides:{'@/lib/avatar-data':{},'@/lib/supabase-browser':{supabase:{}}}});page.render()
+  assert.equal(page.find(n=>typeof n.type==='function'&&n.type.name==='AvatarCreationTools').props.ownerId,'u1')
   assert.equal(page.find(n=>n.props.href==='/dashboard/profil').props.href,'/dashboard/profil')
+  page.render({ownerId:'u1'},'AvatarCreationTools')
+  assert.equal(page.find(n=>typeof n.type==='function'&&n.type.name==='ProfileAvatar').props.ownerId,'u1')
 })
 
 test('badge : initiale pendant chargement/échec, portrait par défaut en absence de configuration',()=>{

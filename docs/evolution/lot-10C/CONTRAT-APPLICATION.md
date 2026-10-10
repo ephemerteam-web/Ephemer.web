@@ -1,5 +1,7 @@
 # Contrat applicatif 10C — intégré après catalogue confirmé
 
+**Évolution du 10/10/2026 :** [Mon profil unifié](../../PROFIL-UNIFIE.md) réunit la saisie et remplace les commandes personnelles après installation manuelle de son SQL. Désactiver le partage général retire désormais les cinq accords IA, identité comprise ; le réactiver ne restaure aucun accord. Les projections cadeaux gardent les cinq champs et le double accord, jamais le nom/coordonnées/date/avatar structurés. Export propriétaire version 11.
+
 **Intégré localement au 9 octobre 2026.** Le catalogue 10C installé humainement a été confirmé en lecture seule. `types/database.generated.ts` a été régénéré depuis la base réelle ; `types/database.ts` conserve ses alias métier. Les simulations n'effectuent aucun appel distant.
 
 ## Données et opérations

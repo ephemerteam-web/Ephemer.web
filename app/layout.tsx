@@ -3,6 +3,7 @@ import { sansFontFamily, monoFontFamily } from './local-fonts';
 import './fonts/fallback.css';
 import "./globals.css";
 import PWARegistration from '@/components/PWARegistration';
+import InvitationAuthGuard from '@/components/InvitationAuthGuard';
 import InvitationDraftCleanup from '@/components/InvitationDraftCleanup';
 import ThemeRuntime from '@/components/ThemeRuntime';
 
@@ -120,7 +121,8 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-canvas text-ink">
-        <ThemeRuntime /><InvitationDraftCleanup />
+        <ThemeRuntime /><InvitationAuthGuard />
+        <InvitationDraftCleanup />
         <PWARegistration />
         {children}
         <footer className="border-t border-line bg-canvas px-4 py-5 flex flex-wrap justify-center items-center gap-4 text-sm text-muted">

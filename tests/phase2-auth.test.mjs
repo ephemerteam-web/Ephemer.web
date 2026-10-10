@@ -72,16 +72,27 @@ test('avatar : route privée couverte par Auth, refus sans session et absence de
 
 test('callback : code manquant/refusé, reset valide et destination externe refusée', async () => {
   for (const [query, error, target] of [
-    ['', null, '/connexion?auth_error=1'],
-    ['?code=test', { message: 'expired' }, '/connexion?auth_error=1'],
+    ['', null, '/connexion?auth_error=1&next=%2Fdashboard'],
+    ['?code=test', { message: 'expired' }, '/connexion?auth_error=1&next=%2Fdashboard'],
+    ['?code=test&next=/etoile', null, '/auth/continuer?next=%2Fetoile'],
     ['?code=test&next=/reset-password', null, '/reset-password'],
-    ['?code=test&next=https://evil.invalid', null, '/dashboard'],
+    ['?code=test&next=https://evil.invalid', null, '/auth/continuer?next=%2Fdashboard'],
   ]) {
     const GET = load('app/auth/callback/route.ts', 'GET', {
-      process: { env }, NextResponse, URL, cookies: async () => response().cookies,
+      process: { env }, NextResponse, URL, URLSearchParams, authReturn: value => value === '/etoile' || value === '/reset-password' ? value : '/dashboard', cookies: async () => response().cookies,
       createServerClient: () => ({ auth: { exchangeCodeForSession: async () => ({ error }) } }),
     })
     const result = await GET({ url: `https://example.invalid/auth/callback${query}` })
     assert.equal(result.url, `https://example.invalid${target}`)
   }
+})
+
+test('proxy : une session expirée pendant le premier profil garde le retour étoile', async () => {
+  const proxy = load('proxy.ts', 'proxy', {
+    process: { env }, NextResponse, URL,
+    authPage: (path, value) => path + (value === '/etoile' ? '?next=%2Fetoile' : ''),
+    createServerClient: () => ({ auth: { getUser: async () => ({ data: { user: null }, error: null }) } }),
+  })
+  const result = await proxy({ url: 'https://example.invalid/completer-profil?next=%2Fetoile', cookies: response().cookies })
+  assert.equal(result.url, 'https://example.invalid/connexion?next=%2Fetoile')
 })

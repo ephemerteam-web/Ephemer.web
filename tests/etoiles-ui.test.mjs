@@ -50,7 +50,7 @@ test('création volontaire : prénom seul en brouillon, choix existant proposé 
  assert.deepEqual(JSON.parse(JSON.stringify(calls[0][1].map(c=>Object.keys(c).sort()))),[['id','prenom','relation']]);assert.equal(calls[0][1][0].prenom,'Camille');assert.equal(calls.at(-1)[1],'/dashboard/contacts/nouveau');h.unmount()
 })
 function publicHarness({initial=A}={}) {
- const win=events(),doc={...events(),visibilityState:'visible'},location={hash:'#'+token,pathname:'/etoile'},requests=[];let current=initial,listener
+ const win={...events(),setInterval:()=>1,clearInterval(){}},doc={...events(),visibilityState:'visible'},location={hash:'#'+token,pathname:'/etoile'},requests=[];let current=initial,listener
  const h=harness('components/etoiles/PublicEtoileScreen.tsx',{overrides:{'next/link':{default:'a'},'@/lib/supabase-browser':{supabase:{auth:{getUser:async()=>({data:{user:current?{id:current,email_confirmed_at:D}:null},error:null}),onAuthStateChange(fn){listener=fn;return {data:{subscription:{unsubscribe(){}}}}}}}},'@/lib/etoiles-data':{sendEtoileCommand:async(owner,command)=>{requests.push({owner,command});return {ok:true,message:'Demande enregistrée.'}},EtoilesRequestError:class extends Error {}}},globals:{AbortController,TextEncoder,navigator:{onLine:true},window:win,document:doc,location,history:{replaceState:()=>location.hash=''},crypto:{randomUUID:()=>A}}})
  return {h,win,doc,location,requests,switchAccount(value){current=value;listener('SIGNED_IN',{user:{id:value}})}}
 }
@@ -58,7 +58,8 @@ test('entrée publique : fragment effacé, aucune demande à l’ouverture, clic
  const {h,location,requests}=publicHarness();h.render();await h.flush();h.render();assert.equal(location.hash,'');assert.equal(requests.length,0)
  h.find(n=>n.type==='button'&&h.text(n)==='Demander à devenir une étoile').props.onClick();await h.flush();h.render();assert.equal(requests.length,1);assert.equal(requests[0].command.donnees.token,token);assert.match(h.text(),/Demande enregistrée/);h.unmount()
 })
-test('entrée publique : connexion, page cachée et changement de compte exigent de rouvrir le lien',async()=>{
- const unauth=publicHarness({initial:null});unauth.h.render();await unauth.h.flush();unauth.h.render();assert.equal(unauth.h.nodes().filter(n=>n.type==='button').length,0);assert.match(unauth.h.text(),/ouvre à nouveau/);unauth.h.unmount()
- for(const mode of ['hidden','account']){const p=publicHarness();p.h.render();await p.h.flush();p.h.render();if(mode==='hidden'){p.doc.visibilityState='hidden';p.doc.emit('visibilitychange')}else p.switchAccount(B);await new Promise(r=>setTimeout(r,5));await p.h.flush();p.h.render();assert.equal(p.h.nodes().filter(n=>n.type==='button').length,0);assert.equal(p.requests.length,0);p.h.unmount()}
+test('entrée publique : connexion et page cachée gardent le lien ; changement de compte le purge',async()=>{
+ const unauth=publicHarness({initial:null});unauth.h.render();await unauth.h.flush();unauth.h.render();assert.equal(unauth.h.nodes().filter(n=>n.type==='button').length,0);assert.match(unauth.h.text(),/retrouver cette invitation/);
+ unauth.switchAccount(A);await new Promise(r=>setTimeout(r,5));await unauth.h.flush();unauth.h.render();assert.equal(unauth.h.nodes().filter(n=>n.type==='button').length,1);assert.equal(unauth.requests.length,0);unauth.h.unmount()
+ for(const mode of ['hidden','account']){const p=publicHarness();p.h.render();await p.h.flush();p.h.render();if(mode==='hidden'){p.doc.visibilityState='hidden';p.doc.emit('visibilitychange')}else p.switchAccount(B);await new Promise(r=>setTimeout(r,5));await p.h.flush();p.h.render();assert.equal(p.h.nodes().filter(n=>n.type==='button').length,mode==='hidden'?1:0);assert.equal(p.requests.length,0);p.h.unmount()}
 })

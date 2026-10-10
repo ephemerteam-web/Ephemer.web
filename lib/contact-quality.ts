@@ -1,6 +1,7 @@
 import { isCalendarDay } from './calendar-day'
 
-// Modèle métier uniquement : le schéma SQL actuel ne sait pas le persister.
+// Jour/mois et année nullable : les dates personnelles portent ce modèle.
+// L'année 2000 sert uniquement à valider un 29 février ; elle n'est jamais enregistrée.
 export type PartialBirthDate = { day: number; month: number; year: number | null }
 export function partialBirthDate(day: string, month: string, year: string): PartialBirthDate | null {
   if (!day && !month && !year) return null

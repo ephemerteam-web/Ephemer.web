@@ -331,6 +331,27 @@ export type Database = {
           },
         ]
       }
+      daily_push_receipts: {
+        Row: {
+          day: string
+          device_key: string
+          reserved_at: string
+          user_id: string
+        }
+        Insert: {
+          day: string
+          device_key: string
+          reserved_at?: string
+          user_id: string
+        }
+        Update: {
+          day?: string
+          device_key?: string
+          reserved_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       evenements_personnels: {
         Row: {
           archive: boolean
@@ -836,7 +857,9 @@ export type Database = {
           email: string | null
           id: string
           nom: string | null
+          onboarding_completed_at: string | null
           prenom: string | null
+          profil_unifie_at: string | null
           telephone_indicatif: string | null
           telephone_numero: string | null
         }
@@ -846,7 +869,9 @@ export type Database = {
           email?: string | null
           id?: string
           nom?: string | null
+          onboarding_completed_at?: string | null
           prenom?: string | null
+          profil_unifie_at?: string | null
           telephone_indicatif?: string | null
           telephone_numero?: string | null
         }
@@ -856,7 +881,9 @@ export type Database = {
           email?: string | null
           id?: string
           nom?: string | null
+          onboarding_completed_at?: string | null
           prenom?: string | null
+          profil_unifie_at?: string | null
           telephone_indicatif?: string | null
           telephone_numero?: string | null
         }
@@ -1309,6 +1336,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      claim_daily_push: {
+        Args: { p_day: string; p_device_key: string; p_user_id: string }
+        Returns: boolean
+      }
       commander_etoiles: {
         Args: { p_action: string; p_donnees: Json; p_operation: string }
         Returns: Json
@@ -1338,8 +1369,17 @@ export type Database = {
           token: string
         }[]
       }
+      daily_push_ready: { Args: never; Returns: boolean }
       desactiver_invitation: { Args: { p_id: string }; Returns: undefined }
       enregistrer_evenement_lot02: { Args: { p_donnees: Json }; Returns: Json }
+      enregistrer_mon_profil: {
+        Args: { p_donnees: Json; p_operation: string }
+        Returns: Json
+      }
+      enregistrer_premier_profil: {
+        Args: { p_donnees: Json; p_operation: string }
+        Returns: Json
+      }
       enregistrer_preparation_lot04: {
         Args: {
           p_etat: string
@@ -1435,11 +1475,15 @@ export type Database = {
         Args: { p_apres?: string; p_limite?: number; p_vue: string }
         Returns: Json
       }
+      lire_mon_profil: { Args: never; Returns: Json }
       lire_mon_univers: { Args: never; Returns: Json }
       lire_partage_carte_lot08: {
         Args: { p_avec_secret?: boolean; p_carte: string; p_user_id: string }
         Returns: Json
       }
+      lire_premier_profil: { Args: never; Returns: Json }
+      lire_reponses_invitation: { Args: never; Returns: Json }
+      lire_reprises_invitation: { Args: never; Returns: Json }
       materialiser_occurrences_lot02: {
         Args: { p_debut: string; p_fin: string }
         Returns: {
@@ -1572,6 +1616,7 @@ export type Database = {
         }
         Returns: Json
       }
+      purger_reprises_invitation: { Args: never; Returns: number }
       reconnaitre_etoiles: {
         Args: { p_apres?: number; p_limite?: number }
         Returns: Json
@@ -1622,9 +1667,24 @@ export type Database = {
           succes: boolean
         }[]
       }
+      soumettre_invitation_v2: {
+        Args: { p_donnees: Json; p_operation: string; p_token: string }
+        Returns: Json
+      }
       supprimer_evenement_lot02: {
         Args: { p_confirmer: boolean; p_id: string; p_revision: number }
         Returns: undefined
+      }
+      traiter_reponse_invitation: {
+        Args: {
+          p_action: string
+          p_champs?: string[]
+          p_contact?: string
+          p_empreinte?: string
+          p_id: string
+          p_revision: number
+        }
+        Returns: Json
       }
       verifier_invitation: {
         Args: { p_token: string }
@@ -1635,6 +1695,7 @@ export type Database = {
           valide: boolean
         }[]
       }
+      verifier_invitation_v2: { Args: { p_token: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never

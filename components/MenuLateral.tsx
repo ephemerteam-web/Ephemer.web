@@ -103,7 +103,6 @@ export default function MenuLateral({ ouvert, onFermer, user }: MenuLateralProps
       titre: 'Général',
       items: [
         { label: 'Mon profil', chemin: '/dashboard/profil', icone: '👤' },
-        { label: 'Mon univers', chemin: '/dashboard/univers', icone: '✧' },
       ],
     },
     {

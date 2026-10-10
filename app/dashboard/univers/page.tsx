@@ -1,2 +1,2 @@
-import UniversScreen from '@/components/univers/UniversScreen'
-export default function UniversPage() { return <UniversScreen /> }
+import { redirect } from 'next/navigation'
+export default function UniversPage() { redirect('/dashboard/profil') }

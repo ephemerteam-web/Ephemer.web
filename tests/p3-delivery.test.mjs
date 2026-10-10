@@ -1,3 +1,4 @@
+import { profileFixture } from './profile-fixture.mjs'
 // Régressions P3 : composants réels, aucun compte ni envoi distant.
 import assert from 'node:assert/strict'
 import test from 'node:test'
@@ -48,12 +49,14 @@ test('invitations : une panne interdit le formulaire incomplet et le réessai r�
   assert.ok(h.nodes().some(n=>n.type==='input'))
 })
 
-test('profil : erreur persistante et réessai, valeurs nullables normalisées seulement dans le formulaire',async()=>{
-  const db=pageDatabase({profiles:[{id:'u1',prenom:null,nom:null,date_naissance:null,telephone_indicatif:null,telephone_numero:null}]},{failAt:1})
-  const h=harness('app/dashboard/profil/page.tsx',{overrides:{'next/navigation':{useRouter:()=>nav},'@/lib/supabase-browser':{supabase:db},'@/components/Modal':{default:'modal'},'@/components/PersonalDates':{default:'button'}}})
-  h.render();await h.flush();h.render();assert.equal(h.nodes().filter(n=>n.type==='input').length,0)
-  h.find(n=>typeof n.props.retry==='function').props.retry();h.render();await h.flush();h.render()
-  assert.ok(h.nodes().some(n=>n.type==='input' && n.props.value===''))
+test('profil : erreur persistante et réessai sans saisie remplacée',async()=>{
+ let fail=true
+ const h=harness('components/profil/ProfileForm.tsx',{overrides:{'@/lib/supabase-browser':{supabase:{}},'@/components/ContactDraftProvider':{useContactDraft:()=>({confirm:async()=>true,registerPrivateDraft(){}})}}})
+ const api={lire:async()=>{if(fail)throw new Error('Lecture indisponible');return profileFixture()},commander:async()=>({ok:true,revision:1})}
+ const props={ownerId:'u1',api}; h.render(props,'AccountProfileForm');await h.flush();h.render(props,'AccountProfileForm')
+ assert.match(h.text(),/Lecture impossible|Lecture indisponible/);assert.ok(!h.nodes().some(n=>n.props.draft))
+ fail=false;h.find(n=>n.type==='button'&&h.text(n)==='Relire les informations enregistrées').props.onClick();await h.flush();h.render(props,'AccountProfileForm')
+ assert.equal(h.find(n=>n.props.draft).props.draft.nom,'Martin');h.unmount()
 })
 
 test('cloche : 250 anciennes non-lues, y compris null ; échec de marquage sans faux succès puis compteur synchronisé',async()=>{

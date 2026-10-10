@@ -1,5 +1,9 @@
 'use client'
 
+import BirthdayFields from '@/components/BirthdayFields'
+import InterestPicker from '@/components/InterestPicker'
+import { invitationAnswer, type InvitationAnswer } from '@/lib/invitation-contract'
+import { invitationRpc } from '@/lib/invitation-data'
 import Modal from '@/components/Modal'
 import { restoreInvitationDraft, saveInvitationDraft, eraseInvitationDraft } from '@/lib/invitation-drafts'
 import { normalizeRelation } from '@/lib/constants'
@@ -18,8 +22,7 @@ export default function FormulaireInvitation(props: InvitationProps) {
 function readDraft(token: string): Record<string, unknown> {
   try { return restoreInvitationDraft(localStorage, token) } catch { return {} }
 }
-import { supabase } from '@/lib/supabase-browser'
-import { GROUPES_INTERETS, INDICATIFS } from './interets'
+import { INDICATIFS } from './interets'
 
 
 const RELATIONS = [
@@ -52,6 +55,11 @@ function InvitationForm({
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
   const [termine, setTermine] = useState(false)
+  const [conserver, setConserver] = useState(draft.conserver === true)
+  const attempt = useRef<{ fingerprint: string; operation: string } | null>(
+    typeof draft.operation === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(draft.operation) && typeof draft.operationFingerprint === 'string' ? { operation: draft.operation, fingerprint: draft.operationFingerprint } : null)
+  const lock = useRef(false), alive = useRef(true)
+  useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
 
   // ── Champs du formulaire
   const [prenom, setPrenom] = useState(() => texte('prenom'))
@@ -74,7 +82,8 @@ function InvitationForm({
   useEffect(() => {
     const data = {
       prenom, nom, jour, mois, annee, relation,
-      interets, noteLibre, email, indicatif, tel
+      interets, noteLibre, email, indicatif, tel, conserver,
+      ...(attempt.current ? { operation: attempt.current.operation, operationFingerprint: attempt.current.fingerprint } : {})
     }
     if (termine) return
     const serialized = JSON.stringify(data)
@@ -83,9 +92,8 @@ function InvitationForm({
     if (previousData.current === serialized) return
     previousData.current = serialized
     // Le stockage est une synchronisation externe ; son échec doit être visible.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     try { setStorageUnavailable(!saveInvitationDraft(localStorage, token, data)) } catch { setStorageUnavailable(true) }
-  }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, token, termine])
+  }, [prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, conserver, token, termine])
 
   // Nettoyer après succès
   useEffect(() => {
@@ -94,66 +102,33 @@ function InvitationForm({
     }
   }, [termine, token])
 
-  // ── Bascule une bulle (ajoute ou retire)
-  const toggleInteret = (item: string) => {
-    setInterets((prev) =>
-      prev.includes(item) ? prev.filter((i) => i !== item) : [...prev, item]
-    )
-  }
-
   // ── Validation par étape (bouton grisé si faux)
   const etapeValide = () => {
-    if (etape === 1) return prenom.trim().length >= 2
+    if (etape === 1) return prenom.trim().length >= 1
     if (etape === 2) return relation !== ''
     return true // étapes 3 et 4 entièrement optionnelles
   }
 
-  // ── Construit la date au format attendu par Postgres (AAAA-MM-JJ)
-  const construireDate = (): string | null => {
-    const date = partialBirthDate(jour, mois, annee)
-    if (!date) return null
-    if (date.year === null) throw new Error('Une date sans année ne peut pas encore être enregistrée. Laisse les trois champs vides pour continuer sans date, ou renseigne une date complète connue.')
-    return `${String(date.year).padStart(4, '0')}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`
-  }
-
-  // ── Envoi final
+  // Même UUID et même contenu après réponse perdue, y compris après rechargement.
   const envoyer = async () => {
+    if (lock.current) return
     setErreur(null)
-    let birth: string | null
-    try { birth = construireDate() } catch (error) { setErreur(error instanceof Error ? error.message : 'Date invalide'); return }
-    setEnvoi(true)
-
-    // On fusionne les bulles cochées et le texte libre dans "note"
-    const morceaux: string[] = []
-    if (interets.length) morceaux.push(interets.join(', '))
-    if (noteLibre.trim()) morceaux.push(noteLibre.trim())
-    const note = morceaux.join(' — ') || null
-
-    const { data, error } = await supabase.rpc('soumettre_invitation', {
-      p_token: token,
-      p_prenom: prenom.trim(),
-      p_nom: nom.trim() || undefined,
-      p_date_naissance: birth ?? undefined,
-      p_relation: normalizeRelation(relation),
-      p_email: email.trim() || undefined,
-      p_telephone_indicatif: tel.trim() ? indicatif : undefined,
-      p_telephone_numero: tel.trim() || undefined,
-      p_note: note ?? undefined,
-    })
-
-    setEnvoi(false)
-
-    const res = Array.isArray(data) ? data[0] : data
-
-    if (error || !res?.succes) {
-      setErreur(res?.message ?? "Une erreur est survenue. Réessaie dans un instant.")
-      return
-    }
-
-    // La RPC crée la fiche. Le trigger SQL validé par l'administrateur
-    // produit l'alerte dans l'application, dans la même transaction.
-
-    setTermine(true)
+    let payload: InvitationAnswer
+    try {
+      payload = invitationAnswer({ prenom, nom, anniversaire: partialBirthDate(jour, mois, annee),
+        relation: normalizeRelation(relation), interets, noteLibre, email, indicatif, tel, conserver })
+    } catch (failure) { setErreur(failure instanceof Error ? failure.message : 'Vérifie ta saisie.'); return }
+    lock.current = true; setEnvoi(true)
+    try {
+      const fingerprint = JSON.stringify(payload)
+      if (attempt.current?.fingerprint !== fingerprint) attempt.current = { fingerprint, operation: crypto.randomUUID() }
+      const operation = attempt.current.operation
+      try { saveInvitationDraft(localStorage, token, { prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, conserver, operation, operationFingerprint: fingerprint }) } catch { /* Réessai en mémoire possible. */ }
+      const res = await invitationRpc<{ succes: boolean; message: string }>('soumettre_invitation_v2', { p_token: token, p_operation: operation, p_donnees: payload as unknown as import('@/types/database').Json })
+      if (!res.succes) throw new Error(res.message || 'Ce lien est indisponible.')
+      if (alive.current) setTermine(true)
+    } catch (failure) { if (alive.current) setErreur(failure instanceof Error ? failure.message : 'Envoi indisponible. Ta saisie est conservée.') }
+    finally { lock.current = false; if (alive.current) setEnvoi(false) }
   }
 
   // ══════════════════════════════════════════
@@ -193,7 +168,7 @@ function InvitationForm({
               fêtes et moments importants des gens qui comptent pour toi.
             </p>
             <Link
-              href="/"
+              href="/inscription"
               className="inline-block rounded-xl bg-action px-6 py-3.5 font-medium text-on-action transition hover:bg-action active:scale-[0.98]"
             >
               Rejoindre l&apos;aventure →
@@ -225,7 +200,7 @@ function InvitationForm({
           <button type="button" className="ml-3 underline" onClick={() => {
             try { eraseInvitationDraft(localStorage, token) } catch { /* Stockage interdit. */ }
             setPrenom(''); setNom(''); setJour(''); setMois(''); setAnnee(''); setRelation(''); setInterets([]); setNoteLibre(''); setEmail(''); setIndicatif('+33'); setTel(''); setEtape(1);
-            previousData.current = null
+            setConserver(false); attempt.current = null; previousData.current = null
           }}>Effacer mon brouillon</button>
         </div>
 
@@ -261,7 +236,7 @@ function InvitationForm({
         </div>
 
         {/* ── Carte contenant l'étape ── */}
-        <div className="rounded-3xl border border-line bg-ink/[0.03] backdrop-blur-sm p-6 sm:p-8">
+        <fieldset disabled={envoi} className="min-w-0 rounded-3xl border border-line bg-ink/[0.03] backdrop-blur-sm p-6 sm:p-8">
 
           {/* ════════ ÉTAPE 1 : IDENTITÉ ════════ */}
           {etape === 1 && (
@@ -307,37 +282,7 @@ function InvitationForm({
                 />
               </div>
 
-              <div>
-                <label htmlFor="inv-field-2" className="block text-sm text-muted mb-2">
-                  Ton anniversaire 🎂
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <input id="inv-field-2"
-                    aria-label="Jour de naissance" value={jour}
-                    onChange={(e) => setJour(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                    placeholder="Jour"
-                    inputMode="numeric"
-                    className="rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-center text-ink placeholder-muted outline-none focus:border-accent/50 transition"
-                  />
-                  <input
-                    aria-label="Mois de naissance" value={mois}
-                    onChange={(e) => setMois(e.target.value.replace(/\D/g, '').slice(0, 2))}
-                    placeholder="Mois"
-                    inputMode="numeric"
-                    className="rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-center text-ink placeholder-muted outline-none focus:border-accent/50 transition"
-                  />
-                  <input
-                    aria-label="Année de naissance" value={annee}
-                    onChange={(e) => setAnnee(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="Année"
-                    inputMode="numeric"
-                    className="rounded-xl bg-ink/[0.04] border border-line px-3 py-3.5 text-center text-ink placeholder-muted outline-none focus:border-accent/50 transition"
-                  />
-                </div>
-                <p className="text-xs text-muted mt-2">
-                  Date complète facultative. Si tu ignores l’année, laisse les trois champs vides : aucune année fictive ne sera enregistrée.
-                </p>
-              </div>
+              <BirthdayFields value={{ jour, mois, annee }} onChange={value => { setJour(value.jour); setMois(value.mois); setAnnee(value.annee) }} disabled={envoi} />
 
               {/* Navigation */}
               <div className="flex items-center gap-3 pt-4">
@@ -527,99 +472,11 @@ function InvitationForm({
             </div>
           )}
 
-          {/* ════════ MODAL PLEIN ÉCRAN : SÉLECTEUR D'INTÉRÊTS ════════ */}
-          {modalInteretsOuvert && (
-            <Modal open={modalInteretsOuvert} onClose={() => setModalInteretsOuvert(false)} title="Choisir mes intérêts" className="w-screen h-dvh flex flex-col bg-canvas rounded-none p-0">
-              {/* ── Barre du haut ── */}
-              <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-line">
-                <button
-                  type="button"
-                  onClick={() => setModalInteretsOuvert(false)}
-                  className="text-muted hover:text-ink transition text-sm flex items-center gap-1"
-                >
-                  ✕ Fermer
-                </button>
-                <div className="flex items-center gap-2">
-                  {interets.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-action/15 border border-accent/30 text-accent text-xs font-medium">
-                      {interets.length} choisi{interets.length > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Titre + suggestions ── */}
-              <div className="flex-shrink-0 px-5 pt-5 pb-3">
-                <h2 className="text-xl font-semibold text-ink mb-1">
-                  Qu&apos;est-ce qui te fait plaisir ?
-                </h2>
-                <p className="text-sm text-muted">
-                  Touche tout ce qui te ressemble.
-                </p>
-                {interets.length === 0 && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const populaires = ['Cinéma', 'Musique', 'Voyage', 'Cuisine', 'Lecture', 'Nature', 'Photographie', 'Jeux vidéo']
-                      const aCocher = populaires.filter(p =>
-                        GROUPES_INTERETS.some(g => g.items.includes(p))
-                      )
-                      setInterets(aCocher)
-                    }}
-                    className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-action/10 border border-accent/25 px-4 py-2 text-sm text-accent hover:bg-action/20 transition"
-                  >
-                    ⚡ Suggestions populaires
-                  </button>
-                )}
-              </div>
-
-              {/* ── Zone scrollable (tout l'espace restant) ── */}
-              <div className="flex-1 overflow-y-auto px-5 py-3 -webkit-overflow-scrolling-touch">
-                <div className="space-y-6 pb-6">
-                  {GROUPES_INTERETS.map((groupe) => (
-                    <div key={groupe.titre}>
-                      <p className="text-xs text-muted mb-2.5 uppercase tracking-wider">
-                        {groupe.emoji} {groupe.titre}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {groupe.items.map((item) => {
-                          const actif = interets.includes(item)
-                          return (
-                            <button
-                              key={item}
-                              type="button"
-                              onClick={() => toggleInteret(item)}
-                              className={`rounded-full border px-4 py-2.5 text-sm transition-all active:scale-95 min-h-[44px] ${
-                                actif
-                                  ? 'border-accent bg-action text-on-action font-medium'
-                                  : 'border-line bg-ink/[0.03] text-muted hover:border-line hover:text-ink hover:bg-ink/[0.06]'
-                              }`}
-                            >
-                              {actif && <span className="mr-1">✓</span>}
-                              {item}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* ── Bouton valider en bas (fixe) ── */}
-              <div className="flex-shrink-0 px-5 py-4 border-t border-line bg-canvas">
-                <button
-                  type="button"
-                  onClick={() => setModalInteretsOuvert(false)}
-                  className="w-full rounded-xl bg-action px-5 py-4 font-medium text-on-action transition hover:bg-action active:scale-[0.98] text-base"
-                >
-                  {interets.length > 0
-                    ? `Valider mes ${interets.length} choix ✨`
-                    : 'Valider (aucun choix)'}
-                </button>
-              </div>
-            </Modal>
-          )}
+          {modalInteretsOuvert && <Modal open onClose={() => setModalInteretsOuvert(false)} title="Choisir mes intérêts" className="w-full max-w-2xl bg-canvas p-5">
+            <div className="max-h-[65dvh] space-y-5 overflow-y-auto"><h2 className="text-xl font-semibold">Qu’est-ce qui te fait plaisir ?</h2>
+              <InterestPicker value={interets} onChange={setInterets} disabled={envoi} />
+            </div><button type="button" className="mt-5 min-h-11 w-full rounded-xl bg-action px-4 py-3 text-on-action" onClick={() => setModalInteretsOuvert(false)}>Valider mes choix ✨</button>
+          </Modal>}
 
           {/* ════════ ÉTAPE 4 : CONTACT ════════ */}
           {etape === 4 && (
@@ -632,7 +489,7 @@ function InvitationForm({
                   Où te souhaiter tout ça ?
                 </h2>
                 <p className="text-sm text-muted mt-1.5">
-                  Uniquement pour que {prenomHote} puisse te joindre. Rien d&apos;autre.
+                  Pour que {prenomHote} puisse te joindre. Tu peux aussi choisir de retrouver ta saisie dans ton futur compte.
                 </p>
               </div>
 
@@ -651,7 +508,7 @@ function InvitationForm({
               </div>
 
                             <div>
-                <label htmlFor="inv-field-5" className="block text-sm text-muted mb-2">
+                <label htmlFor="inv-telephone" className="block text-sm text-muted mb-2">
                   Téléphone <span className="text-muted">(optionnel)</span>
                 </label>
                 <div className="flex gap-2.5">
@@ -666,7 +523,7 @@ function InvitationForm({
                       </option>
                     ))}
                   </select>
-                  <input
+                  <input id="inv-telephone"
                     type="tel"
                     value={tel}
                     onChange={(e) => setTel(e.target.value.replace(/[^0-9\s]/g, ''))}
@@ -681,10 +538,18 @@ function InvitationForm({
               <div className="rounded-2xl border border-line bg-ink/[0.02] p-4">
                 <p className="text-xs text-muted leading-relaxed">
                   🔒 Ces informations sont visibles <strong className="text-muted">uniquement
-                  par {prenomHote}</strong>. Jamais revendues, jamais partagées.
+                  par {prenomHote}</strong>. Elles ne sont jamais revendues.
+                  Si tu le choisis ci-dessous, une copie te permettra de les reprendre dans ton futur compte.
                   Tu peux lui demander de les supprimer à tout moment.
                 </p>
               </div>
+
+              <label className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-action/5 p-4 text-sm">
+                <input type="checkbox" checked={conserver} onChange={event => setConserver(event.target.checked)} className="mt-1" />
+                <span>Retrouver ces informations si je rejoins Ephemer dans les 30 prochains jours.
+                  <span className="mt-1 block text-muted">Un compte avec le même e-mail vérifié sera nécessaire. Tu pourras relire et modifier les informations avant de les enregistrer.</span>
+                </span>
+              </label>
 
               {erreur && (
                 <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3">
@@ -708,12 +573,12 @@ function InvitationForm({
                   disabled={envoi}
                   className="flex-1 rounded-xl bg-action px-5 py-3.5 font-medium text-on-action transition hover:bg-action disabled:opacity-50"
                 >
-                  {envoi ? 'Un instant…' : 'C\'est envoyé ✨'}
+                  {envoi ? 'Un instant…' : 'Envoyer mes informations ✨'}
                 </button>
               </div>
             </div>
           )}
-        </div>
+        </fieldset>
 
         {/* ── Pied de page ── */}
         <div className="mt-8 space-y-4 text-center">
@@ -722,7 +587,7 @@ function InvitationForm({
               Toi aussi, tu as des gens qui comptent&nbsp;?
             </p>
             <Link
-              href="/"
+              href="/inscription"
               className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent transition font-medium"
             >
               Crée ton compte Ephemer et ne les oublie plus jamais

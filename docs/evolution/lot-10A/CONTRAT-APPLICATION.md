@@ -53,7 +53,7 @@ Au dashboard et après changement de carnet : reconnaissance paginée, une séqu
 
 ## Lien partagé et notifications
 
-Page d’entrée générique `/etoile#<secret>`, distincte d’`/invitation/[token]`. Aucun nom du créateur dans HTML, metadata ou URL serveur. Retirer le fragment après lecture en mémoire ; ne pas le conserver au fil d’une redirection OAuth. Après reconnexion demander à rouvrir le lien. Le POST ne part qu’après clic **Demander à devenir une étoile**, jamais à l’affichage.
+Page d’entrée générique `/etoile#<secret>`, distincte d’`/invitation/[token]`. Aucun nom du créateur dans HTML, metadata ou URL serveur. Mise à jour autorisée Invitations V2 du 10/10 : retirer le fragment puis conserver uniquement ce contexte dans sessionStorage de l’onglet, trente minutes maximum, afin de reprendre après connexion/OAuth/inscription/premier profil. Aucun secret dans les paramètres de retour. Premier compte lié sans renouvellement du délai ; effacer après succès, expiration, déconnexion explicite ou changement de compte. Stockage interdit/autre appareil : demander de rouvrir le lien. Les autres listes et données sociales restent sans persistance. Le POST ne part qu’après clic **Demander à devenir une étoile**, jamais à l’affichage. Voir [INVITATIONS.md](../../INVITATIONS.md).
 
 Pas d’analytique ni de ressource tierce sur cette entrée ; no-store/no-referrer/noindex et exclusion du cache PWA. Secret canonique de 43 caractères. Création : copie/menu natif sur clic distinct avec expiration et explication de remise unique. Annulation du menu ne vaut pas partage. Un secret perdu se remplace par révocation puis nouvelle création explicite ; aucune récupération depuis le journal d’opérations.
 
@@ -61,4 +61,4 @@ Réunir notifications personnelles et sociales dans la cloche sans confondre leu
 
 ## Suite
 
-10B crée `UniversPartage`, valeurs/permissions et pseudonyme, avec aperçu de la portée « toutes mes étoiles actuelles et futures ». Les anciennes notes et textes d’invitation ne sont pas copiés. 10C permet l’IA sur chaque champ partagé seulement avec les deux accords, relus avant l’appel fournisseur. Pas de coordonnées ni date de naissance exacte. Ces contrats feront chacun l’objet d’un dossier SQL humain séparé ; ils ne sont pas simulés dans les types Supabase actuels.
+10B crée `UniversPartage`, valeurs/permissions et pseudonyme, avec aperçu de la portée « toutes mes étoiles actuelles et futures ». Les notes privées et anciens textes historiques ne sont pas copiés. Invitations V2 permet une reprise consentie de la réponse originale structurée, trente jours, avec le même e-mail Auth vérifié et relecture ; elle complète les champs vides du premier profil et conserve les accords existants. 10C permet l’IA sur chaque champ partagé seulement avec les deux accords, relus avant l’appel fournisseur. Pas de coordonnées ni date de naissance exacte. Le SQL V2 reste un dossier manuel distinct, sans faux types générés avant installation.

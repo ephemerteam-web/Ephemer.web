@@ -1,0 +1,120 @@
+import 'server-only'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { supabaseAdmin } from './supabase-admin'
+import { consommerQuotaIA } from './garde-ia'
+import { limitedJSON } from './ai-transport'
+import {
+  SelfieAvatarError, rasterInfo, validateSelfieInput, SELFIE_BODY_MAX_BYTES,
+  SELFIE_OUTPUT_MAX_BYTES, SELFIE_OUTPUT_SIDE, SELFIE_PROMPT_VERSION,
+} from './selfie-avatar-contract'
+
+export const SELFIE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b'
+export const SELFIE_PROMPT = 'Transforme la personne de l’image 0 en avatar illustré. Préserve ses traits reconnaissables, son âge apparent, sa carnation, ses cheveux, ses lunettes et sa pilosité éventuelle. Utilise l’image 1 uniquement comme référence artistique, sans reproduire l’identité de son personnage. Portrait de face, tête droite, regard vers le spectateur, épaules symétriques, expression douce, cadrage identique du haut du buste. Style cartoon d’animation 2D, contours nets, formes simplifiées et ombres douces, sans texture photographique. Fond bleu nuit avec une grande lune croissante ivoire et dorée derrière la tête et quelques étoiles dorées. Vêtement uni crème, composition centrée, lisible en petit avatar et compatible avec un recadrage circulaire. Une seule personne, sans texte ni logo.'
+
+type QuotaResult = Awaited<ReturnType<typeof consommerQuotaIA>>
+type Dependencies = {
+  verifyUser: (token: string) => Promise<string | null>
+  consumeQuota: (userId: string) => Promise<QuotaResult>
+  readStyle: () => Promise<Uint8Array>
+  fetch: typeof fetch
+  env: NodeJS.ProcessEnv
+  timeout: () => AbortSignal
+}
+const defaults: Dependencies = {
+  verifyUser: async token => {
+    const { data, error } = await supabaseAdmin.auth.getUser(token)
+    return error ? null : data.user?.id ?? null
+  },
+  consumeQuota: consommerQuotaIA,
+  readStyle: () => readFile(join(process.cwd(), 'assets/avatars/selfie-style-v1.jpg')),
+  fetch: (...args) => fetch(...args),
+  env: process.env,
+  timeout: () => AbortSignal.timeout(60000),
+}
+const privateHeaders = { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' }
+
+async function readPhoto(request: Request) {
+  if (!request.headers.get('content-type')?.startsWith('multipart/form-data;')) throw new SelfieAvatarError('Envoie une photo depuis le formulaire.')
+  if (Number(request.headers.get('content-length')) > SELFIE_BODY_MAX_BYTES) throw new SelfieAvatarError('Photo trop volumineuse.', 413)
+  if (!request.body) throw new SelfieAvatarError('Choisis une photo.')
+  const reader = request.body.getReader(), chunks: Uint8Array[] = []
+  let size = 0
+  try {
+    while (true) {
+      const part = await reader.read()
+      if (part.done) break
+      size += part.value.byteLength
+      if (size > SELFIE_BODY_MAX_BYTES) { await reader.cancel(); throw new SelfieAvatarError('Photo trop volumineuse.', 413) }
+      chunks.push(part.value)
+    }
+  } finally { reader.releaseLock() }
+  let form: FormData
+  try { form = await new Response(Buffer.concat(chunks), { headers: { 'Content-Type': request.headers.get('content-type')! } }).formData() }
+  catch { throw new SelfieAvatarError('Le formulaire est invalide.') }
+  if ([...form.keys()].some(key => !['photo', 'consent'].includes(key)) || form.getAll('photo').length !== 1 || form.getAll('consent').length !== 1) {
+    throw new SelfieAvatarError('Le formulaire est invalide.')
+  }
+  if (form.get('consent') !== 'true') throw new SelfieAvatarError('Autorise l’envoi de ta photo à Cloudflare pour créer ton avatar.', 400, 'CONSENTEMENT_REQUIS')
+  const photo = form.get('photo')
+  if (!(photo instanceof Blob) || photo.type !== 'image/jpeg') throw new SelfieAvatarError('Choisis une photo préparée en JPEG.')
+  const bytes = new Uint8Array(await photo.arrayBuffer())
+  validateSelfieInput(bytes)
+  return bytes
+}
+
+/** Point d’entrée testable avec fournisseur, identité et quota simulés. */
+export async function generateSelfieAvatar(request: Request, overrides: Partial<Dependencies> = {}) {
+  const deps = { ...defaults, ...overrides }
+  try {
+    const token = request.headers.get('authorization')?.match(/^Bearer ([^\s]+)$/)?.[1]
+    if (!token) throw new SelfieAvatarError('Tu dois être connecté.', 401, 'SESSION_EXPIREE')
+    const userId = await deps.verifyUser(token)
+    if (!userId) throw new SelfieAvatarError('Session expirée. Reconnecte-toi.', 401, 'SESSION_EXPIREE')
+    const photo = await readPhoto(request)
+    const { CLOUDFLARE_ACCOUNT_ID: account, CLOUDFLARE_API_TOKEN: apiToken, EPHEMER_AVATAR_AI_ENABLED: enabled } = deps.env
+    if (enabled !== 'true' || !account || !/^[a-f0-9]{32}$/i.test(account) || !apiToken) {
+      throw new SelfieAvatarError('La création d’avatars attend sa configuration Cloudflare.', 503, 'SERVICE_INDISPONIBLE')
+    }
+    const style = await deps.readStyle()
+    validateSelfieInput(style)
+    const signal = AbortSignal.any([request.signal, deps.timeout()])
+    signal.throwIfAborted()
+    const quota = await deps.consumeQuota(userId)
+    if (!quota.ok) throw new SelfieAvatarError(quota.message, quota.status, quota.status === 429 ? 'QUOTA_UTILISATEUR' : 'SERVICE_INDISPONIBLE')
+    signal.throwIfAborted()
+    const form = new FormData()
+    form.append('input_image_0', new Blob([Uint8Array.from(photo)], { type: 'image/jpeg' }), 'selfie.jpg')
+    form.append('input_image_1', new Blob([Uint8Array.from(style)], { type: 'image/jpeg' }), 'style.jpg')
+    form.append('prompt', SELFIE_PROMPT)
+    form.append('width', String(SELFIE_OUTPUT_SIDE))
+    form.append('height', String(SELFIE_OUTPUT_SIDE))
+    const response = await deps.fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${SELFIE_MODEL}`, {
+      method: 'POST', headers: { Authorization: `Bearer ${apiToken}` }, body: form, signal, cache: 'no-store', redirect: 'error',
+    })
+    if (response.status === 429) {
+      await response.body?.cancel()
+      throw new SelfieAvatarError('La limite Cloudflare est atteinte. Réessaie plus tard.', 429, 'QUOTA_CLOUDFLARE')
+    }
+    if (!response.ok) { await response.body?.cancel(); throw new SelfieAvatarError('Cloudflare est temporairement indisponible. Réessaie plus tard.', 502, 'FOURNISSEUR_INDISPONIBLE') }
+    const data = await limitedJSON(response, 12 * 1024 * 1024, 502) as { success?: boolean; result?: { image?: unknown } } | null
+    signal.throwIfAborted()
+    const encoded = data?.result?.image
+    if (data?.success !== true || typeof encoded !== 'string' || !encoded.length || encoded.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) {
+      throw new SelfieAvatarError('Cloudflare n’a pas retourné d’image utilisable.', 502, 'REPONSE_INVALIDE')
+    }
+    const bytes = Buffer.from(encoded, 'base64')
+    if (bytes.length > SELFIE_OUTPUT_MAX_BYTES) throw new SelfieAvatarError('L’image générée est trop volumineuse.', 502, 'REPONSE_INVALIDE')
+    let info
+    try { info = rasterInfo(bytes) } catch { throw new SelfieAvatarError('L’image générée est invalide.', 502, 'REPONSE_INVALIDE') }
+    if (info.width !== SELFIE_OUTPUT_SIDE || info.height !== SELFIE_OUTPUT_SIDE) throw new SelfieAvatarError('Le format de l’avatar reçu est incorrect.', 502, 'REPONSE_INVALIDE')
+    return new Response(bytes, { headers: { ...privateHeaders, 'Content-Type': info.type, 'X-Ephemer-Avatar-Prompt': SELFIE_PROMPT_VERSION } })
+  } catch (error) {
+    const known = error instanceof SelfieAvatarError
+    const expired = error instanceof Error && ['TimeoutError', 'AbortError'].includes(error.name)
+    return Response.json({ error: {
+      code: known ? error.code : expired ? 'DELAI_DEPASSE' : 'SERVICE_INDISPONIBLE',
+      message: known ? error.message : expired ? 'La génération a été interrompue ou a pris trop de temps. Tu peux réessayer.' : 'La création de l’avatar est indisponible. Réessaie plus tard.',
+    } }, { status: known ? error.status : expired ? 504 : 502, headers: privateHeaders })
+  }
+}

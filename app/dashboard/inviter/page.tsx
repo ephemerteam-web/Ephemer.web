@@ -1,4 +1,5 @@
 'use client'
+import InvitationAnswers from '@/components/InvitationAnswers'
 import ClosePeopleNav from '@/components/ClosePeopleNav'
 import { useDashboardUser } from '@/components/DashboardUserContext'
 import { useRequestLifetime } from '@/lib/hooks/useRequestLifetime'
@@ -167,10 +168,12 @@ export default function InviterPage() {
             Invite tes proches
           </h1>
           <p className="text-info text-sm max-w-md mx-auto leading-relaxed">
-            Fini la saisie manuelle. Envoie un lien, ils remplissent leur fiche en
-            30&nbsp;secondes, et leurs dates arrivent directement dans ton calendrier.
+            Envoie un lien : tes proches remplissent leur fiche à leur rythme.
+            Les informations reconnues complètent ton carnet ; tu gardes la main sur les différences.
           </p>
         </div>
+
+        <InvitationAnswers />
 
         {/* ─────── CRÉER UN LIEN ─────── */}
         <div className="bg-ink/5 backdrop-blur-lg border border-line rounded-xl p-5 mb-8">

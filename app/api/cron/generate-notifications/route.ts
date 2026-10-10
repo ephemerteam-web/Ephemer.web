@@ -25,6 +25,12 @@ export async function GET(request: Request) {
   }
   try {
     const today = parisDay();
+    // Purge quotidienne des copies de reprise ; aucune nouvelle tâche planifiée.
+    let invitationCleanup = 'erreur';
+    try {
+      const maintenance = await supabaseAdmin.rpc('purger_reprises_invitation' as never);
+      invitationCleanup = !maintenance.error ? 'ok' : maintenance.error.code === 'PGRST202' || maintenance.error.code === '42883' ? 'sql_non_installe' : 'erreur';
+    } catch { /* Une panne de maintenance ne bloque pas les rappels. */ }
     let totalNotifs = 0;
     let totalEmails = 0;
     const errors: { user_id: string; phase: string }[] = [];
@@ -42,8 +48,8 @@ export async function GET(request: Request) {
       }
     }
     }
-    return NextResponse.json({ success: errors.length === 0, date: today, notifs: totalNotifs, emails: totalEmails, errors },
-      { status: errors.length ? 500 : 200 });
+    return NextResponse.json({ success: errors.length === 0 && invitationCleanup !== 'erreur', date: today, notifs: totalNotifs, emails: totalEmails, errors, invitationCleanup },
+      { status: errors.length || invitationCleanup === 'erreur' ? 500 : 200 });
   } catch (error) {
     console.error('Échec général du cron notifications', error);
     return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });

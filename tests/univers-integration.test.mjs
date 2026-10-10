@@ -3,6 +3,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { harness } from './ui-harness.mjs'
 import { loadPure, p2Helpers, pageDatabase } from './p2-helpers.mjs'
+import { profileFixture } from './profile-fixture.mjs'
 const c = harness('lib/univers-contract.ts', { globals: { TextEncoder } }).component
 const d = harness('lib/cadeaux-social-contract.ts', { globals: { TextEncoder } }).component
 const A='10000000-0000-4000-8000-000000000001', B='10000000-0000-4000-8000-000000000002'
@@ -42,10 +43,12 @@ test('univers navigateur : compte changé, hors ligne et annulation refusent les
  await assert.rejects(browser.socialRequest(A,'/api/univers'),/session a changé/);after=A;online=false;await assert.rejects(browser.socialRequest(A,'/api/univers'),/Hors ligne/);online=true
  const abort=new AbortController();abort.abort();await assert.rejects(browser.socialRequest(A,'/api/univers',undefined,abort.signal),/abandonnée/)
 })
-test('export 10 : univers propriétaire complet, aucun tiers/journal et erreur refuse export partiel',async()=>{
+test('export 11 : profil canonique et univers propriétaire complets, aucun tiers/journal/empreinte ni export partiel',async()=>{
  const db=pageDatabase({});db.auth={getUser:async()=>({data:{user:{id:A,email:'a@example.invalid'}},error:null})};const owner=own();owner.revision=4;owner.valeurs.eviter='Valeur privée';owner.valeurs.anniversaire={jour:29,mois:2,annee:2000}
- const data=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async id=>{assert.equal(id,A);return copy(owner)}});const result=await data.exportOwnData();assert.equal(result.version,10);assert.deepEqual(result.mon_univers,owner);assert.equal(result.univers_etoiles,undefined);assert.equal(result.operations_univers,undefined)
+ const profile=profileFixture(),{empreinte,...exported}=profile;void empreinte
+ const data=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async id=>{assert.equal(id,A);return copy(owner)},readProfile:async id=>{assert.equal(id,A);return copy(profile)}});const result=await data.exportOwnData();assert.equal(result.version,11);assert.deepEqual(result.mon_univers,owner);assert.deepEqual(copy(result.mon_profil),exported);assert.equal(result.univers_etoiles,undefined);assert.equal(result.operations_univers,undefined)
  await assert.rejects(loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async()=>{throw new Error('Univers indisponible')}}).exportOwnData(),/Univers indisponible/)
+ await assert.rejects(loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,readMonUnivers:async()=>owner,readProfile:async()=>{throw new Error('Profil indisponible')}}).exportOwnData(),/Profil indisponible/)
 })
 function panelSetup() {
  const window=new EventTarget(),document=new EventTarget(),navigator={onLine:true};document.visibilityState='visible';let tick,calls=0,deliver=null,fail=false

@@ -1,5 +1,7 @@
 # Contrat applicatif 10B — après confirmation du catalogue
 
+**Évolution du 10/10/2026 :** ce contrat décrit le lot historique. [Mon profil unifié](../../PROFIL-UNIFIE.md) remplace la page et les écritures personnelles après installation manuelle de son SQL. `/dashboard/univers` redirige ; les anciennes commandes demandent de recharger. Les consultations restent compatibles avec l’ajout facultatif `champs.nom`, sous dix critères et partage général. Export propriétaire version 11. Les anciens tests de catalogue portent sur les fonctions avant cette évolution.
+
 **État actuel : intégré localement le 9 octobre 2026 après installation humaine et contrôle distant `lot10b_catalogue_conforme`.** Types régénérés depuis le schéma réel ; documentation Next 16 locale lue avant les routes. Les recettes JWT signés/concurrence/cascades restent reportées explicitement. Changements 10A conservés, aucun commit ou déploiement.
 
 ## Interfaces et données

@@ -24,7 +24,7 @@ export default function ProfileAvatar({ ownerId }: { ownerId: string }) {
 
 // Un changement de compte remonte cet éditeur et abandonne ses lectures/choix privés.
 export function ProfileAvatarEditor({ ownerId }: { ownerId: string }) {
-  const { updateAvatar } = useDashboardAvatar()
+  const { updateAvatar, portrait } = useDashboardAvatar()
   const [row, setRow] = useState<AvatarRow | null>(null), [loaded, setLoaded] = useState(false)
   const [open, setOpen] = useState(false), [choice, setChoice] = useState(() => avatarConfigV3(DEFAULT_AVATAR_V3))
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [needsReview, setNeedsReview] = useState(false)
@@ -80,6 +80,7 @@ export function ProfileAvatarEditor({ ownerId }: { ownerId: string }) {
   }
   return <section className="my-6 space-y-3 rounded-2xl border border-line bg-surface p-4">
     <h2 className="text-lg font-semibold">Avatar</h2>
+    {portrait && <p className="text-sm text-muted">Ton portrait IA est actuellement utilisé dans ton profil. Valider un avatar personnalisable le remplacera.</p>}
     {!loaded ? <p role="status">{error || 'Chargement de ton avatar…'}</p> : <>
       <AvatarRenderer config={current.config} className="h-24 w-24" />
       <p className="text-sm text-muted">Tous les éléments sont gratuits. Ajouter cet avatar à une carte reste un choix séparé.</p>
