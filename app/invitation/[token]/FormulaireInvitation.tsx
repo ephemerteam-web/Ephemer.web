@@ -54,12 +54,19 @@ function InvitationForm({
   const [etape, setEtape] = useState(1)
   const [envoi, setEnvoi] = useState(false)
   const [erreur, setErreur] = useState<string | null>(null)
-  const [termine, setTermine] = useState(false)
-  const [conserver, setConserver] = useState(draft.conserver === true)
+  const [confirmation, setConfirmation] = useState<{ prenom: string; conserver: boolean } | null>(null)
+  const termine = confirmation !== null
+  const [cloture, setCloture] = useState(false)
+  // Un ancien false pouvait être la valeur par défaut, sans choix explicite.
+  const [conserver, setConserver] = useState<boolean | null>(() => draft.conserver === true ? true :
+    draft.conserver === false && draft.choixConservationConfirme === true ? false : null)
+  const [erreurChoix, setErreurChoix] = useState(false)
+  const choixRef = useRef<HTMLInputElement>(null), emailRef = useRef<HTMLInputElement>(null), confirmationRef = useRef<HTMLHeadingElement>(null)
   const attempt = useRef<{ fingerprint: string; operation: string } | null>(
     typeof draft.operation === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(draft.operation) && typeof draft.operationFingerprint === 'string' ? { operation: draft.operation, fingerprint: draft.operationFingerprint } : null)
   const lock = useRef(false), alive = useRef(true)
   useEffect(() => { alive.current = true; return () => { alive.current = false } }, [])
+  useEffect(() => { if (termine) confirmationRef.current?.focus() }, [termine, cloture])
 
   // ── Champs du formulaire
   const [prenom, setPrenom] = useState(() => texte('prenom'))
@@ -82,7 +89,7 @@ function InvitationForm({
   useEffect(() => {
     const data = {
       prenom, nom, jour, mois, annee, relation,
-      interets, noteLibre, email, indicatif, tel, conserver,
+      interets, noteLibre, email, indicatif, tel, conserver: conserver === true, choixConservationConfirme: conserver !== null,
       ...(attempt.current ? { operation: attempt.current.operation, operationFingerprint: attempt.current.fingerprint } : {})
     }
     if (termine) return
@@ -106,13 +113,24 @@ function InvitationForm({
   const etapeValide = () => {
     if (etape === 1) return prenom.trim().length >= 1
     if (etape === 2) return relation !== ''
-    return true // étapes 3 et 4 entièrement optionnelles
+    return true // Les goûts et les coordonnées restent facultatifs.
   }
 
   // Même UUID et même contenu après réponse perdue, y compris après rechargement.
   const envoyer = async () => {
     if (lock.current) return
     setErreur(null)
+    if (conserver === null) {
+      setErreurChoix(true)
+      setErreur('Choisis si tu souhaites conserver une copie pour ton futur compte ou envoyer uniquement à ton proche.')
+      choixRef.current?.focus()
+      return
+    }
+    if (conserver && !email.trim()) {
+      setErreur('Renseigne ton e-mail pour retrouver tes informations dans ton futur compte.')
+      emailRef.current?.focus()
+      return
+    }
     let payload: InvitationAnswer
     try {
       payload = invitationAnswer({ prenom, nom, anniversaire: partialBirthDate(jour, mois, annee),
@@ -123,10 +141,10 @@ function InvitationForm({
       const fingerprint = JSON.stringify(payload)
       if (attempt.current?.fingerprint !== fingerprint) attempt.current = { fingerprint, operation: crypto.randomUUID() }
       const operation = attempt.current.operation
-      try { saveInvitationDraft(localStorage, token, { prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, conserver, operation, operationFingerprint: fingerprint }) } catch { /* Réessai en mémoire possible. */ }
+      try { saveInvitationDraft(localStorage, token, { prenom, nom, jour, mois, annee, relation, interets, noteLibre, email, indicatif, tel, conserver, choixConservationConfirme: true, operation, operationFingerprint: fingerprint }) } catch { /* Réessai en mémoire possible. */ }
       const res = await invitationRpc<{ succes: boolean; message: string }>('soumettre_invitation_v2', { p_token: token, p_operation: operation, p_donnees: payload as unknown as import('@/types/database').Json })
       if (!res.succes) throw new Error(res.message || 'Ce lien est indisponible.')
-      if (alive.current) setTermine(true)
+      if (alive.current) setConfirmation({ prenom: payload.prenom, conserver: payload.conserver })
     } catch (failure) { if (alive.current) setErreur(failure instanceof Error ? failure.message : 'Envoi indisponible. Ta saisie est conservée.') }
     finally { lock.current = false; if (alive.current) setEnvoi(false) }
   }
@@ -140,43 +158,50 @@ function InvitationForm({
         <div className="w-full max-w-md text-center">
 
 
-          <div className="text-6xl mb-6 animate-bounce">🎉</div>
+          <div aria-hidden="true" className="text-6xl mb-6 motion-safe:animate-bounce">🎉</div>
 
-          <h1 className="text-2xl sm:text-3xl font-semibold text-ink mb-4">
-            C&apos;est noté, {prenom} !
+          <h1 ref={confirmationRef} tabIndex={-1} className="text-2xl sm:text-3xl font-semibold text-ink mb-4">
+            {cloture ? 'Tout est terminé, ' + confirmation.prenom + ' !' : 'Tes informations ont été envoyées'}
           </h1>
 
           <p className="text-muted leading-relaxed mb-8">
             {prenomHote} a maintenant tout ce qu&apos;il faut pour penser à toi
-            au bon moment. Tu peux fermer cette page.
+            au bon moment.{cloture && ' Tu peux fermer cette page.'}
           </p>
 
           <div className="rounded-2xl border border-accent/20 bg-action/[0.04] p-5 mb-8">
             <p className="text-accent text-sm">
               🔒 Tes informations sont visibles uniquement par {prenomHote}.
+              {confirmation.conserver && ' Une copie privée te permettra aussi de les reprendre dans ton futur compte pendant 30 jours.'}
             </p>
           </div>
 
           {/* ── Invitation à rejoindre Ephemer ── */}
-          <div className="rounded-2xl border border-line bg-ink/[0.03] p-6 mb-8">
+          {!cloture && <div className="rounded-2xl border border-line bg-ink/[0.03] p-5 sm:p-6 mb-8">
+            <div role="progressbar" aria-label="Parcours invitation et compte" aria-valuemin={0} aria-valuemax={100} aria-valuenow={80} aria-valuetext="4 étapes réalisées sur 5 · Créer un compte est facultatif" className="h-2 overflow-hidden rounded-full bg-ink/10">
+              <div className="h-full w-4/5 rounded-full bg-action" />
+            </div>
+            <p className="mt-2 mb-5 text-xs text-muted">4 étapes réalisées sur 5 · Créer un compte est facultatif</p>
             <p className="text-3xl mb-3">✨</p>
             <h3 className="text-ink font-medium text-base sm:text-lg mb-2">
-              Et si tu faisais pareil pour tes proches&nbsp;?
+              {confirmation.conserver ? 'Tu as déjà fait l’essentiel !' : 'Et si tu rejoignais l’aventure ?'}
             </h3>
             <p className="text-sm text-muted leading-relaxed mb-5">
-              Crée ton compte Ephemer et ne plus jamais oublier les anniversaires,
-              fêtes et moments importants des gens qui comptent pour toi.
+              {confirmation.conserver
+                ? 'Rejoins l’aventure avec le même e-mail : tes informations pourront préremplir ton profil pendant 30 jours. Tu n’auras qu’à les relire et les valider.'
+                : 'Rejoins l’aventure pour ne plus oublier les dates importantes de tes proches. Tu as choisi de ne pas conserver de copie : ton profil sera à compléter.'}
             </p>
             <Link
               href="/inscription"
-              className="inline-block rounded-xl bg-action px-6 py-3.5 font-medium text-on-action transition hover:bg-action active:scale-[0.98]"
+              className="block min-h-11 rounded-xl bg-action px-4 py-3.5 font-medium text-on-action transition hover:bg-action focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none motion-safe:active:scale-[0.98]"
             >
-              Rejoindre l&apos;aventure →
+              Rejoindre l&apos;aventure
             </Link>
             <p className="text-xs text-muted mt-3">
-              Gratuit · 30 secondes · Sans engagement
+              Gratuit · Sans engagement
             </p>
-          </div>
+            <button type="button" onClick={() => setCloture(true)} className="mt-4 min-h-11 w-full rounded-xl border border-line px-4 py-3 text-sm text-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">Terminer ici</button>
+          </div>}
 
           <div className="h-px bg-gradient-to-r from-transparent via-ink/10 to-transparent mb-8" />
 
@@ -197,10 +222,10 @@ function InvitationForm({
       <div className="w-full max-w-lg mx-auto">
         <div role="status" className="p-3 text-sm text-muted">
           {storageUnavailable ? 'Stockage indisponible : tes saisies restent utilisables sur cette page.' : 'Brouillon conservé sur cet appareil pendant 7 jours après ta dernière modification.'}
-          <button type="button" className="ml-3 underline" onClick={() => {
+          <button type="button" disabled={envoi} className="ml-3 underline disabled:opacity-50" onClick={() => {
             try { eraseInvitationDraft(localStorage, token) } catch { /* Stockage interdit. */ }
             setPrenom(''); setNom(''); setJour(''); setMois(''); setAnnee(''); setRelation(''); setInterets([]); setNoteLibre(''); setEmail(''); setIndicatif('+33'); setTel(''); setEtape(1);
-            setConserver(false); attempt.current = null; previousData.current = null
+            setConserver(null); setErreurChoix(false); setErreur(null); attempt.current = null; previousData.current = null
           }}>Effacer mon brouillon</button>
         </div>
 
@@ -224,7 +249,7 @@ function InvitationForm({
             {Array.from({ length: TOTAL_ETAPES }).map((_, i) => (
               <div
                 key={i}
-                className={`h-1 flex-1 rounded-full transition-all duration-500 ${
+                className={`h-1 flex-1 rounded-full transition-all duration-500 motion-reduce:transition-none ${
                   i < etape ? 'bg-action' : 'bg-ink/10'
                 }`}
               />
@@ -495,14 +520,16 @@ function InvitationForm({
 
               <div>
                 <label htmlFor="inv-field-4" className="block text-sm text-muted mb-2">
-                  Email <span className="text-muted">(optionnel)</span>
+                  E-mail <span className="text-muted">{conserver === true ? '(nécessaire pour retrouver tes informations)' : '(facultatif)'}</span>
                 </label>
-                <input id="inv-field-4"
+                <input ref={emailRef} id="inv-field-4"
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setErreur(null) }}
                   placeholder="camille@exemple.com"
                   maxLength={160}
+                  required={conserver === true}
+                  aria-invalid={erreur?.includes('e-mail') || undefined}
                   className="w-full rounded-xl bg-ink/[0.04] border border-line px-4 py-3.5 text-ink placeholder-muted outline-none focus:border-accent/50 transition"
                 />
               </div>
@@ -544,12 +571,23 @@ function InvitationForm({
                 </p>
               </div>
 
-              <label className="flex items-start gap-3 rounded-2xl border border-accent/20 bg-action/5 p-4 text-sm">
-                <input type="checkbox" checked={conserver} onChange={event => setConserver(event.target.checked)} className="mt-1" />
-                <span>Retrouver ces informations si je rejoins Ephemer dans les 30 prochains jours.
-                  <span className="mt-1 block text-muted">Un compte avec le même e-mail vérifié sera nécessaire. Tu pourras relire et modifier les informations avant de les enregistrer.</span>
-                </span>
-              </label>
+              <fieldset role="radiogroup" aria-labelledby="inv-conservation-title" aria-invalid={erreurChoix || undefined} aria-describedby={erreurChoix ? 'inv-conservation-help inv-conservation-error' : 'inv-conservation-help'} className="min-w-0 space-y-3">
+                <legend id="inv-conservation-title" className="mb-2 text-base font-semibold text-ink">Et pour ton futur compte ?</legend>
+                <p id="inv-conservation-help" className="text-sm text-muted">Choisis une option avant d’envoyer. Créer un compte reste facultatif.</p>
+                <label className={'flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border p-4 text-sm ' + (conserver === true ? 'border-accent bg-action/10' : 'border-line bg-action/5')}>
+                  <input ref={choixRef} type="radio" name="inv-conservation" value="oui" checked={conserver === true} aria-describedby={erreurChoix ? 'inv-conservation-error' : undefined} onChange={() => { setConserver(true); setErreurChoix(false); setErreur(null) }} className="mt-1 h-5 w-5 shrink-0 accent-accent" />
+                  <span><strong className="block font-medium text-ink">Conserver mes informations pour mon futur compte</strong>
+                    <span className="mt-2 block text-muted">Une copie sera conservée pendant 30 jours après l’envoi. Avec le même e-mail vérifié, tu pourras retrouver tes informations, les relire et les modifier avant de les enregistrer.</span>
+                  </span>
+                </label>
+                <label className={'flex min-h-11 cursor-pointer items-start gap-3 rounded-2xl border p-4 text-sm ' + (conserver === false ? 'border-accent bg-action/10' : 'border-line bg-ink/[0.02]')}>
+                  <input type="radio" name="inv-conservation" value="non" checked={conserver === false} aria-describedby={erreurChoix ? 'inv-conservation-error' : undefined} onChange={() => { setConserver(false); setErreurChoix(false); setErreur(null) }} className="mt-1 h-5 w-5 shrink-0 accent-accent" />
+                  <span><strong className="block font-medium text-ink">Envoyer uniquement à mon proche</strong>
+                    <span className="mt-2 block text-muted">Aucune copie ne sera conservée pour préremplir ton futur profil.</span>
+                  </span>
+                </label>
+                {erreurChoix && <p id="inv-conservation-error" className="text-sm text-danger">Choisis l’une des deux options pour continuer.</p>}
+              </fieldset>
 
               {erreur && (
                 <div role="alert" className="rounded-xl border border-red-500/25 bg-red-500/10 px-4 py-3">
@@ -558,7 +596,7 @@ function InvitationForm({
               )}
 
               {/* Navigation */}
-              <div className="flex items-center gap-3 pt-4">
+              <div className="flex flex-col-reverse gap-3 pt-4 sm:flex-row sm:items-center">
                 <button
                   type="button"
                   onClick={() => setEtape(etape - 1)}
@@ -586,13 +624,7 @@ function InvitationForm({
             <p className="text-sm text-muted leading-relaxed mb-2">
               Toi aussi, tu as des gens qui comptent&nbsp;?
             </p>
-            <Link
-              href="/inscription"
-              className="inline-flex items-center gap-1.5 text-sm text-accent hover:text-accent transition font-medium"
-            >
-              Crée ton compte Ephemer et ne les oublie plus jamais
-              <span className="text-base">→</span>
-            </Link>
+            <p className="text-sm text-accent font-medium">Termine et envoie ce formulaire : tu pourras ensuite rejoindre l’aventure et créer ton compte.</p>
           </div>
 
           <div className="flex items-center justify-center gap-4 text-xs">

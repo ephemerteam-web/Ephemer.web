@@ -20,9 +20,9 @@ export const data={prenom:'Camille',nom:'Martin',anniversaire:{day:29,month:2,ye
 export const recovery={id:'10000000-0000-4000-8000-000000000003',createdAt:'2026-10-10T10:00:00Z',expiresAt:'2026-11-09T10:00:00Z',donnees:data};
 export const row={id:recovery.id,revision:3,donnees:data,candidats:[{...data,id:'9007199254740993',empreinte:'fixture-contact',note:'Note privée de mon carnet',tel:'699999999'}]};
 export const readFirstProfile=async()=>({complete:false,prenom:'',nom:'',anniversaire:null,email:user.email,indicatif:'+33',tel:'',passions:'',presentation:'',revisionUnivers:0,empreinte:'fixture-profile'});
-export const readRecoveries=async()=>[recovery];export const readPendingAnswers=async()=>[row];
+export const readRecoveries=async()=>JSON.parse(sessionStorage.getItem('fixture-recoveries')??'null')??[recovery];export const readPendingAnswers=async()=>[row];
 export const continueAfterAuth=async()=>'/etoile';
-export const invitationRpc=async(name,args)=>{window.fixtureCalls.push({name,args});if(window.fixtureFailure)throw Error('Panne simulée. Ta saisie est conservée.');return {ok:true,succes:true}};
+export const invitationRpc=async(name,args)=>{window.fixtureCalls.push({name,args});if(window.fixtureFailure)throw Error('Panne simulée. Ta saisie est conservée.');if(name==='soumettre_invitation_v2')sessionStorage.setItem('fixture-recoveries',JSON.stringify(args.p_donnees.conserver?[{...recovery,donnees:args.p_donnees}]:[]));return {ok:true,succes:true}};
 export const sendEtoileCommand=async(owner,command)=>{window.fixtureCalls.push({name:'etoile',command});return {ok:true,message:'Demande déjà envoyée ou prise en compte.'}};
 export class EtoilesRequestError extends Error{};
 export function notifyContactsChanged(){};export function notifyNotificationsChanged(){};

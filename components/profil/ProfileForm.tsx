@@ -9,6 +9,8 @@ import AccountSettings from './AccountSettings'
 import ShareImageButton from '../ShareImageButton'
 import { ownUniversImageFields } from '@/lib/image-projections'
 import { avatarRenderConfig } from '@/lib/avatar-render-config'
+import { profilToutAutorise } from '@/lib/profile-contract'
+import { proposerPermissionsProfil, permissionsProfilTraitees } from '@/lib/profile-permission-proposal'
 
 export type ProfileService = {
   lire: (ownerId: string, signal: AbortSignal) => Promise<unknown>
@@ -21,6 +23,8 @@ export default function ProfileForm(props: { ownerId: string; api: ProfileServic
 export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { ownerId: string; api: ProfileService; avatarEnregistre?: unknown }) {
   const [saved, setSaved] = useState<MonUnivers | null>(null), [draft, setDraft] = useState<MonUnivers | null>(null)
   const [busy, setBusy] = useState(false), [offline, setOffline] = useState(false), [error, setError] = useState(''), [notice, setNotice] = useState(''), [conflict, setConflict] = useState(false)
+  const [proposal, setProposal] = useState(false)
+  const firstRead = useRef(true)
   const { confirm, registerPrivateDraft } = useContactDraft(), id = useId()
   const alive = useRef(false), dirtyRef = useRef(false), lock = useRef(false), epoch = useRef(0)
   const readAbort = useRef<AbortController | null>(null), writeAbort = useRef<AbortController | null>(null)
@@ -54,7 +58,13 @@ export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { 
         const row = await read()
         if (dirtyRef.current) {
           if (row.empreinte !== savedRef.current?.empreinte) { setConflict(true); setNotice('Ton profil a changé ailleurs. Ta saisie est conservée ; relis avant d’enregistrer.') }
-        } else { setSaved(row); setDraft(row); setConflict(false) }
+        } else {
+          const propose = firstRead.current && proposerPermissionsProfil(ownerId)
+          firstRead.current = false
+          const next = propose ? profilToutAutorise(row) : row
+          savedRef.current = row; dirtyRef.current = JSON.stringify(next) !== JSON.stringify(row)
+          setSaved(row); setDraft(next); setProposal(propose); setConflict(false)
+        }
         setError('')
       } catch (failure) { if (alive.current && (failure as Error)?.name !== 'AbortError') setError(failure instanceof Error ? failure.message : 'Lecture impossible.') }
     }
@@ -66,13 +76,13 @@ export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { 
     document.addEventListener('visibilitychange', update)
     return () => { alive.current = false; invalidate(); window.clearInterval(timer)
       window.removeEventListener('focus', update); window.removeEventListener('online', update); window.removeEventListener('offline', stop); document.removeEventListener('visibilitychange', update) }
-  }, [read, invalidate])
+  }, [read, invalidate, ownerId])
   useEffect(() => { registerPrivateDraft(id, dirty); return () => registerPrivateDraft(id, false) }, [id, dirty, registerPrivateDraft])
   async function reload() {
     if (lock.current || isOffline()) return
     if (dirty && !await confirm('Relire remplacera ta saisie par les informations enregistrées. Continuer ?')) return
     lock.current = true; setBusy(true)
-    try { const row = await read(); setSaved(row); setDraft(row); setError(''); setNotice('Informations enregistrées relues.'); setConflict(false); attempt.current = null }
+    try { const row = await read(); setSaved(row); setDraft(row); savedRef.current = row; dirtyRef.current = false; setProposal(false); permissionsProfilTraitees(ownerId); setError(''); setNotice('Informations enregistrées relues.'); setConflict(false); attempt.current = null }
     catch (failure) { if (alive.current) setError(failure instanceof Error ? failure.message : 'Lecture impossible.') }
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
@@ -99,6 +109,8 @@ export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { 
       if (row.revision === expected && same && (!result || result.revision === row.revision)) {
         setSaved(row)
         setDraft(row)
+        savedRef.current = row; dirtyRef.current = false
+        setProposal(false); permissionsProfilTraitees(ownerId)
         window.dispatchEvent(new Event('ephemer-profile-changed'))
         setConflict(false); attempt.current = null; setNotice('Ton profil et tes choix de partage sont enregistrés.')
       } else {
@@ -115,6 +127,10 @@ export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { 
     {error && <p role="alert" className="rounded-xl border border-line p-3 text-ink">{error}</p>}
     {notice && <p role="status" className="text-sm text-ink">{notice}</p>}
     <form onSubmit={event => { event.preventDefault(); void run('enregistrer') }} className="space-y-5">
+    {proposal && <details className="rounded-2xl border border-accent/30 bg-action/5 p-4 text-sm text-ink">
+      <summary className="cursor-pointer rounded-lg py-1 font-medium focus-visible:outline-2 focus-visible:outline-accent">Accords proposés : à vérifier avant d’enregistrer</summary>
+      <p className="mt-3">Tous les renseignements partageables et les accords IA cadeaux sont proposés cochés. Vérifie tes choix : ils s’appliqueront uniquement après « Enregistrer ». Pour garder tes anciens choix, utilise « Relire les informations enregistrées ».</p>
+    </details>}
     {draft ? <ProfileEditor draft={draft} onChange={value => { dirtyRef.current = JSON.stringify(value) !== JSON.stringify(savedRef.current); setDraft(value) }} avatar={avatarEnregistre} disabled={busy} /> : <p className="text-muted">{error ? 'Les informations enregistrées ne sont pas disponibles.' : 'Chargement de ton profil…'}</p>}
     <div className="flex flex-wrap gap-3">
       {/* aria-disabled garde le déclencheur focalisable au retour du dialogue ; le verrou interdit tout deuxième appel. */}

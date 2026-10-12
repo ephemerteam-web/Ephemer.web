@@ -41,10 +41,11 @@ test('navigation privée réseau : aucune écriture de cache', async () => {
 })
 test('API, RSC, images privées et requêtes externes ignorées', async () => {
   const w = worker()
-  for (const path of ['/api/data', '/dashboard?_rsc=abc', '/avatar?_rsc=abc', '/avatar-prive.png', 'https://other.invalid/data']) {
+  for (const path of ['/api/data', '/api/avatars/generate', '/dashboard?_rsc=abc', '/avatar?_rsc=abc', '/avatar-prive.png', 'https://other.invalid/data']) {
     const response = await dispatch(w.handlers.fetch, { request: { method: 'GET', mode: 'cors', destination: 'image', url: new URL(path, 'https://example.invalid').href } })
     assert.equal(response, undefined)
   }
+  assert.equal(await dispatch(w.handlers.fetch, { request: { method: 'POST', mode: 'cors', url: 'https://example.invalid/api/avatars/generate' } }), undefined)
   assert.equal(w.writes.length, 0)
 })
 test('offline : secours public même si aucun cache ne répond', async () => {

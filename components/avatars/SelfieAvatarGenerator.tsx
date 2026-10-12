@@ -141,7 +141,7 @@ function SelfieAvatarSession({ ownerId, onGenerated, allowSave = false }: Selfie
       <img src={portrait.image} alt="Ton portrait IA enregistré" className="h-full w-full object-cover" />
     </div><figcaption className="mt-2 text-sm text-muted">Ton avatar de profil enregistré</figcaption></figure>}
     <p id={`${id}-help`} className="mt-2 text-sm text-muted">Choisis un selfie avec une seule personne et un visage suffisamment net. JPEG, PNG ou WebP, jusqu’à 10 Mo.</p>
-    <p className="mt-2 text-sm text-muted">Un portrait cartoon de face, une grande lune et des étoiles. Ta photo reste temporaire dans l’application ; Cloudflare la reçoit uniquement lorsque tu demandes la création.</p>
+    <p className="mt-2 text-sm text-muted">Un portrait illustré fidèle à ton selfie, avec la couleur de ton vêtement, une grande lune et des étoiles. Ta photo actuelle est la seule référence envoyée à Cloudflare lorsque tu demandes la création ; elle reste temporaire dans l’application.</p>
     <label htmlFor={`${id}-photo`} className="mt-5 block text-sm font-medium">Ta photo</label>
     <input ref={input} id={`${id}-photo`} type="file" disabled={stage === 'saving'} accept="image/jpeg,image/png,image/webp" aria-describedby={`${id}-help`} className="mt-2 block w-full min-w-0 text-sm file:mr-3 file:min-h-11 file:rounded-xl file:border file:border-line file:bg-surface file:px-3 file:text-ink" onChange={event => { void choose(event.currentTarget.files?.[0]) }} />
     <div className="mt-5 grid gap-4 sm:grid-cols-2">

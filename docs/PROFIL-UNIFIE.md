@@ -1,5 +1,13 @@
 # Mon profil — identité, goûts et partage réunis
 
+## Simplification du 12 octobre 2026 — vérification locale
+
+`npm run verify` final réussi : lint sans erreur (cinq avertissements préexistants), types, 390 tests et build. Les tests de suppression du compte ont été adaptés à la rubrique repliable sans changer leurs assertions métier. Aucun fournisseur réel appelé, aucun commit, aucune modification SQL ou nouvelle dépendance.
+
+Recette navigateur finale sur données fictives à 320/390/1440 px, thèmes clair/sombre : les deux onglets au clic et au clavier, saisie conservée entre les onglets, champ obligatoire masqué révélé avant validation, explications repliées en haut et en bas, cases proposées cochées sans écriture, partage/IA distincts, révocation conservée après sauvegarde et retour au compte, panne/réessai, réponse perdue, conflit, hors ligne, changement de compte et export aux champs sensibles décochés. Captures de chaque onglet et résultat : `out/profile-preview/`; journal complet final : `out/profile-tabs-verify.txt`. L’ancien cache mis de côté lors du diagnostic 404 est conservé dans `.next/cache/`, hors des sources TypeScript. La proposition est propre à chaque navigateur, comme expliqué dans Permissions ci-dessous. Cette recette ne valide pas les services distants ni les téléphones réels.
+
+## Unification du 10 octobre 2026
+
 Livraison locale du 10 octobre 2026. L’installation SQL reste manuelle, après recette sur une copie de la base. Aucun commit, déploiement ni nouvelle dépendance.
 Le SQL a depuis été appliqué humainement sur ephemer-app, comme précisé ci-dessous ; la procédure reste manuelle pour toute autre base.
 
@@ -28,11 +36,19 @@ Avant le premier enregistrement, les étoiles voient encore les anciennes inform
 
 ## Permissions
 
-La case Partager mes informations avec mes étoiles commande dix critères : nom, avatar, présentation, passions, plaisirs, préférences à éviter, anniversaire jour/mois, année, e-mail et téléphone. Nom désactivé par défaut. L’année ne peut être partagée sans le jour/mois ni sans année enregistrée. Un avatar invalide/absent n’est pas projeté.
+La case Partager mes informations avec mes étoiles commande dix critères : nom, avatar, présentation, passions, plaisirs, préférences à éviter, anniversaire jour/mois, année, e-mail et téléphone. L’année ne peut être partagée sans le jour/mois ni sans année enregistrée. Un avatar invalide/absent n’est pas projeté.
 
 Ces choix s’appliquent à toutes les étoiles actuelles et futures, après enregistrement. Décocher la case générale garde les critères en mémoire et masque toutes les informations facultatives ; le prénom ou pseudonyme minimal reste visible. Les cinq permissions IA sont retirées, identité comprise. Réactiver le partage ne réactive aucun accord IA. Mammouth AI garde ses autorisations séparées et la sélection explicite par l’étoile à chaque génération. Nom, coordonnées, anniversaire et avatar structurés restent exclus des projections IA.
 
-Les coches « IA cadeaux » sont placées à côté des rubriques de goûts, sans répéter leur liste dans un second bloc. L’accord Passions couvre les bulles et les autres passions ; celui de l’identité reste près du choix prénom/pseudonyme. Une seule explication apparaît sous les goûts. Les coches restent indisponibles tant que le partage correspondant n’est pas actif ; les accords ne sont jamais activés automatiquement.
+Depuis le 12 octobre 2026, les coches « Étoiles » et « IA cadeaux » sont réunies près de chaque rubrique de goûts ; les coordonnées, nom, avatar et anniversaire ont leur coche Étoiles près du champ. L’accord Passions reste commun aux bulles et aux autres passions, selon le choix de l’utilisateur. L’identité sociale possède seulement son accord IA, sa visibilité minimale étant conservée. Le bloc séparé répétant les dix critères a été retiré.
+
+Identité et anniversaire et Mes goûts sont maintenant deux onglets, sur mobile comme sur ordinateur ; Identité et anniversaire est sélectionné au départ. Les deux panneaux restent montés pour conserver la saisie, seul le panneau choisi est visible. Navigation clavier avec les flèches, Home et End ; un champ requis oublié dans un panneau masqué révèle automatiquement son onglet avant le focus de validation. La sauvegarde commune enregistre toujours l’ensemble du profil.
+
+La proposition d’accords en haut, l’explication Étoiles/IA près des autorisations et l’information IA cadeaux en bas sont des blocs dépliables fermés au départ. Les explications complètes de transmission à Mammouth AI, portée des accords, exclusions et révocation restent accessibles. Coordonnées/avatar, catalogue des passions, aperçu et compte restent fermés au départ ; les passions choisies restent visibles.
+
+**Nouveaux réglages demandés :** au prochain passage sur ce navigateur, tous les critères partageables et les cinq accords IA cadeaux sont proposés cochés dans le brouillon, pour les profils nouveaux comme existants. Nom, e-mail, téléphone et année renseignée sont inclus ; anniversaire/année absents restent décochés. Aucun enregistrement automatique : le profil lu, le partage distant et les données de l’export image restent inchangés jusqu’au clic Enregistrer. Le bandeau distingue la proposition des choix enregistrés. Relire permet de conserver les anciens choix ; Tout autoriser propose à nouveau l’ensemble. Les coordonnées, nom, anniversaire et avatar structurés restent exclus de l’IA.
+
+Après une sauvegarde confirmée par relecture ou une relecture explicitement demandée, un marqueur d’interface versionné par compte est mémorisé dans ce navigateur (`ephemer:profile-permission-proposal:v1:<identifiant>` : `traite`). Il ne contient aucun champ du profil, secret ni accord et ne permet aucune relecture hors ligne. Les prochaines visites respectent les choix enregistrés, y compris une révocation. Un autre navigateur ou un effacement du stockage peut présenter de nouveau la proposition, toujours sans application automatique. Si la lecture du stockage local est refusée, aucun accord n’est reproposé automatiquement ; Tout autoriser reste disponible. Le schéma et les RPC Supabase sont inchangés, aucun SQL à installer pour cette simplification.
 
 Les accès tiers continuent de vérifier relation active, blocage et association du contact le cas échéant. Aucun profil complet d’un tiers n’est reçu puis filtré dans le navigateur. L’aperçu utilise la même projection limitée, avec le nom facultatif. Le partage image utilise les informations personnelles enregistrées du propriétaire, avec coordonnées, année et nom décochés par défaut.
 

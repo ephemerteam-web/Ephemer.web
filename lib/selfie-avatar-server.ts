@@ -1,6 +1,4 @@
 import 'server-only'
-import { readFile } from 'node:fs/promises'
-import { join } from 'node:path'
 import { supabaseAdmin } from './supabase-admin'
 import { consommerQuotaIA } from './garde-ia'
 import { limitedJSON } from './ai-transport'
@@ -10,13 +8,21 @@ import {
 } from './selfie-avatar-contract'
 
 export const SELFIE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b'
-export const SELFIE_PROMPT = 'Transforme la personne de l’image 0 en avatar illustré. Préserve ses traits reconnaissables, son âge apparent, sa carnation, ses cheveux, ses lunettes et sa pilosité éventuelle. Utilise l’image 1 uniquement comme référence artistique, sans reproduire l’identité de son personnage. Portrait de face, tête droite, regard vers le spectateur, épaules symétriques, expression douce, cadrage identique du haut du buste. Style cartoon d’animation 2D, contours nets, formes simplifiées et ombres douces, sans texture photographique. Fond bleu nuit avec une grande lune croissante ivoire et dorée derrière la tête et quelques étoiles dorées. Vêtement uni crème, composition centrée, lisible en petit avatar et compatible avec un recadrage circulaire. Une seule personne, sans texte ni logo.'
+// Retouche compatible du 12/10/2026 : le contrat celeste-cartoon-v1 est conservé.
+export const SELFIE_PROMPT = `Transforme la personne de l’image 0 en portrait illustré 2D fidèle et immédiatement reconnaissable. Cette photo est l’unique référence pour son apparence. Préserve précisément la forme et les proportions du visage, ses asymétries naturelles, la mâchoire, les joues, le nez, les lèvres, les sourcils et la forme des yeux. Conserve l’âge apparent, la carnation, la couleur des yeux, la coiffure, la ligne des cheveux, la pilosité et l’expression visibles sur la photo.
+
+Reprends exactement les accessoires présents. Si la personne porte des lunettes, conserve leur forme et leur couleur. Sinon, représente le visage avec les yeux et les tempes entièrement dégagés.
+
+Dessine un t-shirt dont la couleur correspond au vêtement visible sur la photo. Pour un vêtement multicolore, reprends sa couleur dominante. Si aucun vêtement n’est visible, utilise un t-shirt uni crème.
+
+Illustration dessinée avec une stylisation légère, des contours précis et des ombres douces. Conserve les proportions naturelles et l’orientation de la tête pour préserver la ressemblance. Cadrage du haut du buste, tête entière visible, composition centrée adaptée à un avatar circulaire.
+
+Fond bleu nuit avec une grande lune croissante ivoire et dorée derrière la personne et quelques étoiles dorées. La position des étoiles et les détails de la lune peuvent légèrement varier entre les générations. Une seule personne, vêtement sans inscription, aucun texte ni logo.`
 
 type QuotaResult = Awaited<ReturnType<typeof consommerQuotaIA>>
 type Dependencies = {
   verifyUser: (token: string) => Promise<string | null>
   consumeQuota: (userId: string) => Promise<QuotaResult>
-  readStyle: () => Promise<Uint8Array>
   fetch: typeof fetch
   env: NodeJS.ProcessEnv
   timeout: () => AbortSignal
@@ -27,7 +33,6 @@ const defaults: Dependencies = {
     return error ? null : data.user?.id ?? null
   },
   consumeQuota: consommerQuotaIA,
-  readStyle: () => readFile(join(process.cwd(), 'assets/avatars/selfie-style-v1.jpg')),
   fetch: (...args) => fetch(...args),
   env: process.env,
   timeout: () => AbortSignal.timeout(60000),
@@ -76,8 +81,6 @@ export async function generateSelfieAvatar(request: Request, overrides: Partial<
     if (enabled !== 'true' || !account || !/^[a-f0-9]{32}$/i.test(account) || !apiToken) {
       throw new SelfieAvatarError('La création d’avatars attend sa configuration Cloudflare.', 503, 'SERVICE_INDISPONIBLE')
     }
-    const style = await deps.readStyle()
-    validateSelfieInput(style)
     const signal = AbortSignal.any([request.signal, deps.timeout()])
     signal.throwIfAborted()
     const quota = await deps.consumeQuota(userId)
@@ -85,7 +88,6 @@ export async function generateSelfieAvatar(request: Request, overrides: Partial<
     signal.throwIfAborted()
     const form = new FormData()
     form.append('input_image_0', new Blob([Uint8Array.from(photo)], { type: 'image/jpeg' }), 'selfie.jpg')
-    form.append('input_image_1', new Blob([Uint8Array.from(style)], { type: 'image/jpeg' }), 'style.jpg')
     form.append('prompt', SELFIE_PROMPT)
     form.append('width', String(SELFIE_OUTPUT_SIDE))
     form.append('height', String(SELFIE_OUTPUT_SIDE))

@@ -156,7 +156,7 @@ function formulaire({ session = { access_token: 'jeton-simule', user: { id: iden
   const appels = [], messages = [], chargement = []
   const source = lire('components/profil/AccountSettings.tsx')
   const debut = source.indexOf('  async function run(remove:boolean) {')
-  const fin = source.indexOf('  return <section', debut)
+  const fin = source.indexOf('  return <', debut)
   assert.ok(debut >= 0 && fin > debut)
   const { handleDeleteAccount } = runInNewContext(`${stripTypeScriptTypes(source.slice(debut, fin))}\n;({ handleDeleteAccount: () => run(true) })`, {
     owner: identifiant, email: 'fixture@example.invalid', lock: {current:false}, alive: {current:true}, setBusy: valeur => chargement.push(valeur), setNotice() {}, setError: text => { if(text) messages.push({type:'error',text}) },

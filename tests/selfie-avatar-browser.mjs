@@ -23,6 +23,17 @@ const upload = async () => {
 }
 const consent = () => page.click('input[type="checkbox"]')
 const generate = async () => { await consent(); await click('Créer mon avatar'); await page.waitForSelector('a[download]') }
+const syntheticPhoto = async color => {
+  await page.evaluate(async color => {
+    const canvas = document.createElement('canvas'); canvas.width = canvas.height = 600
+    canvas.getContext('2d').fillStyle = color; canvas.getContext('2d').fillRect(0, 0, 600, 600)
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'))
+    const transfer = new DataTransfer(), input = document.querySelector('input[type="file"]')
+    transfer.items.add(new File([blob], 'photo-courante.png', { type: blob.type })); input.files = transfer.files; input.dispatchEvent(new Event('change', { bubbles: true }))
+  }, color)
+  await page.waitForSelector('img[alt="Aperçu de ta photo préparée"]')
+  await page.waitForFunction(() => !document.body.textContent.includes('Préparation de ta photo…'))
+}
 try {
   for (const width of [320, 390, 1440]) {
     console.log('Largeur : ' + width)
@@ -46,6 +57,17 @@ try {
     assert.equal(await page.evaluate(() => window.fixtureActiveURLs.size), 0)
   }
   assert.ok(fs.readdirSync(downloads).some(name => name.endsWith('.png')), 'Téléchargement absent')
+  // Deux photos de même nom mais de contenu différent : aucun octet ou aperçu ancien réutilisé.
+  const digests = []
+  for (const color of ['#cc3344', '#2277bb']) {
+    const oldURLs = await page.evaluate(() => [...window.fixtureActiveURLs])
+    await syntheticPhoto(color)
+    assert.ok(await page.evaluate(urls => urls.every(url => !window.fixtureActiveURLs.has(url)), oldURLs))
+    assert.equal(await page.$('a[download]'), null)
+    await generate()
+    digests.push(await page.evaluate(() => window.fixtureCalls.at(-1).photoDigest))
+  }
+  assert.notEqual(digests[0], digests[1])
   // Remplacer la photo pendant une génération dont le faux fournisseur ignore l’annulation.
   await upload(); await consent(); await page.evaluate(() => { window.fixtureDelay = true }); await click('Créer mon avatar')
   await page.waitForFunction(() => !!window.fixtureRelease)
@@ -54,6 +76,20 @@ try {
   await page.waitForFunction(() => document.querySelector('section [role="status"]').textContent === '')
   assert.equal(await page.$('a[download]'), null)
   assert.equal(await page.evaluate(() => window.fixtureGenerated.length), before)
+  // Effacer pendant un appel ; le fournisseur fictif termine malgré l'annulation.
+  await upload(); await consent(); await page.evaluate(() => { window.fixtureDelay = true }); await click('Créer mon avatar')
+  await page.waitForFunction(() => !!window.fixtureRelease); await click('Effacer')
+  await page.evaluate(() => { window.fixtureDelay = false; window.fixtureRelease(); window.fixtureRelease = null })
+  assert.equal(await page.$('section img'), null); assert.equal(await page.$('a[download]'), null)
+  assert.equal(await page.evaluate(() => window.fixtureActiveURLs.size), 0)
+  assert.equal(await page.evaluate(() => window.fixtureGenerated.length), before)
+  // Fermer pendant un appel invalide aussi le callback tardif.
+  await upload(); await consent(); await page.evaluate(() => { window.fixtureDelay = true }); await click('Créer mon avatar')
+  await page.waitForFunction(() => !!window.fixtureRelease); await click('Fermer')
+  await page.evaluate(() => { window.fixtureDelay = false; window.fixtureRelease(); window.fixtureRelease = null })
+  assert.equal(await page.$('section'), null); assert.equal(await page.evaluate(() => window.fixtureActiveURLs.size), 0)
+  assert.equal(await page.evaluate(() => window.fixtureGenerated.length), before)
+  await click('Ouvrir'); await page.waitForSelector('input[type="file"]'); await upload()
   assert.equal(await page.$eval('input[type="checkbox"]', n => n.checked), false)
   // Changement de compte pendant une génération.
   await consent(); await page.evaluate(() => { window.fixtureDelay = true }); await click('Créer mon avatar')
@@ -93,7 +129,8 @@ try {
   assert.equal(await page.evaluate(() => window.fixtureActiveURLs.size), 0)
   assert.deepEqual(errors, [])
   assert.ok(await page.evaluate(() => window.fixtureCalls.every(c => c.consent === 'true' && c.photoType === 'image/jpeg' && c.photoSize <= 512 * 1024)))
-  fs.writeFileSync(path.join(dir, 'browser-results.json'), JSON.stringify({ widths: [320, 390, 1440], themes: ['dark', 'light'], downloadOffline: true, resizePNGAndWebP: '1200×600 vers JPEG 500×250', stalePhoto: true, staleAccount: true, quota: true, session: true, signOut: true, unmount: true, errors }, null, 2))
+  assert.ok(await page.evaluate(() => window.fixtureCalls.every(c => c.cache === 'no-store' && c.method === 'POST' && c.fields.join(',') === 'consent,photo')))
+  fs.writeFileSync(path.join(dir, 'browser-results.json'), JSON.stringify({ widths: [320, 390, 1440], themes: ['dark', 'light'], downloadOffline: true, resizePNGAndWebP: '1200×600 vers JPEG 500×250', distinctCurrentPhotos: true, noStoreRequests: true, stalePhoto: true, staleAccount: true, staleClear: true, staleUnmount: true, quota: true, session: true, signOut: true, unmount: true, errors }, null, 2))
   console.log('Recette avatar céleste réussie : mobile/ordinateur, deux thèmes, téléchargement hors ligne, résultats tardifs et nettoyage.')
 } catch (error) {
   try {

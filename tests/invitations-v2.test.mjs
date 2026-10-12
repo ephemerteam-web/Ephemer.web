@@ -90,8 +90,94 @@ test('public : double clic et réponse perdue après rechargement conservent le 
  second.h.find(n=>n.type==='button'&&/envoy/i.test(second.h.text(n))).props.onClick()
  await second.h.flush();second.render();await second.h.flush()
  assert.equal(calls.length,2);assert.equal(calls[0].p_operation,calls[1].p_operation);assert.deepEqual(calls[0].p_donnees,calls[1].p_donnees)
- assert.match(second.h.text(),/C'est noté/);assert.equal(store.length,0);second.h.unmount()
+ assert.match(second.h.text(),/Tes informations ont été envoyées/);assert.equal(store.length,0);second.h.unmount()
 })
+function seedPublicDraft(store,patch={}){
+ module('lib/invitation-drafts.ts').saveInvitationDraft(store,'fixture-token',{prenom:'Camille',nom:'Martin',jour:'29',mois:'2',annee:'',relation:'ami',interets:['Romans'],noteLibre:'Mes envies',email:profile.email,indicatif:'+33',tel:'612345678',conserver:false,...patch})
+}
+function lastStep(form){for(let i=0;i<3;i++)form.next()}
+const choice=(form,value)=>form.h.find(n=>n.type==='input'&&n.props.name==='inv-conservation'&&n.props.value===value)
+const sendPublic=form=>form.h.find(n=>n.type==='button'&&/Envoyer mes informations/.test(form.h.text(n))).props.onClick()
+
+test('public : choix sans présélection, aucun envoi ni départ vers inscription avant décision',async()=>{
+ const store=storage(),calls=[];seedPublicDraft(store)
+ const form=publicForm(store,async(...args)=>{calls.push(args);return {succes:true}})
+ await form.h.flush();lastStep(form)
+ assert.equal(choice(form,'oui').props.checked,false);assert.equal(choice(form,'non').props.checked,false)
+ assert.equal(form.h.nodes().filter(n=>n.props.href==='/inscription').length,0)
+ await sendPublic(form);form.render()
+ assert.equal(calls.length,0);assert.match(form.h.text(),/Choisis l’une des deux options/)
+ assert.equal(form.h.find(n=>n.props.role==='radiogroup').props['aria-invalid'],true)
+ choice(form,'non').props.onChange();form.render();await sendPublic(form);await form.h.flush();form.render()
+ assert.equal(calls.length,1);assert.equal(calls[0][1].p_donnees.conserver,false)
+ assert.match(form.h.text(),/ton profil sera à compléter/);assert.doesNotMatch(form.h.text(),/n’auras qu’à les relire/)
+ assert.equal(form.h.find(n=>n.props.role==='progressbar').props['aria-valuenow'],80)
+ form.h.find(n=>n.type==='button'&&form.h.text(n)==='Terminer ici').props.onClick();form.render()
+ assert.match(form.h.text(),/Tu peux fermer cette page/);assert.equal(form.h.nodes().filter(n=>n.props.href==='/inscription').length,0)
+ form.h.unmount()
+})
+
+test('public : reprise exige un e-mail valide, envoi au proche possible sans e-mail',async()=>{
+ const store=storage(),calls=[];seedPublicDraft(store,{email:''})
+ const form=publicForm(store,async(name,args)=>{calls.push(plain(args));return {succes:true}})
+ await form.h.flush();lastStep(form);choice(form,'oui').props.onChange();form.render()
+ assert.equal(form.h.find(n=>n.type==='input'&&n.props.type==='email').props.required,true)
+ await sendPublic(form);form.render();assert.equal(calls.length,0);assert.match(form.h.text(),/Renseigne ton e-mail/)
+ form.h.find(n=>n.type==='input'&&n.props.type==='email').props.onChange({target:{value:'invalide'}});form.render()
+ await sendPublic(form);form.render();assert.equal(calls.length,0);assert.match(form.h.text(),/Vérifie ton adresse e-mail/)
+ form.h.find(n=>n.type==='input'&&n.props.type==='email').props.onChange({target:{value:''}});choice(form,'non').props.onChange();form.render()
+ assert.equal(form.h.find(n=>n.type==='input'&&n.props.type==='email').props.required,false)
+ await sendPublic(form);await form.h.flush();form.render();assert.equal(calls.length,1);assert.equal(calls[0].p_donnees.email,'')
+ form.h.unmount()
+})
+
+test('public : ancien accord repris, ancien false à confirmer, nouveau refus restauré et effacement du choix',async()=>{
+ for(const [patch,expected] of [[{conserver:true},'oui'],[{conserver:false},null],[{conserver:false,choixConservationConfirme:true},'non']]){
+  const store=storage();seedPublicDraft(store,patch)
+  const form=publicForm(store,async()=>{throw Error('Aucun envoi attendu')});await form.h.flush();lastStep(form)
+  for(const value of ['oui','non'])assert.equal(choice(form,value).props.checked,value===expected)
+  choice(form,'non').props.onChange();form.render();await form.h.flush()
+  const saved=module('lib/invitation-drafts.ts').restoreInvitationDraft(store,'fixture-token')
+  assert.equal(saved.conserver,false);assert.equal(saved.choixConservationConfirme,true)
+  form.h.find(n=>n.type==='button'&&form.h.text(n)==='Effacer mon brouillon').props.onClick();form.render();await form.h.flush();lastStep(form)
+  assert.equal(choice(form,'oui').props.checked,false);assert.equal(choice(form,'non').props.checked,false);assert.equal(store.length,0)
+  form.h.unmount()
+ }
+})
+
+test('public : panne sans promesse de reprise, confirmation fondée sur le contenu envoyé',async()=>{
+ const store=storage(),calls=[];seedPublicDraft(store,{conserver:true})
+ let fail=true,resolve
+ const form=publicForm(store,async(name,args)=>{calls.push(plain(args));if(fail)throw Error('Panne simulée');return new Promise(r=>resolve=r)})
+ await form.h.flush();lastStep(form);await sendPublic(form);form.render()
+ assert.match(form.h.text(),/Panne simulée/);assert.equal(form.h.nodes().filter(n=>n.props.role==='progressbar').length,0)
+ assert.equal(form.h.nodes().filter(n=>n.props.href==='/inscription').length,0)
+ fail=false;const pending=sendPublic(form);form.render()
+ assert.equal(form.h.find(n=>n.type==='button'&&form.h.text(n)==='Effacer mon brouillon').props.disabled,true)
+ // Même si la saisie change artificiellement pendant l'attente, l'accusé suit le payload envoyé.
+ choice(form,'non').props.onChange();form.render();resolve({succes:true});await pending;form.render();await form.h.flush();form.render()
+ assert.equal(calls[0].p_operation,calls[1].p_operation);assert.deepEqual(calls[0].p_donnees,calls[1].p_donnees)
+ assert.match(form.h.text(),/même e-mail/);assert.match(form.h.text(),/n’auras qu’à les relire et les valider/)
+ assert.doesNotMatch(form.h.text(),/ton profil sera à compléter/);assert.equal(store.length,0)
+ form.h.unmount()
+})
+
+test('reprise : profil réel prérempli puis enregistré après lecture avec identité vérifiée',async()=>{
+ const calls=[],routes=[],router={replace:url=>routes.push(url)},user={id:A}
+ const h=harness('app/completer-profil/page.tsx',{globals:{Error,window:{location:{search:''},confirm:()=>true},crypto:{randomUUID:()=>B}},overrides:{
+  'next/navigation':{useRouter:()=>router},'@/lib/supabase-browser':{supabase:{auth:{getUser:async()=>({data:{user},error:null}),onAuthStateChange:()=>({data:{subscription:{unsubscribe(){}}}})}}},
+  '@/lib/invitation-data':{readFirstProfile:async()=>profile,readRecoveries:async()=>[recovery],invitationRpc:async(name,args)=>{calls.push(plain(args));return {ok:true}}}
+ }})
+ h.render();await h.flush();h.render()
+ assert.equal(h.find(n=>n.type==='input'&&n.props.autoComplete==='given-name').props.value,'Camille');assert.match(h.text(),/Tes informations sont déjà là/)
+ const submit=()=>h.find(n=>n.type==='form').props.onSubmit({preventDefault(){}})
+ submit();h.render();assert.equal(h.find(n=>n.type==='textarea').props.value,'Mes envies')
+ submit();h.render();assert.match(h.text(),/Romans/);assert.match(h.text(),/29\/2 · année privée/)
+ submit();await h.flush();assert.equal(calls.length,1)
+ assert.equal(calls[0].p_donnees.passions,'Romans');assert.equal(calls[0].p_donnees.noteLibre,'Mes envies');assert.deepEqual(calls[0].p_donnees.repriseIds,[A])
+ assert.deepEqual(routes,['/dashboard']);h.unmount()
+})
+
 test('premier profil : seul le prénom suffit, goûts et année absente enregistrés avant retour étoile',async()=>{
  const calls=[],routes=[],router={replace:url=>routes.push(url)},user={id:A}
  const h=harness('app/completer-profil/page.tsx',{globals:{Error,window:{location:{search:'?next=%2Fetoile'},confirm:()=>true},crypto:{randomUUID:()=>B}},overrides:{

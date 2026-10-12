@@ -40,6 +40,14 @@ export function commandeProfil(value: CommandeProfil): CommandeProfil {
 export function profilAvecPartage(value: ProfilUnifie, actif: boolean): ProfilUnifie {
   return { ...value, partageActif: actif, iaCadeaux: actif ? value.iaCadeaux : { ...IA_CADEAUX_VIDE } }
 }
+// Proposition de formulaire uniquement : aucune permission distante n'est changée avant l'enregistrement.
+export function profilToutAutorise(value: ProfilUnifie): ProfilUnifie {
+  const anniversaire = value.valeurs.anniversaire
+  return { ...value, partageActif: true, partageNom: true,
+    partage: { presentation: true, passions: true, plaisirs: true, eviter: true, email: true, telephone: true, avatar: true,
+      anniversaire: !!anniversaire, annee: anniversaire?.annee != null },
+    iaCadeaux: { identite: true, presentation: true, passions: true, plaisirs: true, eviter: true } }
+}
 export function apercuProfil(value: ProfilUnifie, avatar: unknown = null): UniversPartage {
   const owner = profilUnifie(value)
   const preview = apercuUnivers({ revision: owner.revision, modeIdentite: owner.modeIdentite, identite: owner.identite, valeurs: owner.valeurs,

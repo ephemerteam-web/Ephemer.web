@@ -30,10 +30,10 @@ export default function AccountSettings({ owner, email }: { owner:string; email:
     } catch(cause){if(alive.current)setError(cause instanceof Error?cause.message:'Action indisponible.')}
     finally{lock.current=false;if(alive.current)setBusy(false)}
   }
-  return <section className="space-y-4 rounded-3xl border border-line bg-surface p-5 sm:p-6"><h2 className="text-xl font-semibold">Mon compte</h2>
+  return <details className="space-y-4 rounded-3xl border border-line bg-surface p-4 sm:p-5"><summary className="cursor-pointer rounded-xl py-2 text-lg font-semibold focus-visible:outline-2 focus-visible:outline-accent">Mon compte</summary>
     <button type="button" disabled={busy} className="min-h-11 rounded-xl border border-line px-4 py-3 text-accent disabled:opacity-50" onClick={()=>void run(false)}>Modifier mon mot de passe</button>
     <button type="button" disabled={busy} className="ml-3 min-h-11 rounded-xl border border-line px-4 py-3 text-danger disabled:opacity-50" onClick={()=>setConfirm(true)}>Supprimer mon compte</button>
     {notice&&<p role="status" className="text-sm">{notice}</p>}{error&&<p role="alert" className="text-sm text-danger">{error}</p>}
     <Modal open={confirm} title="Supprimer mon compte" onClose={()=>{if(!busy)setConfirm(false)}} className="w-[min(95vw,32rem)]"><p className="mb-5">Ton compte et tes données seront supprimés définitivement. Cette action est irréversible.</p><div className="flex gap-3"><button type="button" disabled={busy} onClick={()=>setConfirm(false)} className="min-h-11 rounded-xl border border-line px-4">Annuler</button><button type="button" disabled={busy} onClick={()=>void run(true)} className="min-h-11 rounded-xl bg-action px-4 text-on-action">{busy?'Suppression…':'Oui, supprimer'}</button></div></Modal>
-  </section>
+  </details>
 }

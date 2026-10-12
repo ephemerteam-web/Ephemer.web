@@ -34,14 +34,14 @@ test('profil : goût libre conservé avec bulles et pseudonyme indépendant',()=
 test('éditeur profil : dix critères et pseudonyme indépendant de la modification du prénom',()=>{
  let draft={...profileFixture(),modeIdentite:'pseudonyme',identite:'Polaris',partageActif:true}
  const h=harness('components/profil/ProfileEditor.tsx'),render=()=>h.render({draft,disabled:false,onChange:value=>{draft=value}})
- render();assert.equal(h.nodes().filter(n=>n.type==='input'&&n.props.type==='checkbox'&&!n.props['aria-label']).length,11)
+ render();assert.equal(h.nodes().filter(n=>n.type==='input'&&n.props['aria-label']?.startsWith('Étoiles : ')).length,10)
  const consent=name=>h.find(n=>n.type==='input'&&n.props['aria-label']==='Autoriser : '+name)
  assert.equal(h.nodes().filter(n=>n.type==='input'&&n.props['aria-label']?.startsWith('Autoriser : ')).length,5)
  assert.equal(consent('Passions').props.disabled,true)
- const passionSharing=h.find(n=>n.type==='label'&&h.text(n)==='Mes passions').props.children[0]
+ const passionSharing=h.find(n=>n.type==='input'&&n.props['aria-label']==='Étoiles : Mes passions')
  passionSharing.props.onChange({target:{checked:true}});render();assert.equal(consent('Passions').props.disabled,false)
  consent('Passions').props.onChange({target:{checked:true}});render();assert.equal(draft.iaCadeaux.passions,true);assert.equal(draft.iaCadeaux.plaisirs,false)
- h.find(n=>n.type==='label'&&h.text(n)==='Mes passions').props.children[0].props.onChange({target:{checked:false}});render()
+ h.find(n=>n.type==='input'&&n.props['aria-label']==='Étoiles : Mes passions').props.onChange({target:{checked:false}});render()
  assert.equal(draft.iaCadeaux.passions,false);assert.equal(consent('Passions').props.disabled,true)
  assert.equal(h.nodes().filter(n=>n.props.id===consent('Passions').props['aria-describedby']).length,1)
  h.find(n=>n.props.autoComplete==='given-name').props.onChange({target:{value:'Autre prénom'}});render();assert.equal(draft.identite,'Polaris');assert.equal(draft.prenom,'Autre prénom')
@@ -57,10 +57,11 @@ test('transport profil : SQL absent, panne, changement de compte avant/après, r
  error=null;after='other';await assert.rejects(api.readProfile(owner),/session a changé/)
  const count=calls;await assert.rejects(api.readProfile(owner),/session a changé/);assert.equal(count,calls)
 })
-function form(){
+function form(storage){
  let row=profileFixture(),fail=false,lost=false,readsFail=false
  const calls=[],operations=new Map(),win=new EventTarget(),doc=new EventTarget()
  win.setInterval=()=>1;win.clearInterval=()=>{};doc.visibilityState='visible'
+ if(storage)win.localStorage={getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)}
  const api={lire:async()=>{if(readsFail)throw new Error('Lecture en panne');return copy(row)},commander:async(_,input)=>{
   calls.push(copy(input));if(fail){fail=false;throw new Error('Panne avant écriture')}
   if(!operations.has(input.operation)){row={...copy(input.donnees),revision:row.revision+1,empreinte:'b'.repeat(64)};operations.set(input.operation,row.revision)}
@@ -70,6 +71,45 @@ function form(){
  const render=()=>h.render({ownerId:owner,api},'AccountProfileForm'),change=patch=>{h.find(n=>n.props.draft).props.onChange({...h.find(n=>n.props.draft).props.draft,...patch});render()},save=()=>h.find(n=>n.type==='form').props.onSubmit({preventDefault(){}})
  return {h,render,change,save,calls,win,setFail:()=>fail=true,setLost:()=>lost=true,setReadsFail:v=>readsFail=v,remote:()=>{row.revision++;row.empreinte='c'.repeat(64)},get row(){return row}}
 }
+test('profil : tout autoriser reste une proposition valide, sans année inventée ni mutation du profil lu',()=>{
+ const original=profileFixture(),row=c.profilToutAutorise(original)
+ assert.equal(original.partageActif,false);assert.ok(Object.values(original.iaCadeaux).every(v=>!v))
+ assert.equal(row.partageNom,true);assert.equal(row.partage.annee,false);assert.equal(row.partageActif,true)
+ assert.ok(Object.values(row.iaCadeaux).every(Boolean));assert.doesNotThrow(()=>c.profilUnifie(row))
+ const empty=c.profilToutAutorise({...original,valeurs:{...original.valeurs,anniversaire:null}})
+ assert.equal(empty.partage.anniversaire,false);assert.equal(empty.partage.annee,false)
+ const year=c.profilToutAutorise({...original,valeurs:{...original.valeurs,anniversaire:{jour:1,mois:1,annee:2000}}})
+ assert.equal(year.partage.annee,true);assert.doesNotThrow(()=>c.profilUnifie(year))
+})
+test('formulaire profil : accords proposés avant sauvegarde, aucun appel automatique et marqueur seulement après confirmation',async()=>{
+ const storage=new Map(),f=form(storage);f.render();await f.h.flush();f.render()
+ assert.equal(f.row.partageActif,false);assert.equal(f.calls.length,0);assert.equal(storage.size,0)
+ assert.ok(Object.values(f.h.find(n=>n.props.draft).props.draft.iaCadeaux).every(Boolean))
+ assert.match(f.h.text(),/proposés cochés/)
+ f.win.dispatchEvent(new Event('focus'));await f.h.flush();f.render()
+ assert.equal(f.h.find(n=>n.props.draft).props.draft.partageActif,true)
+ f.change({partageActif:false,iaCadeaux:{...profileFixture().iaCadeaux}});f.setFail();f.save();await f.h.flush();f.render()
+ assert.equal(storage.size,0);f.save();await f.h.flush();f.render();assert.equal(storage.size,1)
+ assert.deepEqual([...storage.values()],['traite']);assert.doesNotMatch(f.h.text(),/proposés cochés/);f.h.unmount()
+ const next=form(storage);next.render();await next.h.flush();next.render()
+ assert.equal(next.h.find(n=>n.props.draft).props.draft.partageActif,false);assert.equal(next.calls.length,0);next.h.unmount()
+})
+test('proposition profil : marqueur isolé par compte et stockage bloqué sans activation automatique',()=>{
+ const storage=new Map(),win={localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value)}}
+ const p=harness('lib/profile-permission-proposal.ts',{globals:{window:win}}).component
+ assert.equal(p.proposerPermissionsProfil(owner),true);p.permissionsProfilTraitees(owner)
+ assert.equal(p.proposerPermissionsProfil(owner),false);assert.equal(p.proposerPermissionsProfil('other'),true)
+ const blocked=harness('lib/profile-permission-proposal.ts',{globals:{window:{get localStorage(){throw new Error('Bloqué')}}}}).component
+ assert.equal(blocked.proposerPermissionsProfil(owner),false);assert.doesNotThrow(()=>blocked.permissionsProfilTraitees(owner))
+})
+test('formulaire profil : relire abandonne la proposition et conserve les choix distants sans écriture',async()=>{
+ const storage=new Map(),f=form(storage);f.render();await f.h.flush();f.render()
+ f.h.find(n=>n.type==='button'&&f.h.text(n)==='Relire les informations enregistrées').props.onClick()
+ await f.h.flush();f.render()
+ assert.equal(f.h.find(n=>n.props.draft).props.draft.partageActif,false)
+ assert.ok(Object.values(f.h.find(n=>n.props.draft).props.draft.iaCadeaux).every(v=>!v))
+ assert.equal(f.calls.length,0);assert.equal(storage.size,1);assert.doesNotMatch(f.h.text(),/proposés cochés/);f.h.unmount()
+})
 test('formulaire profil : double clic, panne avant écriture et réessai conservent UUID et saisie',async()=>{
  const f=form();f.render();await f.h.flush();f.render();f.change({nom:'Nouveau'});f.setFail();f.save();f.save();await f.h.flush();f.render()
  assert.equal(f.calls.length,1);assert.equal(f.h.find(n=>n.props.draft).props.draft.nom,'Nouveau')

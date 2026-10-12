@@ -3,7 +3,6 @@ import { readFileSync } from 'node:fs'
 import { stripTypeScriptTypes } from 'node:module'
 import { runInNewContext } from 'node:vm'
 import test from 'node:test'
-import { join } from 'node:path'
 import { deflateSync } from 'node:zlib'
 
 function load(path, names, context = {}) {
@@ -39,13 +38,12 @@ function harness(overrides = {}) {
     env: { CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32), CLOUDFLARE_API_TOKEN: 'fixture-only', EPHEMER_AVATAR_AI_ENABLED: 'true' },
     verifyUser: async token => { calls.push(['auth', token]); return 'verified-owner' },
     consumeQuota: async owner => { calls.push(['quota', owner]); return { ok: true, userId: owner } },
-    readStyle: async () => style,
     fetch: async (url, options) => { calls.push(['fetch', url, options]); return Response.json({ success: true, result: { image: output.toString('base64') } }) },
     timeout: () => new AbortController().signal,
     ...overrides,
   }
   const server = load('lib/selfie-avatar-server.ts', 'generateSelfieAvatar,SELFIE_MODEL,SELFIE_PROMPT', {
-    ...contract, ...transport, join, readFile: async () => style, supabaseAdmin: {}, consommerQuotaIA: async () => {}, fetch: () => {},
+    ...contract, ...transport, supabaseAdmin: {}, consommerQuotaIA: async () => {}, fetch: () => {},
   })
   return { calls, server, run: request => server.generateSelfieAvatar(request, deps) }
 }
@@ -86,8 +84,8 @@ test('avatar selfie : corps borné même sans content-length', async () => {
   assert.equal(response.status, 413); assert.equal(h.calls.length, 1)
 })
 
-test('avatar selfie : configuration et référence manquantes bloquent avant quota', async () => {
-  for (const overrides of [{ env: {} }, { env: { EPHEMER_AVATAR_AI_ENABLED: 'false' } }, { readStyle: async () => { throw new Error('private-file-path') } }]) {
+test('avatar selfie : configuration manquante bloque avant quota', async () => {
+  for (const overrides of [{ env: {} }, { env: { EPHEMER_AVATAR_AI_ENABLED: 'false' } }]) {
     const h = harness(overrides), response = await h.run(request())
     assert.ok(response.status >= 500); assert.equal(h.calls.filter(c => c[0] === 'quota').length, 0)
     assert.ok(!(await response.text()).includes('private-file-path'))
@@ -101,7 +99,7 @@ test('avatar selfie : quota existant consommé pour l’identité vérifiée ; r
   }
 })
 
-test('avatar selfie : deux références binaires, prompt fixe et sortie privée 1024 carrée', async () => {
+test('avatar selfie : selfie seul, prompt fixe et sortie privée 1024 carrée', async () => {
   const h = harness(), response = await h.run(request())
   assert.equal(response.status, 200); assert.equal(response.headers.get('content-type'), 'image/png')
   assert.equal(response.headers.get('cache-control'), 'no-store'); assert.equal(response.headers.get('x-ephemer-avatar-prompt'), 'celeste-cartoon-v1')
@@ -112,7 +110,40 @@ test('avatar selfie : deux références binaires, prompt fixe et sortie privée 
   assert.equal(options.headers['Content-Type'], undefined); assert.equal(options.redirect, 'error')
   assert.equal(options.body.get('prompt'), h.server.SELFIE_PROMPT)
   assert.equal(options.body.get('width'), '1024'); assert.equal(options.body.get('height'), '1024')
-  for (const key of ['input_image_0', 'input_image_1']) assert.deepEqual(Buffer.from(await options.body.get(key).arrayBuffer()), style)
+  assert.deepEqual([...options.body.keys()].sort(), ['height', 'input_image_0', 'prompt', 'width'])
+  assert.deepEqual(Buffer.from(await options.body.get('input_image_0').arrayBuffer()), style)
+  assert.equal(options.body.get('input_image_1'), null)
+})
+
+test('avatar selfie : chaque appel transmet sa photo courante sans reprendre une entrée précédente', async () => {
+  // JPEG valides et distincts, sans photo personnelle : ajout d’un commentaire de fixture.
+  const photos = ['photo-A', 'photo-B'].map(label => {
+    const comment = Buffer.from(label), marker = Buffer.alloc(4)
+    marker[0] = 255; marker[1] = 254; marker.writeUInt16BE(comment.length + 2, 2)
+    return Buffer.concat([style.subarray(0, 2), marker, comment, style.subarray(2)])
+  })
+  const h = harness()
+  for (const photo of photos) {
+    assert.notDeepEqual(photo, style)
+    assert.equal((await h.run(request({ photo }))).status, 200)
+  }
+  const sent = h.calls.filter(call => call[0] === 'fetch')
+  assert.equal(sent.length, 2)
+  assert.notEqual(sent[0][2].body, sent[1][2].body)
+  for (let index = 0; index < sent.length; index++) {
+    const [, url, options] = sent[index]
+    assert.equal(url, `https://api.cloudflare.com/client/v4/accounts/${'a'.repeat(32)}/ai/run/${h.server.SELFIE_MODEL}`)
+    assert.equal(options.method, 'POST'); assert.equal(options.cache, 'no-store')
+    assert.deepEqual([...options.body.keys()].sort(), ['height', 'input_image_0', 'prompt', 'width'])
+    const selfie = Buffer.from(await options.body.get('input_image_0').arrayBuffer())
+    assert.deepEqual(selfie, photos[index])
+    assert.notDeepEqual(selfie, photos[1 - index])
+    assert.equal(options.body.get('input_image_1'), null)
+    assert.equal(options.body.get('prompt'), h.server.SELFIE_PROMPT)
+  }
+  // Après deux succès, une photo vide reste refusée : aucune reprise de l’ancien selfie.
+  assert.equal((await h.run(request({ photo: Buffer.alloc(0) }))).status, 413)
+  assert.equal(h.calls.filter(call => call[0] === 'fetch').length, 2)
 })
 
 test('avatar selfie : erreur fournisseur, dépassement et réponses inutilisables sans fuite ni réessai', async () => {
@@ -144,7 +175,7 @@ test('avatar selfie : expiration avant appel et interruption pendant appel', asy
   assert.equal((await during.run(request())).status, 504)
 })
 
-test('avatar selfie : la référence livrée respecte les limites et les formats sont identifiés', () => {
+test('avatar selfie : le JPEG de fixture respecte les limites et les formats sont identifiés', () => {
   assert.equal(contract.validateSelfieInput(style).width, 500)
   assert.equal(contract.rasterInfo(output).type, 'image/png')
   assert.throws(() => contract.rasterInfo(new Uint8Array([255, 216, 255, 217])))
@@ -160,6 +191,8 @@ function clientHarness({ online = true, ownerAfter = 'verified-owner', provider,
     } },
     fetch: async (url, options) => {
       calls++; assert.equal(url, '/api/avatars/generate'); assert.equal(options.body.get('consent'), 'true')
+      assert.equal(options.method, 'POST'); assert.equal(options.cache, 'no-store'); assert.equal(options.redirect, 'error')
+      assert.deepEqual([...options.body.keys()].sort(), ['consent', 'photo'])
       return provider ? provider() : new Response(output, { headers: { 'Content-Type': 'image/png', 'X-Ephemer-Avatar-Prompt': 'celeste-cartoon-v1' } })
     },
   })
