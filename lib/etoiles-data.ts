@@ -3,13 +3,14 @@ import { supabase } from './supabase-browser'
 import { limitedJSON } from './ai-transport'
 import { commandeEtoile, etoilesItems, resultatEtoile, reconnaissanceEtoiles, exportEtoilesItems, ETOILES_EXPORT_VUES, type CommandeEtoile, type EtoilesRows, type EtoilesExportVue, type ResultatEtoile } from './etoiles-contract'
 export class EtoilesRequestError extends Error { status: number; constructor(message: string, status = 0) { super(message); this.status = status } }
-export async function socialRequest(ownerId: string, path: string, body?: unknown, signal?: AbortSignal): Promise<unknown> {
+export async function socialRequest(ownerId: string, path: string, body?: unknown, signal?: AbortSignal, responseLimit = 128 * 1024): Promise<unknown> {
+  if(!Number.isSafeInteger(responseLimit)||responseLimit<1||responseLimit>2*1024*1024)throw new Error('Limite de réponse invalide.')
   if (typeof navigator !== 'undefined' && navigator.onLine === false) throw new EtoilesRequestError('Hors ligne : reconnecte-toi pour gérer tes étoiles.')
   const { data: { session }, error } = await supabase.auth.getSession()
   if (error || !session || session.user.id !== ownerId) throw new EtoilesRequestError('La session a changé. Reconnecte-toi.', 401)
   if (signal?.aborted) throw new DOMException('Lecture abandonnée.', 'AbortError')
   const response = await fetch(path, { method: body === undefined ? 'GET' : 'POST', headers: { Authorization: `Bearer ${session.access_token}`, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) }, ...(body === undefined ? {} : { body: JSON.stringify(body) }), cache: 'no-store', signal })
-  const result = await limitedJSON(response, 128 * 1024, 502)
+  const result = await limitedJSON(response, responseLimit, 502)
   const { data: after, error: afterError } = await supabase.auth.getSession()
   if (afterError || after.session?.user.id !== ownerId) throw new EtoilesRequestError('La session a changé. Relance la lecture.', 401)
   if (!response.ok) throw new EtoilesRequestError(result && typeof result === 'object' && 'error' in result && typeof result.error === 'string' ? result.error : 'Action indisponible. Réessaie.', response.status)

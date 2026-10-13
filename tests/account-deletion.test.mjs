@@ -44,7 +44,8 @@ function serveur(options = {}) {
   const source = stripTypeScriptTypes(lire('app/api/delete-account/route.ts'))
     .replace(/^import[^\n]+\n/gm, '').replace(/^export /gm, '')
   const { DELETE } = runInNewContext(`${source}\n;({ DELETE })`, {
-    supabaseAdmin, NextResponse: Response, console: { error() {} },
+    supabaseAdmin, NextResponse: Response, console: { error() {} }, CELEBRATIONS_ENABLED:options.celebrations??false,
+    celebrationTransport:()=>({rpc:async(name)=>{appels.push(['celebrations',name]);if(options.echec==='celebrations')throw new Error('Nettoyage impossible');return {ok:true}}}),
   })
   const requete = (authorization = 'Bearer jeton-simule') => new Request('https://ephemer.invalid/api/delete-account', {
     method: 'DELETE', headers: authorization ? { Authorization: authorization } : {},
@@ -61,6 +62,13 @@ async function verifierEchec(reponse) {
   assert.doesNotMatch(resultat.error, /Détail interne|SIMULATION/)
   return resultat.error
 }
+
+test('célébrations activées : révocation avant effacement privé ; échec empêche toute suppression du compte', async()=>{
+  const ready=serveur({celebrations:true});assert.equal((await ready.DELETE(ready.requete())).status,200)
+  assert.equal(ready.appels[1][0],'celebrations');assert.equal(ready.appels[2][0],'contacts')
+  const failed=serveur({celebrations:true,echec:'celebrations'});await verifierEchec(await failed.DELETE(failed.requete()))
+  assert.equal(failed.tables.contacts.length,2);assert.equal(failed.comptes.size,2)
+})
 
 test('en-tête absent ou mal formé : aucun appel Supabase', async () => {
   for (const header of [null, 'Basic jeton-simule', 'Bearer', 'Bearer un deux', 'jeton-simule']) {

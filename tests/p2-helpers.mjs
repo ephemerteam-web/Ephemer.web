@@ -28,6 +28,7 @@ const listHelpers = loadPure('lib/private-lists.ts','isUuid,contactsInList,chang
 const eventLoader = loadPure('lib/personal-event-data.ts','readEventData',{ ...calendar, ...pagination, ...personal })
 const rappelHelpers = loadPure('lib/rappel-occurrence.ts','rappelOccurrenceCurrent')
 const notificationPersistence = loadPure('lib/occurrence-notifications.ts','persistOccurrenceNotification')
+const celebrationActivation = loadPure('lib/celebration-contract.ts','CELEBRATIONS_ENABLED')
 // Les anciennes fixtures ne contiennent aucune occurrence. Leur RPC simulée
 // retourne une table vide ; les nouveaux tests fournissent leur propre RPC.
 async function readEventData(client, ...args) {
@@ -37,6 +38,7 @@ async function readEventData(client, ...args) {
 export const p2Helpers = { readProfile: async () => profileFixture(), ...ids, ...journal, ...constants, ...amounts, ...aiOptions, ...aiTransport, ...calendar, ...preferences, ...pagination, ...gifts, ...months, ...personal, ...reminderPolicy, ...occurrencePolicy, ...notificationPersistence, ...listHelpers, ...rappelHelpers, ...consent, ...aiContext, readEventData, exportCardLinks: async () => [], exportEtoiles: async () => ({ relations: [], demandes: [], blocages: [], liens: [], associations: [] }), readMonUnivers: async () => ({ revision: 0, modeIdentite: 'prenom', identite: 'Fixture', iaCadeaux: { identite: false, presentation: false, passions: false, plaisirs: false, eviter: false }, valeurs: { presentation: '', passions: '', plaisirs: '', eviter: '', anniversaire: null, email: '', telephone: '' }, partage: { presentation: false, passions: false, plaisirs: false, eviter: false, anniversaire: false, annee: false, email: false, telephone: false, avatar: false } }) }
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
+Object.assign(p2Helpers, celebrationActivation)
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {
   let reads = 0
   return { from(table) {

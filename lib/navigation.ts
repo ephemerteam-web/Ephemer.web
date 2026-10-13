@@ -16,6 +16,6 @@ export function activeSpace(path: string) {
   if (path === '/dashboard') return '/dashboard'
   if (/^\/dashboard\/(calendrier|ce-mois-ci|anniversaires)/.test(path)) return '/dashboard/calendrier'
   if (/^\/dashboard\/(contacts|etoiles|inviter)/.test(path)) return '/dashboard/contacts'
-  if (/^\/dashboard\/(prepar|idees|gift-ideas|generate|budget|styles|messages-programmes)/.test(path)) return '/dashboard/preparations'
+  if (/^\/dashboard\/(prepar|celebrations|idees|gift-ideas|generate|budget|styles|messages-programmes)/.test(path)) return '/dashboard/preparations'
   return ''
 }

@@ -1,10 +1,13 @@
 // 🔐 Suppression du compte, côté serveur uniquement.
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
+import { CELEBRATIONS_ENABLED } from '@/lib/celebration-contract'
+import { celebrationTransport } from '@/lib/celebration-server'
 
 export async function DELETE(request: Request) {
   // Un appel peut échouer après avoir été exécuté : ne jamais promettre un retour arrière.
   let nettoyageCommence = false
+  let celebrationsRetirees = false
 
   try {
     // 1. Seul l'utilisateur identifié par Supabase peut supprimer son propre compte.
@@ -22,6 +25,11 @@ export async function DELETE(request: Request) {
     // Garder le profil jusqu'à ce que les contacts soient supprimés.
     // En cas d'erreur, arrêter ici pour conserver le compte et permettre une nouvelle tentative.
     nettoyageCommence = true
+    if(CELEBRATIONS_ENABLED){
+      const result=await celebrationTransport(token).rpc('preparer_effacement_celebrations',{})
+      if(!result||typeof result!=='object'||!('ok' in result)||result.ok!==true)throw new Error('Nettoyage des célébrations non confirmé')
+      celebrationsRetirees=true
+    }
     const { error: contactsError } = await supabaseAdmin
       .from('contacts')
       .delete()
@@ -30,7 +38,7 @@ export async function DELETE(request: Request) {
     if (contactsError) {
       console.error('Erreur suppression contacts:', contactsError.code)
       return NextResponse.json(
-        { error: 'Impossible de confirmer la suppression de tes contacts. Ton compte n’a pas été supprimé. Réessaie.' },
+        { error: (celebrationsRetirees?'Tes participations aux célébrations ont été retirées. ':'')+'Impossible de confirmer la suppression de tes contacts. Ton compte n’a pas été supprimé. Réessaie.' },
         { status: 500 }
       )
     }

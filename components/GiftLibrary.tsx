@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react'
 import { useDashboardUser } from './DashboardUserContext'
 import { AttentionNav, EditForm, LoadState, NoteField, TextField, button, field, panel, optional, text, useAttentionLoad } from './AttentionShared'
-import { CURRENCIES, centsInput, merchantLink, money, parseCents, attentionError } from '@/lib/attention-utils'
+import { CURRENCIES, centsInput, merchantLink, money, parseCents, attentionError, quickIdea } from '@/lib/attention-utils'
 import { attentionRows, removeAttention, requireOwner, saveAttention, type Choice, type Gift, type Idea } from '@/lib/attention-data'
 import { supabase } from '@/lib/supabase-browser'
 import { parisDay } from '@/lib/calendar-day'
@@ -28,17 +28,21 @@ export function IdeaEditor({ idea, contactId = null, initialTitle = '', onSaved 
   return <EditForm onSaved={onSaved} save={async data => {
     id.current ??= crypto.randomUUID()
     const estimated = amount(data, 'estimate')
+    const ideaFields = quickIdea(text(data, 'title'), text(data, 'link'))
     await saveAttention('idees_cadeaux', user.id, idea?.id ?? id.current, idea?.revision ?? null, {
-      contact_id: idea?.contact_id ?? contactId, titre: text(data, 'title'), note: optional(data, 'note'),
-      lien_marchand: merchantLink(text(data, 'link')), prix_estime_centimes: estimated.cents,
+      contact_id: idea?.contact_id ?? contactId, ...ideaFields, note: optional(data, 'note'),
+      prix_estime_centimes: estimated.cents,
       devise_estimee: estimated.currency, archivee: data.get('archived') === 'on',
     })
   }}>
-    <TextField name="title" label="Idée cadeau" required maxLength={200} value={idea?.titre ?? initialTitle} />
-    <NoteField name="note" label="Note personnelle (facultative)" value={idea?.note ?? ''} />
+    <p className="text-sm text-muted">Un titre ou un lien suffit. Un lien seul reçoit le titre modifiable « Idée à découvrir ».</p>
+    <TextField name="title" label="Idée cadeau (titre ou lien requis)" maxLength={200} value={idea?.titre ?? initialTitle} />
     <TextField name="link" label="Lien marchand http/https (facultatif)" value={idea?.lien_marchand ?? ''} maxLength={2048} />
+    <details open={idea ? true : undefined}><summary className="min-h-11 cursor-pointer py-3">Prix et détails facultatifs</summary>
+    <NoteField name="note" label="Note personnelle (facultative)" value={idea?.note ?? ''} />
     <AmountFields prefix="estimate" label="Prix estimé" cents={idea?.prix_estime_centimes} currency={idea ? idea.devise_estimee : 'EUR'} />
     <label className="flex min-h-11 items-center gap-2"><input name="archived" type="checkbox" defaultChecked={idea?.archivee ?? false} />Archiver cette idée</label>
+    </details>
   </EditForm>
 }
 export function IdeaLibrary({ contactId, preparationId, onChanged }: { contactId?: number | null; preparationId?: string; onChanged?: () => void }) {
@@ -48,6 +52,7 @@ export function IdeaLibrary({ contactId, preparationId, onChanged }: { contactId
   const contacts = useAttentionLoad(user.id + ':idea-contacts', () => readAllRows(() => supabase.from('contacts').select('id,prenom,nom').eq('user_id', user.id)))
   const [search, setSearch] = useState(''), [selectedContact, setSelectedContact] = useState(''), [archive, setArchive] = useState('active'), [known, setKnown] = useState('all')
   const [budget, setBudget] = useState(''), [currency, setCurrency] = useState('EUR')
+  const [showAll, setShowAll] = useState(false)
   let ceiling: number | null = null, filterError = ''
   try { ceiling = parseCents(budget) } catch (e) { filterError = e instanceof Error ? e.message : 'Plafond invalide.' }
   const visible = loaded.data?.filter(idea =>
@@ -99,8 +104,9 @@ export function IdeaLibrary({ contactId, preparationId, onChanged }: { contactId
     {error && <p role="alert">{error}</p>}
     {!loaded.data ? <LoadState error={loaded.error} retry={loaded.reload} /> : <>
       {!visible.length && <p className="rounded-xl bg-canvas p-5 text-sm text-muted">Aucune idée ne correspond. Ajoute une inspiration ou élargis les filtres.</p>}
-      {visible.map(idea => <article key={idea.id} className="space-y-3 rounded-2xl border border-line bg-canvas p-4 sm:p-5">
+      {(preparationId && !showAll ? visible.slice(0, 4) : visible).map(idea => <article key={idea.id} className="space-y-3 rounded-2xl border border-line bg-canvas p-4 sm:p-5">
         <h3 className="break-words font-semibold">{idea.titre}{idea.archivee && ' · Archivée'}</h3>
+        {preparationId && <p className="text-xs text-muted">Provenance : mon inspiration privée</p>}
         <ShareImageButton title={idea.titre} fields={[{ id: 'link', label: 'Lien marchand', value: idea.lien_marchand }, { id: 'note', label: 'Note', value: idea.note, sensitive: true }, { id: 'amount', label: 'Prix estimé', value: money(idea.prix_estime_centimes, idea.devise_estimee), sensitive: true }]} />
         <p>{money(idea.prix_estime_centimes, idea.devise_estimee)} estimé</p>
         {idea.note && <p className="whitespace-pre-wrap break-words text-sm">{idea.note}</p>}
@@ -111,6 +117,7 @@ export function IdeaLibrary({ contactId, preparationId, onChanged }: { contactId
           <button disabled={busy} className={button} onClick={() => void action(idea, true)}>Supprimer</button>
         </div>
       </article>)}
+      {preparationId && visible.length > 4 && <button className={button} onClick={() => setShowAll(value => !value)}>{showAll ? 'Afficher quatre inspirations' : `Voir toutes les inspirations (${visible.length})`}</button>}
     </>}
   </section>
 }
@@ -146,7 +153,7 @@ function DonateChoice({ choice, onSaved }: { choice: Choice; onSaved: () => void
     <p className="text-xs text-muted">Le don ne déclare ni achat ni livraison. La dépense éventuelle reste attachée au choix.</p>
   </EditForm>
 }
-export function GiftChoices({ preparationId, refresh = 0 }: { preparationId: string; refresh?: number }) {
+export function GiftChoices({ preparationId, refresh = 0, onChanged }: { preparationId: string; refresh?: number; onChanged?: () => void }) {
   const user = useDashboardUser()
   const loaded = useAttentionLoad(user.id + ':choices:' + preparationId, async () => {
     const [choices, gifts] = await Promise.all([attentionRows('choix_cadeaux', user.id), attentionRows('cadeaux_offerts', user.id)])
@@ -159,8 +166,8 @@ export function GiftChoices({ preparationId, refresh = 0 }: { preparationId: str
         <h3 className="break-words font-semibold">{choice.titre} · {choice.etat === 'achete' ? 'Acheté' : choice.etat === 'abandonne' ? 'Abandonné' : 'Prévu'}</h3>
         <ShareImageButton title={choice.titre} fields={[{ id: 'state', label: 'État', value: choice.etat }, { id: 'estimate', label: 'Prix estimé', value: money(choice.prix_estime_centimes, choice.devise_estimee), sensitive: true }, { id: 'paid', label: 'Montant dépensé', value: money(choice.montant_depense_centimes, choice.devise_depensee), sensitive: true }]} />
         <p>{money(choice.prix_estime_centimes, choice.devise_estimee)} estimé{choice.etat === 'achete' && ' · ' + money(choice.montant_depense_centimes, choice.devise_depensee) + ' dépensé'}</p>
-        <details><summary className="min-h-11 cursor-pointer py-2">Modifier le choix ou déclarer l’achat</summary><ChoiceEditor choice={choice} onSaved={loaded.reload} /></details>
-        {loaded.data!.gifts.some(g => g.choix_id === choice.id) ? <p className="text-success">Cadeau offert déclaré</p> : <details><summary className="min-h-11 cursor-pointer py-2">Noter le cadeau offert</summary><DonateChoice choice={choice} onSaved={loaded.reload} /></details>}
+        <details><summary className="min-h-11 cursor-pointer py-2">Modifier le choix ou déclarer l’achat</summary><ChoiceEditor choice={choice} onSaved={() => { loaded.reload(); onChanged?.() }} /></details>
+        {loaded.data!.gifts.some(g => g.choix_id === choice.id) ? <p className="text-success">Cadeau offert déclaré</p> : <details><summary className="min-h-11 cursor-pointer py-2">Noter le cadeau offert</summary><DonateChoice choice={choice} onSaved={() => { loaded.reload(); onChanged?.() }} /></details>}
       </article>)}
     </>}
   </section>

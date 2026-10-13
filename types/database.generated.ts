@@ -57,6 +57,7 @@ export type Database = {
         Row: {
           configuration: Json
           created_at: string
+          portrait_ia: Json | null
           revision: number
           updated_at: string
           user_id: string
@@ -64,6 +65,7 @@ export type Database = {
         Insert: {
           configuration: Json
           created_at?: string
+          portrait_ia?: Json | null
           revision?: number
           updated_at?: string
           user_id: string
@@ -71,6 +73,7 @@ export type Database = {
         Update: {
           configuration?: Json
           created_at?: string
+          portrait_ia?: Json | null
           revision?: number
           updated_at?: string
           user_id?: string
@@ -1340,6 +1343,10 @@ export type Database = {
         Args: { p_day: string; p_device_key: string; p_user_id: string }
         Returns: boolean
       }
+      commander_celebrations: {
+        Args: { p_action: string; p_donnees: Json; p_operation: string }
+        Returns: Json
+      }
       commander_etoiles: {
         Args: { p_action: string; p_donnees: Json; p_operation: string }
         Returns: Json
@@ -1435,6 +1442,10 @@ export type Database = {
         Args: { email_du_contact: string; mon_user_id: string }
         Returns: boolean
       }
+      exporter_celebrations: {
+        Args: { p_apres?: string; p_limite?: number }
+        Returns: Json
+      }
       exporter_etoiles: {
         Args: { p_apres?: string; p_limite?: number; p_vue: string }
         Returns: Json
@@ -1471,8 +1482,17 @@ export type Database = {
         Args: { p_apres?: number; p_limite?: number }
         Returns: Json
       }
+      lire_celebration: { Args: { p_id: string }; Returns: Json }
+      lire_celebrations: {
+        Args: { p_apres?: string; p_limite?: number }
+        Returns: Json
+      }
       lire_etoiles: {
         Args: { p_apres?: string; p_limite?: number; p_vue: string }
+        Returns: Json
+      }
+      lire_invitations_celebrations: {
+        Args: { p_apres?: string; p_limite?: number }
         Returns: Json
       }
       lire_mon_profil: { Args: never; Returns: Json }
@@ -1601,6 +1621,7 @@ export type Database = {
         }
         Returns: Json
       }
+      preparer_effacement_celebrations: { Args: never; Returns: Json }
       publier_carte_lot09: {
         Args: {
           p_carte: string

@@ -37,3 +37,11 @@ export function attentionError(error: unknown): string {
   if (code === '42501') return 'Cette ressource est inaccessible. Vérifie ta session.'
   return error instanceof Error ? error.message : 'Enregistrement impossible. Ta saisie est conservée ; tu peux réessayer.'
 }
+
+export function quickIdea(title: string, link: string) {
+  const validatedLink = merchantLink(link)
+  const validatedTitle = title.trim()
+  if (!validatedTitle && !validatedLink) throw new Error('Saisis un titre ou un lien http/https pour ton idée.')
+  if (validatedTitle.length > 200) throw new Error('Le titre est limité à 200 caractères.')
+  return { titre: validatedTitle || 'Idée à découvrir', lien_marchand: validatedLink }
+}

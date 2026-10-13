@@ -50,8 +50,13 @@ export async function loadPreparation(owner: string, occurrenceId: string) {
   if (event.error || !event.data) throw new Error('Événement inaccessible.')
   const contact = event.data.contact_id === null ? null : await supabase.from('contacts').select('*').eq('user_id', owner).eq('id', event.data.contact_id).single()
   if (contact?.error) throw new Error('Contact inaccessible.')
-  const opened = await supabase.rpc('ouvrir_preparation_lot04', { p_occurrence: occurrenceId })
+  // Consulter un historique déjà enregistré ne nécessite aucune écriture.
+  // La création conserve la RPC atomique et ses contrôles lorsque rien n'existe.
+  const existing = await supabase.from('preparations_evenements').select('*').eq('user_id', owner).eq('occurrence_id', occurrenceId).maybeSingle()
+  if (existing.error) throw existing.error
+  const opened = existing.data ? existing : await supabase.rpc('ouvrir_preparation_lot04', { p_occurrence: occurrenceId })
   if (opened.error || !opened.data) throw opened.error ?? new Error('Préparation inaccessible.')
-  const tasks = await readAllRows(() => supabase.from('taches_preparation').select('*').eq('user_id', owner).eq('preparation_id', opened.data.id))
-  return { occurrence: occurrence.data, event: event.data, contact: contact?.data ?? null, preparation: opened.data, tasks }
+  const preparation = opened.data
+  const tasks = await readAllRows(() => supabase.from('taches_preparation').select('*').eq('user_id', owner).eq('preparation_id', preparation.id))
+  return { occurrence: occurrence.data, event: event.data, contact: contact?.data ?? null, preparation, tasks }
 }

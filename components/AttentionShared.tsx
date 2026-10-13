@@ -8,12 +8,16 @@ export const button = 'inline-flex min-h-11 items-center justify-center rounded-
 export const panel = 'min-w-0 space-y-3 rounded-xl border border-line bg-surface p-4'
 export function AttentionNav() {
   return <nav aria-label="Célébrations" className="mb-6 flex flex-wrap gap-2">
-    <Link className={button} href="/dashboard/preparations">Mes préparations</Link>
-    <Link className={button} href="/dashboard/idees">Boîte à idées et cadeaux</Link>
-    <Link className={button} href="/dashboard/generate">Messages</Link>
-    <Link className={button} href="/dashboard/messages-programmes">Messages programmés</Link>
-    <Link className={button} href="/dashboard/budget">Budget cadeaux</Link>
-    <Link className={button} href="/dashboard/styles">Mes styles</Link>
+    <Link className={button} href="/dashboard/preparations">Mes célébrations</Link>
+    <details className="min-w-0"><summary className={button + ' cursor-pointer'}>Mes outils personnels</summary>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link className={button} href="/dashboard/idees">Inspirations et historique</Link>
+        <Link className={button} href="/dashboard/budget">Ma synthèse personnelle</Link>
+        <Link className={button} href="/dashboard/generate">Messages</Link>
+        <Link className={button} href="/dashboard/messages-programmes">Messages programmés</Link>
+        <Link className={button} href="/dashboard/styles">Mes styles</Link>
+      </div>
+    </details>
   </nav>
 }
 export function useAttentionLoad<T>(scope: string, loader: () => Promise<T>, refresh = 0) {
