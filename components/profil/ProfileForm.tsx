@@ -11,6 +11,7 @@ import { ownUniversImageFields } from '@/lib/image-projections'
 import { avatarRenderConfig } from '@/lib/avatar-render-config'
 import { profilToutAutorise } from '@/lib/profile-contract'
 import { proposerPermissionsProfil, permissionsProfilTraitees } from '@/lib/profile-permission-proposal'
+import ProfileAvatarCard from '@/components/avatars/ProfileAvatarCard'
 
 export type ProfileService = {
   lire: (ownerId: string, signal: AbortSignal) => Promise<unknown>
@@ -121,7 +122,10 @@ export function AccountProfileForm({ ownerId, api, avatarEnregistre = null }: { 
     finally { lock.current = false; if (alive.current) setBusy(false) }
   }
   return <div className="mx-auto max-w-6xl space-y-5 p-4 sm:p-6">
-    <header><h1 className="text-2xl font-semibold text-ink">Mon profil</h1><p className="mt-2 text-sm text-muted">Tes informations, tes goûts et ce que tu choisis de partager, au même endroit.</p></header>
+    <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div><h1 className="text-2xl font-semibold text-ink">Mon profil</h1><p className="mt-2 text-sm text-muted">Tes informations, tes goûts et ce que tu choisis de partager, au même endroit.</p></div>
+      <ProfileAvatarCard ownerId={ownerId} initiale={saved?.prenom.slice(0, 1)} />
+    </header>
     {saved && <ShareImageButton title="Mon profil" fields={[...ownUniversImageFields(saved),{id:'surname',label:'Nom de famille',value:saved.nom,sensitive:true}]} avatarSnapshot={imageAvatar} />}
     {offline && <p role="status" className="text-sm text-muted">Hors ligne : tes modifications restent en mémoire pendant cette session.</p>}
     {error && <p role="alert" className="rounded-xl border border-line p-3 text-ink">{error}</p>}

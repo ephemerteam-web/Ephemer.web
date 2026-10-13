@@ -1,5 +1,15 @@
 # Mon profil — identité, goûts et partage réunis
 
+## Cadre d’avatar — 13 octobre 2026
+
+Un petit cadre « Mon avatar » est visible en haut de `/dashboard/profil`, sans ouvrir la rubrique Coordonnées et avatar. Il reprend l’apparence déjà chargée dans le dashboard : portrait IA enregistré, avatar dessiné ou initiale en attendant sa lecture. Cliquer sur l’avatar ou sur **Modifier** ouvre `/avatar`, avec le garde existant si le profil contient des modifications non enregistrées.
+
+Pour un portrait IA, maintenir l’avatar appuyé pendant 550 ms ouvre une fenêtre avec le portrait entier et **Télécharger mon avatar**. Le bouton **Agrandir** donne le même accès au clavier. La fenêtre se ferme avec **Fermer**, Échap ou un clic sur le fond ; le dialogue natif gère le focus. Déplacer le doigt pour défiler, annuler l’appui, quitter le cadre ou changer d’onglet annule le délai. Relâcher un appui prolongé ne déclenche pas la navigation. Un changement de compte, une nouvelle révision du portrait ou son remplacement par un dessin démonte la fenêtre et l’appui précédent.
+
+Le téléchargement utilise le JPEG enregistré, déjà en mémoire, nommé `avatar-ephemer.jpg` ; il ne reconstitue pas l’image originale de génération en 1024 px. Une fois le portrait chargé, il reste agrandissable et téléchargeable pendant cette session hors ligne. Après rechargement hors ligne, une connexion reste nécessaire pour relire les données privées. Aucun stockage navigateur ou cache PWA, nouvelle API, dépendance, écriture de profil ou changement SQL.
+
+Vérifications : 27 tests ciblés profil/portrait/cadre réussis, dont six nouveaux tests d’interaction. `npm run verify` réussi après relance autorisée hors du bac à sable (`spawn EPERM` au premier lancement) : 396 tests, types et build réussis, zéro erreur lint et cinq avertissements préexistants. Journal : `out/profile-avatar-card-verify.txt`. Les recettes `tests/profile-browser.mjs` et `tests/profile-avatar-browser.mjs`, après `node tests/profile-preview.mjs`, passent sur données fictives à 320/390/1440 px, thèmes clair/sombre, avec appui souris/tactile, clavier, garde des brouillons, téléchargement hors ligne comparé octet par octet, changement de compte/portrait et annulation pendant le défilement. Captures et résultats : `out/profile-preview/`, dont `avatar-browser-results.json` ; captures mobile 320 px sombre et 390 px clair inspectées. Aucun service distant appelé ni commit ; Safari/iPhone/Android réels restent à vérifier.
+
 ## Simplification du 12 octobre 2026 — vérification locale
 
 `npm run verify` final réussi : lint sans erreur (cinq avertissements préexistants), types, 390 tests et build. Les tests de suppression du compte ont été adaptés à la rubrique repliable sans changer leurs assertions métier. Aucun fournisseur réel appelé, aucun commit, aucune modification SQL ou nouvelle dépendance.

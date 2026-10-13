@@ -8,14 +8,20 @@ import {
 } from './selfie-avatar-contract'
 
 export const SELFIE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b'
-// Retouche compatible du 12/10/2026 : le contrat celeste-cartoon-v1 est conservé.
-export const SELFIE_PROMPT = `Transforme la personne de l’image 0 en portrait illustré 2D fidèle et immédiatement reconnaissable. Cette photo est l’unique référence pour son apparence. Préserve précisément la forme et les proportions du visage, ses asymétries naturelles, la mâchoire, les joues, le nez, les lèvres, les sourcils et la forme des yeux. Conserve l’âge apparent, la carnation, la couleur des yeux, la coiffure, la ligne des cheveux, la pilosité et l’expression visibles sur la photo.
+// Retouche compatible du 13/10/2026 : priorité aux traits et couleurs du selfie, contrat celeste-cartoon-v1 conservé.
+export const SELFIE_PROMPT = `Transforme la personne de l’image 0 en portrait illustré 2D fidèle et immédiatement reconnaissable. Cette photo est l’unique référence pour son apparence. La fidélité au visage et à ses couleurs est la priorité absolue : lorsqu’un choix de stylisation entre en conflit avec la ressemblance, conserve les caractéristiques du selfie.
+
+Reproduis précisément les yeux visibles : leur forme, leur taille, leur espacement, leur inclinaison, l’ouverture et les plis des paupières, ainsi que la couleur et les nuances visibles des iris. Respecte les différences naturelles entre les deux yeux. Ne les agrandis pas, ne les arrondis pas et ne les remplace pas par des yeux de dessin génériques. Ne change pas la couleur des iris.
+
+Conserve la teinte et le sous-ton de la peau visibles sur la photo, avec leurs variations naturelles, les taches de rousseur et les grains de beauté visibles. N’éclaircis pas et n’assombris pas la carnation, n’ajoute pas de bronzage et évite le lissage excessif de la peau.
+
+Préserve précisément la forme et les proportions du visage, ses asymétries naturelles, la mâchoire, les joues, le nez, les lèvres et les sourcils. Conserve l’âge apparent, la coiffure, la ligne des cheveux, la pilosité et l’expression visibles sur la photo. N’embellis pas le visage en modifiant ses traits, ne le rajeunis pas et ne remplace pas ses particularités par un visage standard. Si un détail est peu lisible, reste au plus près de ce qui est visible sans inventer une couleur d’yeux ni imposer un trait générique.
 
 Reprends exactement les accessoires présents. Si la personne porte des lunettes, conserve leur forme et leur couleur. Sinon, représente le visage avec les yeux et les tempes entièrement dégagés.
 
 Dessine un t-shirt dont la couleur correspond au vêtement visible sur la photo. Pour un vêtement multicolore, reprends sa couleur dominante. Si aucun vêtement n’est visible, utilise un t-shirt uni crème.
 
-Illustration dessinée avec une stylisation légère, des contours précis et des ombres douces. Conserve les proportions naturelles et l’orientation de la tête pour préserver la ressemblance. Cadrage du haut du buste, tête entière visible, composition centrée adaptée à un avatar circulaire.
+Illustration dessinée avec une stylisation légère, des contours fins et précis et des ombres douces. Utilise un éclairage neutre sur la personne pour conserver les couleurs du selfie. Réserve le bleu nuit et les reflets dorés au décor : aucune dominante bleue ou dorée sur la peau ou les iris. Conserve les proportions naturelles et l’orientation de la tête pour préserver la ressemblance. Cadrage du haut du buste, tête entière visible, composition centrée adaptée à un avatar circulaire.
 
 Fond bleu nuit avec une grande lune croissante ivoire et dorée derrière la personne et quelques étoiles dorées. La position des étoiles et les détails de la lune peuvent légèrement varier entre les générations. Une seule personne, vêtement sans inscription, aucun texte ni logo.`
 
