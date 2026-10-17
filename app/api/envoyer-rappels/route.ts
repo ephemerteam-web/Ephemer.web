@@ -9,6 +9,7 @@ import { genererEmailRappel } from '@/lib/email-templates';
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { messageNeedsRescheduling, automaticReminderUseful } from '@/lib/reminder-policy';
 import { rappelOccurrenceCurrent } from '@/lib/rappel-occurrence';
+import { runCollectiveCron } from '@/lib/collective-card-worker';
 
 // 🔐 Secrets lus depuis les variables d'environnement (jamais en clair dans le code)
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -33,6 +34,10 @@ export async function GET(request: NextRequest) {
     console.log(`🔧 Mode force : ${force ? 'OUI (tous les rappels programmés)' : 'NON (date_envoi <= aujourd\'hui)'}`);
 
     const resultats: { id: number; statut: string; raison?: string; erreur?: string; emailId?: string }[] = [];
+    // Phase collective bornée, indépendante des erreurs des rappels historiques.
+    let cartesCollectives;
+    try { cartesCollectives = await runCollectiveCron(); }
+    catch { cartesCollectives = { traites: 0, publications: 0, acceptes: 0, incertains: 0, erreurs: 1 }; }
     for await (const rappels of readPages(() => supabaseAdmin.from('rappels')
       .select('*, contacts (prenom, nom, email, user_id)').eq('statut', 'programme').lte('date_envoi', aujourdhui))) {
 
@@ -211,11 +216,12 @@ export async function GET(request: NextRequest) {
 
     }
     return NextResponse.json({
-      success: !resultats.some(r => ['erreur', 'review', 'failed'].includes(r.statut)),
+      success: cartesCollectives.erreurs === 0 && !resultats.some(r => ['erreur', 'review', 'failed'].includes(r.statut)),
+      cartesCollectives,
       date: aujourdhui,
       total_traites: resultats.length,
       resultats,
-    }, { status: resultats.some(r => ['erreur', 'review', 'failed'].includes(r.statut)) ? 500 : 200 });
+    }, { status: cartesCollectives.erreurs > 0 || resultats.some(r => ['erreur', 'review', 'failed'].includes(r.statut)) ? 500 : 200 });
 
   } catch (err: unknown) {
     console.error('❌ Erreur générale cron:', err);

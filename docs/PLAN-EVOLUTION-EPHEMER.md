@@ -4,6 +4,53 @@ Document préparé le 4 octobre 2026 à partir de la discussion produit et du d�
 
 Objectif : développer des fonctionnalités utiles, les proposer gratuitement au lancement, puis décider lesquelles méritent une offre premium ou des achats cosmétiques après observation de leur usage. Ce document prépare le travail ; il ne lance aucune implémentation, aucun changement Supabase et aucun paiement.
 
+**Suite proposée après l’audit du 17/10 :** le [plan d’actions E01–E11](PLAN-ACTIONS-2026-10-17.md) organise les prochaines évolutions en étapes à valider une à une. Il conserve les références des lots ci-dessous et ne vaut pas autorisation de les réaliser tous.
+
+**Actualisation de planification :** à la demande de l’utilisateur, les cartes collectives sont désormais considérées à jour dans le plan d’actions : E09 n’est plus un chantier restant. La programmation E10 et le suivi email E03 portent uniquement sur d’éventuels écarts non déjà couverts. Le bilan historique ci-dessous et ses preuves ne constituent pas une nouvelle vérification de cette hypothèse.
+
+## État d’avancement au 17 octobre 2026
+
+Ce bilan reprend le plan du premier audit, sans remplacer ses prompts ni son historique. Il décrit le dépôt local examiné le 17/10 ; « intégré » ne signifie pas que le dernier code est déployé. Les confirmations de base ci-dessous proviennent des comptes rendus existants, sans nouveau contrôle distant pendant cet audit. Le [nouvel audit](AUDIT-APPLICATION-2026-10-17.md) détaille l’inventaire, les parcours, les limites et les propositions suivantes.
+
+| Lot initial | Avancement constaté | Ce qui reste / preuve principale |
+|---|---|---|
+| 00 — État réel et suivi | Réalisé, à actualiser à chaque livraison. | [SUIVI.md](evolution/SUIVI.md) conserve les étapes historiques ; lire la synthèse actuelle avant les anciens blocages. |
+| 01 — Modèle et permissions | Conception réalisée, puis adaptée. | [Modèle initial](evolution/MODELE-METIER.md) ; les groupes permanents ont été remplacés par des participations à une célébration dans la [conception actuelle](evolution/celebrations/CONCEPTION.md). |
+| SQL — Persistance | Installation humaine et contrôles de catalogue consignés pour plusieurs lots. | Pas de validation globale de toutes les RLS ni des courses réelles. Le dossier collectif 13–14 reste proposé, non branché. |
+| 02 — Dates personnelles | Intégré : jour/mois, année facultative, fête choisie, dates ponctuelles/annuelles, occurrences communes. | `PersonalDates`, `personal-events` et suivi 02. Recette authentifiée complète, changements simultanés et appareils réels à compléter. |
+| 03 — Listes privées | Intégré : listes multiples, gestion et filtres Contacts/Dates. | `PrivateLists`, `private-lists`, suivi 03. L’accueil a volontairement perdu son sélecteur de liste depuis le plan initial. |
+| 04 — Préparation | Intégré, puis regroupé sous Célébrations : tâches, message, modèles, historique par occurrence. | `PreparationScreen`, `attention-data`. Les états préparé/acheté/envoyé/livré restent distincts. |
+| 05 — Idées, dons et budget | Intégré : bibliothèque, choix, cadeaux offerts, historique, montants par devise. | `GiftLibrary`, `BudgetScreen`, `CelebrationCosts`. Budget personnel seulement ; les frais partagés restent futurs. |
+| 06 — Styles de messages | Intégré et persistant selon catalogue consigné : compte, contact, choix temporaire, signature locale. | `MessageStyles`, `personal-preferences`, suivi 06/07. Recette distante exhaustive encore distincte des simulations. |
+| 07 — Suggestions cadeaux | Intégré : catégories, filtres, sauvegarde volontaire et contexte autorisé. | Générateur cadeaux et suivi 06/07 ; enrichissement social 10C. Pas d’achat marchand automatique. |
+| 08 — Cartes individuelles | Intégré : brouillon, aperçu, publication figée, lien révocable/expirant et PNG. | `components/cards`, `card-data`, suivi 08. Réception/partage natif sur téléphone à vérifier. |
+| 09 — Avatar et signature | Intégré, étendu depuis : avatars dessinés, portrait IA depuis selfie, aperçu/téléchargement du portrait enregistré. | `components/avatars`, `avatar-data`, docs Profil. Les anciennes cartes gardent leur avatar figé. |
+| 10 — Relations entre comptes | Intégré en trois tranches : Étoiles 10A, Univers 10B, consentements cadeaux IA 10C ; Univers ensuite réuni dans Mon profil. | Dossiers 10A/B/C et [Profil unifié](PROFIL-UNIFIE.md). Débit, conservation et recettes de droits/concurrence à solder selon les limites consignées. |
+| 11 — Cercles / préparatifs partagés | Réalisé sous un périmètre révisé : invitations et organisation **par célébration**, sans cercle permanent. | B activé dans le code en développement et production ; catalogue corrigé et parcours pilotes consignés, GO humain donné. Déploiement actuel non vérifié ; courses et rejeux réels restants. [Activation](evolution/celebrations/ACTIVATION.md). |
+| 12 — Envies / réservations | Non livré dans le parcours partagé. Conception reportée aux tranches C/D. | Les idées et achats privés du lot 05 ne constituent pas une réservation entre participants. [Conception](evolution/celebrations/CONCEPTION.md). |
+| 13 — Cartes collectives | Préparation partielle : contrats, rendu, composants autonomes et dossier SQL. | `COLLECTIVE_CARDS_ENABLED=false` ; pas de persistance collective raccordée. [Dossier 13–14](evolution/lot-13-14/README.md). |
+| 14 — Programmation des cartes | Préparation partielle ; pas de programmation collective opérationnelle. | Schéma durable, raccordement cron/webhook et recette réelle restent nécessaires. Les messages programmés existants sont un parcours différent. |
+| 15 — Constellation / récompenses | Non réalisé dans le code examiné. | Les modèles de carte nommés « Constellation » ne sont pas un système de progression. À réévaluer après observation des usages. |
+| 16 — Mesure d’usage | Non réalisé selon le livrable prévu. | Paquet Analytics déclaré, mais aucun appel d’instrumentation produit trouvé dans `app`, `components`, `lib`, ni document `MESURE-USAGE.md`. Ne pas annoncer de rétention mesurée. |
+| 17 — Premium / cosmétiques payants | Non réalisé, conformément au report prévu. | Pas de paiement ni de monétisation validée dans le parcours examiné. Attendre des usages et coûts mesurés. |
+| 18 — Recette de bout en bout | Partiel et continu : nombreux tests locaux, recettes navigateur consignées, pilote réel B. | Ni certification complète de production, ni concurrence réelle générale, ni validation iOS/Android complète. Résultats du nouvel audit dans le rapport lié ci-dessus. |
+
+**Lecture produit :** le socle privé des lots 02–09 et le social 10 sont intégrés ; 11 a été adapté puis activé dans le code ; 12 reste à construire ; 13/14 sont préparés ; 15–17 ne sont pas livrés ; 18 demeure transversal. Un pourcentage global masquerait les écarts entre code, installation, déploiement et recette réelle.
+
+### Compléments réalisés depuis le plan initial
+
+- Quatre espaces communs, accueil unifié, calendrier Mois/Agenda et décomptes rétablis.
+- Mon profil unifié, partage et autorisations IA regroupés ; premier profil et reprise d’invitation retravaillés.
+- Export PNG local sur de nombreux écrans ; export JSON du compte étendu à la version 12 lorsque B est actif.
+- Résumé push quotidien codé ; installation SQL confirmée humainement dans le guide du 10/10, réception réelle et configuration complète encore à valider.
+- Célébrations personnelles en trois onglets et organisation à plusieurs, avec choix explicite des éléments publiés.
+
+### Prochaines évolutions proposées, non lancées
+
+Ordre recommandé : fiabilisation et état d’activation → simplification du parcours → export calendrier `.ics` → abonnement par lien à mises à jour automatiques → mesure des usages → réservations de cadeaux / finalisation des cartes collectives → connecteur Google si le besoin de délai le justifie → Outlook et échanges dans les deux sens après validation de leur utilité.
+
+L’abonnement par lien est une nouvelle proposition : il n’était pas livré par le lot Dates. Son contrat, ses limites de confidentialité, les différences Google/Apple/Outlook et les critères d’acceptation figurent dans le [nouvel audit, sections 6 à 8](AUDIT-APPLICATION-2026-10-17.md#6-calendrier-externe--export-abonnement-et-synchronisation).
+
 ## 1. Direction produit
 
 Ephemer aide à préparer une attention personnelle au bon moment : retrouver une idée, choisir un cadeau, écrire un message, créer une carte et organiser les préparatifs avec ses proches.

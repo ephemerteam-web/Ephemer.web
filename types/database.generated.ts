@@ -355,6 +355,182 @@ export type Database = {
         }
         Relationships: []
       }
+      email_attempts: {
+        Row: {
+          finished_at: string | null
+          id: number
+          job_id: string
+          outcome: string
+          resend_id: string | null
+          started_at: string
+          token: string
+        }
+        Insert: {
+          finished_at?: string | null
+          id?: never
+          job_id: string
+          outcome?: string
+          resend_id?: string | null
+          started_at?: string
+          token: string
+        }
+        Update: {
+          finished_at?: string | null
+          id?: never
+          job_id?: string
+          outcome?: string
+          resend_id?: string | null
+          started_at?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_attempts_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "email_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_cron_runs: {
+        Row: {
+          completed_at: string
+          cron: string
+          day: string
+          id: number
+          phase: string
+          success: boolean
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string
+          cron: string
+          day: string
+          id?: never
+          phase: string
+          success: boolean
+          user_id: string
+        }
+        Update: {
+          completed_at?: string
+          cron?: string
+          day?: string
+          id?: never
+          phase?: string
+          success?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_delivery_control: {
+        Row: {
+          collective_enabled: boolean
+          enabled: boolean
+          singleton: boolean
+        }
+        Insert: {
+          collective_enabled?: boolean
+          enabled?: boolean
+          singleton?: boolean
+        }
+        Update: {
+          collective_enabled?: boolean
+          enabled?: boolean
+          singleton?: boolean
+        }
+        Relationships: []
+      }
+      email_jobs: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          delivery_status: string
+          event_keys: string[]
+          expires_on: string
+          first_attempt_at: string | null
+          id: string
+          job_key: string
+          kind: string
+          lease_until: string | null
+          notification_ids: string[]
+          payload: Json
+          rappel_id: number | null
+          resend_id: string | null
+          source: Json
+          state: string
+          token: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          delivery_status?: string
+          event_keys?: string[]
+          expires_on: string
+          first_attempt_at?: string | null
+          id?: string
+          job_key: string
+          kind: string
+          lease_until?: string | null
+          notification_ids?: string[]
+          payload: Json
+          rappel_id?: number | null
+          resend_id?: string | null
+          source?: Json
+          state: string
+          token?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          delivery_status?: string
+          event_keys?: string[]
+          expires_on?: string
+          first_attempt_at?: string | null
+          id?: string
+          job_key?: string
+          kind?: string
+          lease_until?: string | null
+          notification_ids?: string[]
+          payload?: Json
+          rappel_id?: number | null
+          resend_id?: string | null
+          source?: Json
+          state?: string
+          token?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      email_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          occurred_at: string
+          received_at: string
+          resend_id: string
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          occurred_at: string
+          received_at?: string
+          resend_id: string
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          occurred_at?: string
+          received_at?: string
+          resend_id?: string
+        }
+        Relationships: []
+      }
       evenements_personnels: {
         Row: {
           archive: boolean
@@ -1301,6 +1477,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      begin_email_job: {
+        Args: { p_job_id: string; p_token: string }
+        Returns: Json
+      }
+      begin_email_job_socle: {
+        Args: { p_job_id: string; p_token: string }
+        Returns: Json
+      }
       budget_cadeaux_lot05: {
         Args: { p_debut: string; p_fin: string }
         Returns: {
@@ -1343,6 +1527,39 @@ export type Database = {
         Args: { p_day: string; p_device_key: string; p_user_id: string }
         Returns: boolean
       }
+      claim_email_job: {
+        Args: {
+          p_event_keys: string[]
+          p_expires_on: string
+          p_key: string
+          p_kind: string
+          p_notification_ids: string[]
+          p_payload: Json
+          p_rappel_id: number
+          p_source: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      claim_email_job_socle: {
+        Args: {
+          p_event_keys: string[]
+          p_expires_on: string
+          p_key: string
+          p_kind: string
+          p_notification_ids: string[]
+          p_payload: Json
+          p_rappel_id: number
+          p_source: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      collectif_disponible: { Args: never; Returns: boolean }
+      commander_carte_collective: {
+        Args: { p_celebration: string; p_commande: Json }
+        Returns: Json
+      }
       commander_celebrations: {
         Args: { p_action: string; p_donnees: Json; p_operation: string }
         Returns: Json
@@ -1358,6 +1575,10 @@ export type Database = {
           p_operation: string
           p_revision: number
         }
+        Returns: Json
+      }
+      consulter_carte_collective: {
+        Args: { p_empreinte: string }
         Returns: Json
       }
       consulter_carte_lot08: { Args: { p_empreinte: string }; Returns: Json }
@@ -1378,6 +1599,11 @@ export type Database = {
       }
       daily_push_ready: { Args: never; Returns: boolean }
       desactiver_invitation: { Args: { p_id: string }; Returns: undefined }
+      email_occurrence_current: { Args: { p_id: number }; Returns: boolean }
+      engager_email_carte: {
+        Args: { p_job: string; p_token: string }
+        Returns: Json
+      }
       enregistrer_evenement_lot02: { Args: { p_donnees: Json }; Returns: Json }
       enregistrer_mon_profil: {
         Args: { p_donnees: Json; p_operation: string }
@@ -1461,6 +1687,19 @@ export type Database = {
           version_id: string
         }[]
       }
+      exporter_mes_contributions_collectives: {
+        Args: { p_celebration: string }
+        Returns: Json
+      }
+      finish_email_job: {
+        Args: {
+          p_job_id: string
+          p_outcome: string
+          p_resend_id: string
+          p_token: string
+        }
+        Returns: undefined
+      }
       gerer_partage_carte_lot08: {
         Args: {
           p_action: string
@@ -1482,11 +1721,14 @@ export type Database = {
         Args: { p_apres?: number; p_limite?: number }
         Returns: Json
       }
+      lire_carte_collective: { Args: { p_celebration: string }; Returns: Json }
       lire_celebration: { Args: { p_id: string }; Returns: Json }
       lire_celebrations: {
         Args: { p_apres?: string; p_limite?: number }
         Returns: Json
       }
+      lire_echeances_cartes: { Args: { p_limite?: number }; Returns: Json }
+      lire_enveloppe_carte: { Args: { p_plan: string }; Returns: Json }
       lire_etoiles: {
         Args: { p_apres?: string; p_limite?: number; p_vue: string }
         Returns: Json
@@ -1559,6 +1801,16 @@ export type Database = {
         }
         Returns: Json
       }
+      my_email_status: {
+        Args: never
+        Returns: {
+          delivery_status: string
+          rappel_id: number
+          resend_id: string
+          state: string
+          updated_at: string
+        }[]
+      }
       noter_cadeau_offert_lot05: {
         Args: {
           p_choix: string
@@ -1622,6 +1874,25 @@ export type Database = {
         Returns: Json
       }
       preparer_effacement_celebrations: { Args: never; Returns: Json }
+      preparer_publication_collective: {
+        Args: { p_plan: string }
+        Returns: Json
+      }
+      publier_carte_collective: {
+        Args: {
+          p_acteur: string
+          p_carte: string
+          p_chiffre: Json
+          p_duree: number
+          p_hash: string
+          p_lien: string
+          p_operation: string
+          p_plan?: string
+          p_revision: number
+          p_version: string
+        }
+        Returns: Json
+      }
       publier_carte_lot09: {
         Args: {
           p_carte: string
@@ -1642,6 +1913,26 @@ export type Database = {
         Args: { p_apres?: number; p_limite?: number }
         Returns: Json
       }
+      record_cron_run: {
+        Args: {
+          p_cron: string
+          p_day: string
+          p_phase: string
+          p_success: boolean
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      record_email_webhook: {
+        Args: {
+          p_event_id: string
+          p_job_id: string
+          p_occurred_at: string
+          p_resend_id: string
+          p_type: string
+        }
+        Returns: undefined
+      }
       repondre_invitation: {
         Args: {
           p_date_naissance: string
@@ -1659,6 +1950,10 @@ export type Database = {
           raison: string
           succes: boolean
         }[]
+      }
+      reserver_email_carte: {
+        Args: { p_payload_chiffre: Json; p_plan: string }
+        Returns: Json
       }
       resoudre_univers_cadeaux: {
         Args: {
@@ -1690,6 +1985,10 @@ export type Database = {
       }
       soumettre_invitation_v2: {
         Args: { p_donnees: Json; p_operation: string; p_token: string }
+        Returns: Json
+      }
+      statut_lien_collectif: {
+        Args: { p_acteur: string; p_carte: string }
         Returns: Json
       }
       supprimer_evenement_lot02: {

@@ -1,5 +1,6 @@
 // 💌 Contrat de rendu indépendant de la base. Ne pas modifier un rendu déjà publié : créer une version suivante.
 import { supportedCardSnapshot, type SupportedCardSnapshot } from './card-snapshot-v2'
+import { collectiveCardSnapshot, type CollectiveCardSnapshot } from './collective-card'
 export const CARD_TEMPLATES = [
   { id: 'clair_de_lune', label: 'Clair de lune', description: 'Une lune dorée dans un ciel bleu profond.' },
   { id: 'constellation', label: 'Constellation', description: 'Des étoiles reliées sur un papier lumineux.' },
@@ -14,12 +15,13 @@ export type CardSnapshotV1 = {
   message: string; signature: string
 }
 export type CardShareStatus = { revision: number; versionId: string | null; linkId: string | null; state: 'absent' | 'actif' | 'expire' | 'revoque'; expiresAt: string | null; published: SupportedCardSnapshot | null }
-export type PublicCard = { content: SupportedCardSnapshot; expiresAt: string }
+export type PublicCard = { content: SupportedCardSnapshot | CollectiveCardSnapshot; expiresAt: string }
 export function publicCard(input: unknown, now = Date.now()): PublicCard {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new Error('Cette carte est indisponible')
   const value = input as Record<string, unknown>
   if (typeof value.expiresAt !== 'string' || !Number.isFinite(Date.parse(value.expiresAt)) || Date.parse(value.expiresAt) <= now) throw new Error('Cette carte est indisponible')
-  return { content: supportedCardSnapshot(value.content, true), expiresAt: value.expiresAt }
+  const content = value.content && typeof value.content === 'object' && 'format' in value.content && value.content.format === 3 ? collectiveCardSnapshot(value.content) : supportedCardSnapshot(value.content, true)
+  return { content, expiresAt: value.expiresAt }
 }
 const snapshotKeys = ['format', 'templateId', 'templateVersion', 'renderVersion', 'message', 'signature']
 export function isCardTemplate(value: unknown): value is CardTemplateId {

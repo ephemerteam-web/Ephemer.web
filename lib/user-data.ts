@@ -6,6 +6,8 @@ import { readMonUnivers } from './univers-data'
 import { readProfile } from './profile-data'
 import { CELEBRATIONS_ENABLED } from './celebration-contract'
 import { exportCelebrations } from './celebration-data'
+import { collectiveService } from './collective-card-data'
+import { COLLECTIVE_CARDS_ENABLED } from './collective-card'
 
 export async function readOwnRows(table: 'contacts' | 'rappels' | 'notifications' | 'notification_preferences' | 'profiles' | 'invitations' | 'listes_personnelles' | 'appartenances_listes' | 'evenements_personnels' | 'regles_evenements' | 'occurrences_evenements' | 'preparations_evenements' | 'taches_preparation' | 'idees_cadeaux' | 'choix_cadeaux' | 'cadeaux_offerts' | 'styles_messages' | 'preferences_styles_messages' | 'styles_messages_contacts' | 'preferences_cadeaux_contacts' | 'cartes_individuelles' | 'versions_cartes' | 'avatars_utilisateurs', userId: string) {
   const rows: Record<string, unknown>[] = []
@@ -26,7 +28,7 @@ export async function exportOwnData() {
   if (error || !user) throw new Error('Reconnecte-toi pour exporter tes données.')
   const tables = ['profiles', 'contacts', 'rappels', 'notifications', 'notification_preferences', 'invitations', 'listes_personnelles', 'appartenances_listes', 'evenements_personnels', 'regles_evenements', 'occurrences_evenements', 'preparations_evenements', 'taches_preparation', 'idees_cadeaux', 'choix_cadeaux', 'cadeaux_offerts', 'styles_messages', 'preferences_styles_messages', 'styles_messages_contacts', 'preferences_cadeaux_contacts', 'cartes_individuelles', 'versions_cartes', 'avatars_utilisateurs'] as const
   const result: Record<string, unknown> = {
-    format: 'ephemer-personal-export', version: CELEBRATIONS_ENABLED ? 12 : 11, exported_at: new Date().toISOString(),
+    format: 'ephemer-personal-export', version: COLLECTIVE_CARDS_ENABLED && CELEBRATIONS_ENABLED ? 13 : CELEBRATIONS_ENABLED ? 12 : 11, exported_at: new Date().toISOString(),
     account: { id: user.id, email: user.email },
     limitations: 'Lecture paginée sans instantané transactionnel. Mon profil contient les informations communes du propriétaire ; Mon univers conserve une projection de compatibilité avec ses valeurs et permissions. Empreinte de concurrence, univers et avatars des étoiles exclus. Tokens d’invitation, empreintes et secrets des cartes (même chiffrés), secrets des liens sociaux, journaux d’opérations, identités résolues des destinataires de demandes envoyées, secrets de session et clés push exclus. Les journaux des prestataires et sauvegardes ne sont pas inclus.',
   }
@@ -37,7 +39,18 @@ export async function exportOwnData() {
   const { empreinte, ...profile } = await readProfile(user.id)
   void empreinte // Jeton de concurrence, inutile dans un export personnel.
   result.mon_profil = profile
-  if(CELEBRATIONS_ENABLED)result.celebrations=await exportCelebrations(user.id)
+  if(CELEBRATIONS_ENABLED) {
+    const celebrations = await exportCelebrations(user.id)
+    result.celebrations = celebrations
+    if(COLLECTIVE_CARDS_ENABLED) {
+      const propres = []
+      for(const row of celebrations) {
+        const contribution = await collectiveService.export(user.id, row.celebration.id)
+        if(contribution && contribution.contributions.length) propres.push({ celebration: row.celebration.id, ...contribution })
+      }
+      result.contributions_collectives = propres
+    }
+  }
   // Projections explicites : aucun secret de lien ni résolution des destinataires.
   result.notifications_etoiles = await readAllRows(() => supabase.from('notifications_etoiles').select('id,type,demande_id,relation_id,lue,created_at').eq('user_id', user.id))
   const { data: current } = await supabase.auth.getUser()

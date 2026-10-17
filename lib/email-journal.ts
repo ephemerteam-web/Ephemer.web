@@ -1,4 +1,4 @@
-// 📬 Contrat FUTUR du SQL docs/sql/email-reliability.sql, absent du schéma réel.
+// 📬 Contrat du journal installé humainement, contrôlé dans le dossier lots 13–14.
 // Seule cette frontière connaît ces RPC. Les types générés restent intacts.
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '@/types/database'

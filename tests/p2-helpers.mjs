@@ -28,7 +28,9 @@ const listHelpers = loadPure('lib/private-lists.ts','isUuid,contactsInList,chang
 const eventLoader = loadPure('lib/personal-event-data.ts','readEventData',{ ...calendar, ...pagination, ...personal })
 const rappelHelpers = loadPure('lib/rappel-occurrence.ts','rappelOccurrenceCurrent')
 const notificationPersistence = loadPure('lib/occurrence-notifications.ts','persistOccurrenceNotification')
-const celebrationActivation = loadPure('lib/celebration-contract.ts','CELEBRATIONS_ENABLED')
+// Les fixtures historiques d’export restent en version 11 sans transport Célébrations.
+// L’export activé est testé séparément avec ses propres données et refus de droits.
+const celebrationActivation = { CELEBRATIONS_ENABLED: false }
 // Les anciennes fixtures ne contiennent aucune occurrence. Leur RPC simulée
 // retourne une table vide ; les nouveaux tests fournissent leur propre RPC.
 async function readEventData(client, ...args) {
@@ -39,6 +41,8 @@ export const p2Helpers = { readProfile: async () => profileFixture(), ...ids, ..
 
 // Requête simulée avec un vrai ordre et curseur ; plafond inférieur au lot demandé.
 Object.assign(p2Helpers, celebrationActivation)
+// Anciennes recettes isolées : aucun nouveau transport collectif implicite.
+Object.assign(p2Helpers, { COLLECTIVE_CARDS_ENABLED: false, runCollectiveCron: async () => ({ traites: 0, publications: 0, acceptes: 0, incertains: 0, erreurs: 0 }) })
 export function pageDatabase(tables, { cap = 200, failAt = Infinity, onRead = () => {} } = {}) {
   let reads = 0
   return { from(table) {

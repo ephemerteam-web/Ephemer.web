@@ -8,11 +8,11 @@ const create=()=>({action:'creer',operation:B,donnees:{id:C,titre:'Repas entre a
 const summary=()=>({id:C,titre:'Repas entre amis',date:null,dateCanonique:null,heure:null,lieu:null,mode:'partage',surprise:false,destinataire:null,etat:'active',revision:1,role:'organisateur',maintenance:false})
 const detail=()=>({celebration:summary(),participants:[],taches:[],commentaires:[],invitations:[],transferts:[],demandes:[],actions:[],notifications:[]})
 
-test('B : activation pilote en développement seulement et création sans date sans occurrence fictive',()=>{
-  assert.equal(contract.CELEBRATIONS_ENABLED,false)
-  for(const [environment,expected] of [['development',true],['production',false],['test',false]]){
+test('B : activation production autorisée et création sans date sans occurrence fictive',()=>{
+  assert.equal(contract.CELEBRATIONS_ENABLED,true)
+  for(const environment of ['development','production','test']){
     const activation=loadPure('lib/celebration-contract.ts','CELEBRATIONS_ENABLED',{...p2Helpers,TextEncoder,process:{env:{NODE_ENV:environment}}})
-    assert.equal(activation.CELEBRATIONS_ENABLED,expected)
+    assert.equal(activation.CELEBRATIONS_ENABLED,true)
   }
   assert.equal(contract.celebrationCommand(create()).donnees.date,null)
   assert.equal('occurrenceId' in contract.celebrationCommand(create()).donnees,false)

@@ -1,11 +1,25 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {loadPure,p2Helpers} from './p2-helpers.mjs'
+import {loadPure,p2Helpers,pageDatabase} from './p2-helpers.mjs'
 import {harness} from './ui-harness.mjs'
 const contract=loadPure('lib/celebration-contract.ts','celebrationDetail,celebrationUuid',{...p2Helpers,TextEncoder})
 const A='61000000-0000-4000-8000-000000000001',B='61000000-0000-4000-8000-000000000002',C='62000000-0000-4000-8000-000000000001',T='63000000-0000-4000-8000-000000000001'
 const row=()=>({celebration:{id:C,titre:'Titre courant',date:null,dateCanonique:null,heure:null,lieu:null,mode:'partage',surprise:false,destinataire:null,etat:'active',revision:2,role:'participant',maintenance:false},participants:[{id:A,compte:A,identite:'Alice',role:'participant',etat:'active'},{id:B,compte:B,identite:'Bruno',role:'organisateur',etat:'active'}],taches:[{id:T,titre:'Ma tâche actuelle',type:'cadeau',responsable:B,echeance:null,etat:'a_faire',revision:2,auteur:A},{id:B,titre:'Tâche tierce',type:'repas',responsable:A,echeance:null,etat:'a_faire',revision:1,auteur:B}],commentaires:[{id:T,auteur:A,identite:'Alice',texte:'Texte actuel',revision:2},{id:B,auteur:B,identite:'Bruno',texte:'Texte tiers',revision:1}],demandes:[{id:T,demandeur:A,motif:'Mon motif',etat:'attente',revision:1},{id:B,demandeur:B,motif:'Motif tiers',etat:'attente',revision:1}],invitations:[],transferts:[],actions:[],notifications:[]})
 function transport(read){return loadPure('lib/celebration-data.ts','exportCelebrations,ownCelebrationProjection,celebrationService',{...p2Helpers,...contract,celebrationCommand:x=>x,celebrationResult:x=>x,celebrationItems:(x,parse)=>x.items.map(parse),celebrationSummary:x=>x,celebrationInvitation:x=>x,socialRequest:read})}
+test('production : export global activé inclut les célébrations autorisées et refuse un résultat partiel',async()=>{
+  const db=pageDatabase({});db.auth={getUser:async()=>({data:{user:{id:A}},error:null})}
+  let refuse=false,calls=0
+  const api=loadPure('lib/user-data.ts','exportOwnData',{...p2Helpers,supabase:db,CELEBRATIONS_ENABLED:true,exportCelebrations:async owner=>{
+    assert.equal(owner,A);calls++;if(refuse)throw new Error('Accès révoqué')
+    return [transport(async()=>{}).ownCelebrationProjection(row(),owner)]
+  }})
+  const exported=await api.exportOwnData()
+  assert.equal(exported.version,12);assert.equal(exported.celebrations.length,1);assert.equal(calls,1)
+  assert.equal(exported.celebrations[0].commentaires[0].texte,'Texte actuel')
+  assert.doesNotMatch(JSON.stringify(exported.celebrations),/Texte tiers|Motif tiers|Tâche tierce/)
+  refuse=true;await assert.rejects(api.exportOwnData(),/Accès révoqué/)
+})
+
 test('production : export reconstruit avec textes actuels et sans contributions ou motifs tiers',async()=>{
   let pages=0
   const old=row();old.commentaires[0].texte='Texte obsolète';old.celebration.titre='Ancien titre'

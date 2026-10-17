@@ -1,4 +1,6 @@
 'use client'
+import CollectiveCardExperience from './CollectiveCardExperience'
+import { COLLECTIVE_CARDS_ENABLED } from '@/lib/collective-card'
 import Link from 'next/link'
 import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react'
 import Modal from '../Modal'
@@ -199,6 +201,7 @@ export function CelebrationScreen({ id,api=celebrationService }: {id:string;api?
         </section>
         {!c.maintenance&&<CelebrationTabs organisation={<>
           {admin&&open&&<details className={panel}><summary className="min-h-11 cursor-pointer py-3">Modifier la célébration</summary><MetadataEditor detail={detail} run={actions.run}/></details>}
+          {COLLECTIVE_CARDS_ENABLED && c.destinataire !== user.id && <CollectiveCardExperience key={user.id + id} owner={user.id} celebration={id} organizer={admin} />}
           {open&&<section className={panel}><h2 className="font-bold">Ajouter une tâche</h2><TaskForm detail={detail} run={actions.run}/></section>}
           {detail.taches.map(task=><section key={task.id} className={panel}><h2 className="break-words font-bold">{task.titre}</h2><p>{task.etat==='faite'?'Faite':task.etat==='abandonnee'?'Abandonnée':'À faire'} · {detail.participants.find(p=>p.id===task.responsable)?.identite??'Responsable à choisir'}</p>{open&&(admin||task.auteur===user.id||detail.participants.some(p=>p.id===task.responsable&&p.compte===user.id))&&<details><summary className="min-h-11 cursor-pointer py-3">Modifier cette tâche</summary><TaskForm task={task} detail={detail} run={actions.run}/></details>}</section>)}
           <section className={panel}><h2 className="font-bold">Commentaires</h2><p className="text-sm text-muted">Ce fil d’organisation est partagé avec les participants, y compris le destinataire hors surprise. Garde les détails de ses cadeaux dans ta préparation privée.</p>{detail.commentaires.map(comment=><article key={comment.id} className="space-y-2 border-t border-line py-3"><p className="text-sm text-muted">{comment.identite}</p><p className="whitespace-pre-wrap break-words">{comment.texte}</p>{open&&comment.auteur===user.id&&<details><summary className="min-h-11 cursor-pointer py-3">Modifier mon commentaire</summary><CommentForm comment={comment} id={id} run={actions.run}/></details>}{(admin||comment.auteur===user.id)&&<button className={button} onClick={()=>setConfirmation({action:'retirer_commentaire',data:{id,commentaire:comment.id},message:'Retirer ce commentaire ? Son auteur ne sera pas remplacé.'})}>Retirer le commentaire</button>}</article>)}{open&&<CommentForm id={id} run={actions.run}/>}</section>

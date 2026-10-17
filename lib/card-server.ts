@@ -92,7 +92,13 @@ export async function cardEndpoint(request: Request, endpoint: CardEndpoint, id 
       if (!isCardSecret(body.secret)) throw inaccessible()
       const result = await client.rpc('consulter_carte_lot08', { p_empreinte: cardSecretHash(body.secret) })
       if (result.error) throw new CardHTTPError(503, 'Service momentanément indisponible. Réessaie.')
-      try { return reply(publicCard(result.data)) } catch { throw inaccessible() }
+      // Les RPC individuelles gardent leur contrat. Seule leur absence autorise le lecteur collectif.
+      if (result.data === null) {
+        const collective = await client.rpc('consulter_carte_collective', { p_empreinte: cardSecretHash(body.secret) })
+        if (collective.error) throw new CardHTTPError(503, 'Service momentanément indisponible. Réessaie.')
+        try { const card = publicCard(collective.data); if (card.content.format !== 3) throw inaccessible(); return reply(card) } catch { throw inaccessible() }
+      }
+      try { const card = publicCard(result.data); if (card.content.format === 3) throw inaccessible(); return reply(card) } catch { throw inaccessible() }
     }
     const userId = await owner(request, client)
     if (endpoint === 'export') {

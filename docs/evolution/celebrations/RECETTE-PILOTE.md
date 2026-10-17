@@ -1,6 +1,6 @@
 # Recette réelle Célébrations — 17 octobre 2026
 
-**Parcours fonctionnels ci-dessous validés ; GO général non donné, courses réelles restantes.** Les deux comptes pilotes ont été connectés manuellement par l’utilisateur dans le navigateur intégré. Les observations ci-dessous proviennent de l’application locale reliée à la base actuelle, sans injection de données par SQL, sans compte créé/supprimé par l’assistant et sans fournisseur externe.
+**Parcours fonctionnels ci-dessous validés ; GO production demandé ensuite explicitement par l’utilisateur, courses et rejeux réels toujours non effectués.** Les deux comptes pilotes ont été connectés manuellement par l’utilisateur dans le navigateur intégré. Les observations ci-dessous proviennent de l’application locale reliée à la base actuelle, sans injection de données par SQL, sans compte créé/supprimé par l’assistant et sans fournisseur externe.
 
 A désigne le premier compte organisateur ; B, l’Étoile « Alexandre » ajoutée et identifiée par l’utilisateur. Les deux identités affichées portent le même prénom. Aucun identifiant de connexion ou jeton n’est conservé dans ce document. Les sessions sont successives dans un même contexte de navigateur : **aucune concurrence entre deux comptes n’est prouvée par ces essais**.
 
@@ -53,4 +53,4 @@ Une tentative de tâche a reçu 401 puis l’écran de connexion avant la reconn
 - Blocage uniquement après certitude d’absence d’autres célébrations communes affectées. Aucun blocage effectué à ce stade ; ne pas considérer le déblocage comme une restauration d’amitié ou de participation.
 - Aucun compte réel supprimé, aucune invalidation volontaire d’Auth. Les limites sur l’effacement, le destinataire devenu invalide, les quotas maximaux et les appareils physiques restent explicites.
 
-La recette ne remplace pas le dossier [GO-PRODUCTION.md](GO-PRODUCTION.md). Le module est ouvert en développement seulement ; un build de production reste fermé jusqu’à décision fondée sur les résultats réels restants.
+La recette ne remplace pas le dossier [GO-PRODUCTION.md](GO-PRODUCTION.md). Après présentation de ces résultats et limites, l’utilisateur a demandé « go production ». Le module est donc activé dans le code pour les builds de production ; le déploiement reste humain. Cette décision ne constitue pas une validation des contrôles restants.

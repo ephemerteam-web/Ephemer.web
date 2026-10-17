@@ -7,7 +7,7 @@
 | Tranche | Préparation locale | Condition d’activation |
 |---|---|---|
 | A — parcours personnel | Liste à venir/historique, écran Organisation / Idées et cadeaux / Frais, modèles prévisualisés, ajout d’idée par titre ou lien, synthèse par célébration. Reprise des occurrences et protections privées existantes. | Contrats privés installés ; vérifier les droits d’écriture effectifs. Les créations libres sans date exigent B et restent absentes de A. |
-| B — invitations et organisation partagée | Correctif humain et catalogue corrigé conformes au 17/10 ; module ouvert en développement, parcours fonctionnels réels contrôlés. | Courses et rejeux réseau avec deux sessions indépendantes restant avant le GO général ; voir GO-PRODUCTION.md. |
+| B — invitations et organisation partagée | Correctif humain et catalogue corrigé conformes au 17/10 ; module activé aussi en production sur demande explicite de l’utilisateur après les parcours fonctionnels réels. | Courses et rejeux réseau avec deux sessions indépendantes encore non validés malgré le GO production demandé ; voir GO-PRODUCTION.md. |
 | C — propositions, soutiens, sondages, envies et réservations | Conception uniquement, sans DDL dans le dossier B. | B puis dossier SQL et procédures propres, fixtures multi-comptes et courses réelles sur copie. |
 | D — frais et remboursements | Politique proposée et règles de calcul décrites ; **aucun DDL financier avant validation de la conservation**. | Approbation de la politique, dossier SQL financier, contrôles exacts et confirmation par le receveur. |
 

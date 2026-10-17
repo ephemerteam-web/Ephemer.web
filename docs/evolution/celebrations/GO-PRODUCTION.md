@@ -1,6 +1,6 @@
 # Célébrations — dossier de GO production sans copie Supabase
 
-17 octobre 2026. **GO pour la recette locale ; GO général non donné.** L’utilisateur confirme `celebrations_production_catalogue_conforme` après application humaine. Le même fichier de vérification a été réexécuté par l’assistant en READ ONLY : résultat conforme. Le module est ouvert avec `npm run dev`, et reste fermé dans les builds de production. Deux comptes pilotes disponibles et reliés par une Étoile acceptée ont été confirmés par l’utilisateur. Aucun mot de passe ou jeton n’est à transmettre à l’assistant.
+17 octobre 2026. **GO production demandé explicitement par l’utilisateur le 17/10/2026 (« go production »), après présentation des résultats et limites de la recette.** L’utilisateur confirme `celebrations_production_catalogue_conforme` après application humaine. Le même fichier de vérification a été réexécuté par l’assistant en READ ONLY : résultat conforme. Le module est activé dans le code, en développement et dans les builds de production ; le déploiement reste humain. Cette décision ne certifie pas les tests réels de concurrence et de rejeu réseau encore non effectués. Deux comptes pilotes disponibles et reliés par une Étoile acceptée ont été confirmés par l’utilisateur. Aucun mot de passe ou jeton n’est à transmettre à l’assistant.
 
 La contrainte « copie Supabase obligatoire » est remplacée, sur demande explicite de l’utilisateur, par un correctif limité, des contrôles en lecture seule et une recette réelle ciblée. Les anciens scripts de copie gardent leur garde-fou : **ne pas les exécuter dans la base de l’application et ne pas contourner leur marqueur**.
 
@@ -20,7 +20,7 @@ La contrainte « copie Supabase obligatoire » est remplacée, sur demande expli
 2. Dans le SQL Editor du projet utilisé par l’application, exécuter **le fichier entier** [correctifs-production.sql](correctifs-production.sql), sans sélectionner seulement une partie. Ne pas réexécuter `schema-propose.sql`.
 3. Résultat attendu : `celebrations_correctif_production_applique`. Si un verrou dépasse trois secondes ou si un contrôle échoue, la transaction s’arrête : ne pas supprimer le contrôle et ne pas poursuivre avec des fragments. Communiquer le message d’erreur sans secret ni contenu personnel.
 4. Exécuter **le fichier entier** [verification-production.sql](verification-production.sql). Résultat attendu : `celebrations_production_catalogue_conforme`.
-5. Résultat désormais confirmé : lancer `npm run dev` et effectuer la recette ci-dessous. `CELEBRATIONS_ENABLED` est vrai uniquement en environnement de développement ; `npm run build` / `npm run start` gardent le module fermé. Le GO général nécessitera une décision explicite après la recette. Aucun déploiement automatique.
+5. Résultat désormais confirmé : lancer `npm run dev` et effectuer la recette ci-dessous. `CELEBRATIONS_ENABLED=true` active désormais le module dans tous les environnements, sur décision explicite de l’utilisateur après les parcours pilotes. Les contrôles restants ci-dessous restent à effectuer et ne sont pas présentés comme réussis. Aucun déploiement automatique.
 
 Le correctif remplace sept fonctions existantes et ajoute un helper interne sans droit client. Six procédures publiques et leurs signatures sont conservées ; aucune table privée ou migration modifiée, aucun type public futur ajouté. Pas de création de compte, d’appel d’email/push/IA, d’exécution de commande métier ou de modification des contenus existants par ce script. Contraintes, colonnes, triggers et droits sont vérifiés avant changement. Les fonctions déjà corrigées et index déjà présents à l’identique sont conservés. Le schéma attendu est documenté dans `production-reference.json`, extrait exclusivement du catalogue.
 
@@ -66,7 +66,7 @@ Ne pas invalider ou supprimer le compte destinataire pour provoquer le second d�
 | Vérification complète et navigateur | `npm run verify` réussi après correction du formulaire : **418 tests**, TypeScript/build, zéro erreur lint/cinq avertissements préexistants. Journal `out/celebrations-production/verify-activation.txt`. Navigateur 320/390/1440 px, deux thèmes, clavier/panne/compte/révocation réussi avec données fictives ; observations réelles séparées dans RECETTE-PILOTE.md. |
 | Application humaine du correctif | **Confirmée par l’utilisateur le 17/10.** Aucun correctif appliqué automatiquement par l’assistant. |
 | Catalogue corrigé | **Conforme** : confirmation utilisateur puis vérification indépendante READ ONLY, `celebrations_production_catalogue_conforme`. |
-| Activation locale | **Ouverte en développement uniquement** ; builds de production fermés. |
+| Activation applicative | **Ouverte en développement et production**, sur GO explicite de l’utilisateur. Déploiement humain non effectué par l’assistant. |
 | Recette des deux comptes réels | **Parcours fonctionnels contrôlés avec sessions successives.** Création, invitation/révocation/refus/acceptation, surprise, tâches/commentaires, export propre, transfert accepté/retrait, refus de l’ex-membre, publication sélectionnée et source conservée après suppression ; voir [RECETTE-PILOTE.md](RECETTE-PILOTE.md). Courses concurrentes et rejeux réseau réels non validés. |
 | Effacement d’un vrai compte | **Non effectué volontairement.** Tests locaux et inspection du trigger ne prouvent pas une suppression réelle en production. |
 
@@ -74,10 +74,16 @@ L’analyse syntaxique ne valide pas les liaisons de toutes les requêtes métie
 
 ## 5. GO et retour arrière
 
-Correctif humain, catalogue corrigé, vérifications locales et parcours fonctionnels pilotes sont confirmés. **GO local pour l’utilisation et la recette ; GO général encore en attente des courses entre deux sessions indépendantes et des rejeux réseau réels.** Le navigateur intégré a permis des connexions successives, pas deux identités simultanées. Les clics et changements de compte observés ne remplacent pas ces preuves.
+Correctif humain, catalogue corrigé, vérifications locales et parcours fonctionnels pilotes sont confirmés. **L’utilisateur demande maintenant le GO production malgré les contrôles restants présentés : le verrou applicatif est ouvert dans les builds de production. Les courses entre deux sessions indépendantes et les rejeux réseau réels restent non validés.** Le navigateur intégré a permis des connexions successives, pas deux identités simultanées. Les clics et changements de compte observés ne remplacent pas ces preuves.
 
 Consigner ensuite les résultats des quatre courses prévues, les réessais sans doublon et le refus d’anciennes commandes après révocation. Le blocage n’est pas exécuté tant que l’absence d’autres célébrations communes affectées n’est pas établie. L’effacement réel reste volontairement exclu selon le plan. Une anomalie d’autorisation ou de conservation empêche le GO ; elle ne se résout pas par un nouveau GRANT large.
 
-Après cette décision seulement, l’utilisateur publie la version validée. Aucun commit ou déploiement par l’assistant. Les cartes collectives et envois programmés restent reportés.
+Le GO demandé autorise la préparation du build activé ; l’utilisateur effectue lui-même la publication. Il s’agit d’une décision de mise en production, pas d’une certification des contrôles restants. Aucun commit ou déploiement par l’assistant. Les cartes collectives et envois programmés restent reportés.
 
 Retour : fermer le module applicatif ; pour couper immédiatement les nouveaux appels, appliquer humainement [retour-arriere.sql](retour-arriere.sql). Les tables, sources privées et données sont conservées, ainsi que les triggers de blocage/effacement. Garder les corrections de sécurité installées ; ne pas restaurer un ancien corps vulnérable pour rouvrir. Le script de correction suppose les permissions initiales : après une fermeture des droits, leur réouverture exige une procédure séparée relue, pas un GRANT improvisé.
+
+## 6. Vérification du build activé
+
+Après le GO demandé, `npm run verify` réussit : **440 tests, zéro échec**, TypeScript et build de production terminés, zéro erreur lint et cinq avertissements préexistants. Journal : `out/celebrations-production/verify-go-production.txt`. Le premier lancement était bloqué par les permissions Windows du bac à sable ; la vérification finale complète a été relancée avec l’autorisation accordée.
+
+Les fixtures historiques d’export conservent explicitement leur module fermé ; un test distinct exerce l’export global activé en version 12, les contributions autorisées et le refus de tout export partiel après révocation. Aucun code des travaux de cartes collectives en cours n’a été modifié pour cette activation ; leur verrou séparé reste fermé. Le total de tests reflète l’ensemble présent dans le dépôt au moment de cette vérification.

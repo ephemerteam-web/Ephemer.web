@@ -17,6 +17,7 @@ function serverMock(key=randomBytes(32).toString('hex')){
   db.rpc=async(name,args)=>{
     calls.push({name,args:{...args}})
     if(name==='consulter_carte_lot08')return {data:projection,error:null}
+    if(name==='consulter_carte_collective')return {data:null,error:null}
     if(name==='exporter_liens_cartes_lot08')return {data:[{id:state.linkId,carte_id:cardId,version_id:versionId,expires_at:state.expiresAt,revoked_at:null,created_at:new Date().toISOString(),empreinte:'FORBIDDEN',secret_chiffre:'FORBIDDEN'}],error:null}
     if(name==='lire_partage_carte_lot08')return {data:{...state},error:null}
     if(name==='gerer_partage_carte_lot08'||name==='publier_carte_lot09'){
