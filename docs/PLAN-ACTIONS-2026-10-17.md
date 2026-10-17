@@ -2,7 +2,7 @@
 
 Préparé le 17 octobre 2026 à partir du [nouvel audit](AUDIT-APPLICATION-2026-10-17.md), du [bilan du plan initial](PLAN-EVOLUTION-EPHEMER.md) et de l’état local relu pour cette préparation.
 
-**Statut : plan proposé. Aucune étape de réalisation n’est validée ou lancée par la création de ce document.** Les numéros E01 à E11 servent au pilotage de la suite ; les lots historiques 00–18 conservent leurs noms et leurs preuves.
+**Statut : E01 autorisée et réalisée, présentée à l’essai utilisateur ; les autres étapes à réaliser restent proposées.** La création initiale du plan ne lançait aucune réalisation ; l’utilisateur a ensuite demandé explicitement l’implémentation d’E01. Les numéros E01 à E11 servent au pilotage de la suite ; les lots historiques 00–18 conservent leurs noms et leurs preuves.
 
 **Mise à jour demandée le 17/10 : les cartes collectives sont considérées à jour pour planifier la suite.** E09 sort des travaux à réaliser ; son numéro est conservé pour éviter de décaler les références. Ce point de départ est celui demandé par l’utilisateur, sans nouvelle certification technique du déploiement. Les comptes rendus antérieurs décrivent leur état à leur date et ne sont pas réécrits comme de nouveaux résultats.
 
@@ -25,7 +25,7 @@ Les décisions déjà prises restent acquises : quatre espaces, libellé Céléb
 
 | Étape | Résultat attendu | Dépendance principale | Validation |
 |---|---|---|---|
-| E01 | Réduire les alertes des dépendances sans casser l’application. | État actuel et avis de sécurité à réactualiser au démarrage. | À valider |
+| E01 | Réduire les alertes des dépendances sans casser l’application. | [Bilan E01](evolution/E01-DEPENDANCES.md) : audit production 6 → 0 ; audit complet 15 → 5. | Réalisée, à essayer |
 | E02 | Confirmer ce qui fonctionne réellement : inscription, invitations, partage et push. | E01 pour la livraison de la version mise à niveau. | À valider |
 | E03 | Compléter le suivi email et les envois uniquement sur les points encore manquants. | Réutiliser le journal et les traitements déjà disponibles. | À valider |
 | E04 | Faciliter le parcours et la reprise d’une préparation. | E02 ; inventaire des parcours déjà présents. | À valider |
@@ -211,6 +211,6 @@ Les évolutions futures préservent ces fonctions et les cartes historiques. Ell
 
 ## État des validations
 
-E09 est **considérée acquise pour la planification**, à la demande de l’utilisateur. E01–E08 restent **proposées, non validées** ; E10 et E11 sont **conditionnelles, non validées**. La prochaine décision porte uniquement sur le périmètre E01 décrit plus haut. La mise à jour du plan ne lance aucune réalisation.
+E01 a été **autorisée explicitement, réalisée et présentée à l’essai utilisateur** : voir le [bilan, les contrôles et les limites](evolution/E01-DEPENDANCES.md). Son acceptation après essai avec `npm run dev` reste à confirmer. E09 est **considérée acquise pour la planification**, à la demande de l’utilisateur. E02–E08 restent **proposées, non validées** ; E10 et E11 sont **conditionnelles, non validées**. Aucune étape suivante n’est lancée par la livraison d’E01.
 
 Après chaque étape, ajouter ici : date de validation du périmètre, résultat présenté, vérifications réellement exécutées, essais utilisateur, décision et points ouverts. Puis reporter le bilan technique dans [SUIVI.md](evolution/SUIVI.md). Aucun résultat historique de l’audit ne constitue une nouvelle vérification de l’étape.

@@ -1,6 +1,6 @@
 # AGENTS.md — Contexte réel d’Ephemer.name
 
-Mise à jour : 12 octobre 2026. Ce document décrit le code local ; il ne certifie pas que les propositions SQL ou variables serveur sont installées en production. Les explications doivent rester accessibles à une personne non développeuse.
+Mise à jour : 17 octobre 2026. Ce document décrit le code local ; il ne certifie pas que les propositions SQL ou variables serveur sont installées en production. Les explications doivent rester accessibles à une personne non développeuse.
 
 ## Règle de travail avec les assistants IA
 
@@ -28,16 +28,16 @@ Le libellé produit retenu est **Célébrations**. Les noms techniques historiqu
 
 | Couche | Code déclaré dans package.json |
 |---|---|
-| Framework | Next.js `^16.2.6` (installation vérifiée : 16.2.6) |
+| Framework | Next.js `16.4.2` (E01, installation vérifiée le 17/10/2026) |
 | Interface | React / React DOM 19.2.4, TypeScript `^5` |
-| Styles | Tailwind CSS v4, thèmes clair/sombre et fond céleste |
+| Styles | Tailwind CSS / @tailwindcss/postcss `4.3.3`, thèmes clair/sombre et fond céleste |
 | Données/Auth | Supabase JS `^2.103.3`, SSR `^0.10.3` |
 | Emails | Resend `^6.12.2` |
 | Images locales | html-to-image 1.11.13, chargé au clic de préparation |
 | Push serveur | web-push 3.6.7 ; @types/web-push 3.6.4 en développement |
-| Autres | @vercel/analytics `^2.0.1`, ESLint `^9`, eslint-config-next 16.2.4 |
+| Autres | @vercel/analytics `^2.0.1`, ESLint `9.39.5`, eslint-config-next `16.4.2` |
 
-Les nouvelles bibliothèques n’ajoutent aucun service payant. Les quotas d’hébergement, base de données, email et fournisseur IA restent applicables. L’audit npm du 10/10/2026 signale 15 alertes (dont une critique sur la version Next installée), à traiter séparément ; aucun `npm audit fix --force` n’a été appliqué.
+Les nouvelles bibliothèques n’ajoutent aucun service payant. Les quotas d’hébergement, base de données, email et fournisseur IA restent applicables. Après E01 le 17/10/2026, l’audit npm passe de 15 à **5 alertes élevées dans une seule chaîne de l’outillage ESLint**, sans correctif `braces` publié lors du contrôle ; l’audit `--omit=dev` passe de 6 à **0 alerte**. ESLint 9 est signalé non maintenu par npm ; pas de passage automatique à la version majeure 10. Aucun `npm audit fix --force` ni remplacement incompatible appliqué. Voir `docs/evolution/E01-DEPENDANCES.md` pour les versions, limites et retour ciblé.
 
 **Champs de formulaire** : les styles communs dans `app/globals.css` harmonisent les champs de saisie, sélecteurs et zones de texte avec la palette céleste. Fond doux, angles de 14 px, taille de texte de 16 px, focus doré visible, erreur via `aria-invalid` ou validation native après interaction, état désactivé et réduction des animations. Les espacements horizontaux restent adaptés aux icônes ; les contrôles spécialisés gardent leur forme. Aucun composant ni code Uiverse n'est importé : exemples utilisés comme inspiration, sans dépendance supplémentaire. Voir `docs/FORMULAIRES.md`.
 

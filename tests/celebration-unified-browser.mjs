@@ -8,8 +8,8 @@ const page = await browser.newPage(), errors = [], dir = path.resolve('out/celeb
 fs.mkdirSync(dir, { recursive: true })
 page.on('pageerror', error => errors.push(error.message))
 page.on('dialog', dialog => { void dialog.accept() })
-const click = async text => {
-  const handle = await page.evaluateHandle(text => [...document.querySelectorAll('button,a,summary')].find(node => node.textContent.trim() === text && node.checkVisibility()), text)
+const click = async (text, scope) => {
+  const handle = await page.evaluateHandle(({ text, scope }) => [...(scope ? document.querySelector(scope) : document).querySelectorAll('button,a,summary')].find(node => node.textContent.trim() === text && node.checkVisibility()), { text, scope })
   assert.ok(handle.asElement(), 'Commande absente : ' + text); await handle.asElement().click(); await handle.dispose()
 }
 const ready = text => page.waitForFunction(text => document.body.textContent.includes(text), {}, text)
@@ -48,8 +48,8 @@ try {
   await click('Idées et cadeaux'); assert.equal(await page.$eval('input[name="link"]', input => input.value), 'https://example.invalid/livre')
   await click('Changer de compte'); await ready('Organisation personnelle')
   await click('Idées et cadeaux'); assert.equal(await page.$('input[name="link"]'), null)
-  await click('Liste / préparation'); await ready('Mes célébrations'); await click('Historique'); await ready('Repas passé')
-  await click('À venir'); await click('Organiser une célébration'); await page.waitForSelector('dialog[open]')
+  await click('Liste / préparation'); await ready('Mes célébrations'); await click('Mes préparations personnelles existantes'); await click('Historique'); await ready('Repas passé')
+  await click('À venir', 'details[open] section'); await click('Organiser une célébration', 'details[open] section'); await page.waitForSelector('dialog[open]')
   assert.ok(await page.$('dialog[open] a[href*="/dashboard/preparer/"]'))
   await page.keyboard.press('Escape'); await click('Hors ligne'); await ready('Hors ligne')
   assert.equal(await page.evaluate(() => localStorage.length), 0)
