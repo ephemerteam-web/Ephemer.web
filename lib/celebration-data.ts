@@ -8,6 +8,17 @@ export const celebrationService = {
   commander: async (owner: string, input: CelebrationCommand, signal?: AbortSignal) => celebrationResult(await socialRequest(owner, '/api/celebrations', celebrationCommand(input), signal, 2*1024*1024)),
 }
 export type CelebrationService = typeof celebrationService
+// Reconstruire depuis la dernière lecture autorisée ; aucun objet tiers conservé.
+export function ownCelebrationProjection(value:CelebrationDetail,owner:string):CelebrationDetail {
+  const row=celebrationDetail(value),c=row.celebration
+  const me=row.participants.find(p=>p.compte===owner&&p.etat==='active')
+  if(!me||c.maintenance||c.etat==='supprimee'||c.etat==='suspendue'||c.surprise&&c.destinataire===owner)throw new Error('L’accès à une célébration a changé. Relance l’export.')
+  return celebrationDetail({celebration:{...c},participants:[{...me}],
+    taches:row.taches.filter(t=>t.auteur===owner&&(c.destinataire!==owner||!['cadeau','message'].includes(t.type))).map(t=>({...t,responsable:t.responsable===me.id?me.id:null})),
+    commentaires:row.commentaires.filter(t=>t.auteur===owner).map(t=>({...t})),
+    demandes:row.demandes.filter(t=>t.demandeur===owner).map(t=>({...t})),
+    invitations:[],transferts:[],actions:[],notifications:row.notifications.map(n=>({...n}))})
+}
 export async function exportCelebrations(owner: string) {
   const items:CelebrationDetail[] = [], seen = new Set<string>(); let after: string | null = null
   do {
@@ -17,6 +28,11 @@ export async function exportCelebrations(owner: string) {
     after = rows.length === 1 ? rows.at(-1)!.celebration.id : null
   } while (after)
   // Une révocation durant la pagination invalide l'ensemble avant téléchargement.
-  for(const item of items)await celebrationService.lire(owner,item.celebration.id)
-  return items
+  const current:CelebrationDetail[]=[]
+  for(const item of items){
+    const fresh=await celebrationService.lire(owner,item.celebration.id)
+    if(fresh.celebration.id!==item.celebration.id)throw new Error('Export incohérent.')
+    current.push(ownCelebrationProjection(fresh,owner))
+  }
+  return current
 }

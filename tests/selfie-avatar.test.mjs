@@ -33,7 +33,7 @@ export function fixturePNG(side = 1024) {
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(rows)), chunk('IEND', Buffer.alloc(0))])
 }
 const output = fixturePNG()
-function harness(overrides = {}) {
+function harness(overrides = {}, randomPoseIndex = () => 0) {
   const calls = [], deps = {
     env: { CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32), CLOUDFLARE_API_TOKEN: 'fixture-only', EPHEMER_AVATAR_AI_ENABLED: 'true' },
     verifyUser: async token => { calls.push(['auth', token]); return 'verified-owner' },
@@ -42,8 +42,8 @@ function harness(overrides = {}) {
     timeout: () => new AbortController().signal,
     ...overrides,
   }
-  const server = load('lib/selfie-avatar-server.ts', 'generateSelfieAvatar,SELFIE_MODEL,SELFIE_PROMPT', {
-    ...contract, ...transport, supabaseAdmin: {}, consommerQuotaIA: async () => {}, fetch: () => {},
+  const server = load('lib/selfie-avatar-server.ts', 'generateSelfieAvatar,SELFIE_MODEL,SELFIE_PROMPT,SELFIE_POSES', {
+    ...contract, ...transport, randomInt: randomPoseIndex, supabaseAdmin: {}, consommerQuotaIA: async () => {}, fetch: () => {},
   })
   return { calls, server, run: request => server.generateSelfieAvatar(request, deps) }
 }
@@ -99,7 +99,7 @@ test('avatar selfie : quota existant consommé pour l’identité vérifiée ; r
   }
 })
 
-test('avatar selfie : selfie seul, prompt fixe et sortie privée 1024 carrée', async () => {
+test('avatar selfie : selfie seul, consignes communes et sortie privée 1024 carrée', async () => {
   const h = harness(), response = await h.run(request())
   assert.equal(response.status, 200); assert.equal(response.headers.get('content-type'), 'image/png')
   assert.equal(response.headers.get('cache-control'), 'no-store'); assert.equal(response.headers.get('x-ephemer-avatar-prompt'), 'celeste-cartoon-v1')
@@ -108,11 +108,34 @@ test('avatar selfie : selfie seul, prompt fixe et sortie privée 1024 carrée', 
   const [, url, options] = h.calls[2]
   assert.ok(url.endsWith('/ai/run/@cf/black-forest-labs/flux-2-klein-4b'))
   assert.equal(options.headers['Content-Type'], undefined); assert.equal(options.redirect, 'error')
-  assert.equal(options.body.get('prompt'), h.server.SELFIE_PROMPT)
+  assert.ok(options.body.get('prompt').startsWith(h.server.SELFIE_PROMPT + '\n\n'))
+  assert.ok(options.body.get('prompt').endsWith(h.server.SELFIE_POSES[0]))
   assert.equal(options.body.get('width'), '1024'); assert.equal(options.body.get('height'), '1024')
   assert.deepEqual([...options.body.keys()].sort(), ['height', 'input_image_0', 'prompt', 'width'])
   assert.deepEqual(Buffer.from(await options.body.get('input_image_0').arrayBuffer()), style)
   assert.equal(options.body.get('input_image_1'), null)
+})
+
+test('avatar selfie : cinq poses accessibles, une seule consigne tirée à chaque appel', async () => {
+  let draws = 0
+  const h = harness({}, max => {
+    assert.equal(max, 5)
+    return draws++ % max
+  })
+  assert.equal(h.server.SELFIE_POSES.length, 5)
+  assert.equal(new Set(h.server.SELFIE_POSES).size, 5)
+  // Inclure un second tour : le tirage est refait, sans mémoire ni pose exclue.
+  for (let index = 0; index < 10; index++) {
+    assert.equal((await h.run(request())).status, 200)
+    const sent = h.calls.filter(call => call[0] === 'fetch').at(-1)[2].body
+    const prompt = sent.get('prompt')
+    assert.ok(prompt.startsWith(h.server.SELFIE_PROMPT + '\n\n'))
+    const included = h.server.SELFIE_POSES.filter(pose => prompt.includes(pose))
+    assert.equal(included.length, 1)
+    assert.equal(included[0], h.server.SELFIE_POSES[index % 5])
+    assert.deepEqual([...sent.keys()].sort(), ['height', 'input_image_0', 'prompt', 'width'])
+  }
+  assert.equal(draws, 10)
 })
 
 test('avatar selfie : chaque appel transmet sa photo courante sans reprendre une entrée précédente', async () => {
@@ -139,7 +162,8 @@ test('avatar selfie : chaque appel transmet sa photo courante sans reprendre une
     assert.deepEqual(selfie, photos[index])
     assert.notDeepEqual(selfie, photos[1 - index])
     assert.equal(options.body.get('input_image_1'), null)
-    assert.equal(options.body.get('prompt'), h.server.SELFIE_PROMPT)
+    assert.ok(options.body.get('prompt').startsWith(h.server.SELFIE_PROMPT + '\n\n'))
+    assert.ok(options.body.get('prompt').endsWith(h.server.SELFIE_POSES[0]))
   }
   // Après deux succès, une photo vide reste refusée : aucune reprise de l’ancien selfie.
   assert.equal((await h.run(request({ photo: Buffer.alloc(0) }))).status, 413)

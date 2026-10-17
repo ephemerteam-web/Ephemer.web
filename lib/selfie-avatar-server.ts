@@ -1,4 +1,5 @@
 import 'server-only'
+import { randomInt } from 'node:crypto'
 import { supabaseAdmin } from './supabase-admin'
 import { consommerQuotaIA } from './garde-ia'
 import { limitedJSON } from './ai-transport'
@@ -8,10 +9,22 @@ import {
 } from './selfie-avatar-contract'
 
 export const SELFIE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b'
-// Retouche compatible du 13/10/2026 : priorité aux traits et couleurs du selfie, contrat celeste-cartoon-v1 conservé.
+// Une seule pose est tirée au sort côté serveur, avec la même probabilité pour chacune.
+// Gauche et droite désignent toujours les côtés de l’image vus par le spectateur.
+export const SELFIE_POSES = [
+  'Face : tête et épaules de face, tête droite, regard vers l’objectif, posture naturelle et détendue.',
+  'Légère rotation vers la gauche de l’image : épaules et visage tournés d’environ 15 degrés vers la gauche, regard revenu vers l’objectif, les deux yeux bien visibles.',
+  'Légère rotation vers la droite de l’image : épaules et visage tournés d’environ 15 degrés vers la droite, regard revenu vers l’objectif, les deux yeux bien visibles.',
+  'Trois quarts vers la gauche de l’image : épaules tournées d’environ 35 degrés et visage d’environ 30 degrés vers la gauche, regard vers l’objectif, les deux yeux visibles et anatomiquement cohérents.',
+  'Trois quarts vers la droite de l’image : épaules tournées d’environ 35 degrés et visage d’environ 30 degrés vers la droite, regard vers l’objectif, les deux yeux visibles et anatomiquement cohérents.',
+] as const
+
+// Retouche compatible du 17/10/2026 : traits visibles fidèles et cinq poses, contrat celeste-cartoon-v1 conservé.
 export const SELFIE_PROMPT = `Transforme la personne de l’image 0 en portrait illustré 2D fidèle et immédiatement reconnaissable. Cette photo est l’unique référence pour son apparence. La fidélité au visage et à ses couleurs est la priorité absolue : lorsqu’un choix de stylisation entre en conflit avec la ressemblance, conserve les caractéristiques du selfie.
 
 Reproduis précisément les yeux visibles : leur forme, leur taille, leur espacement, leur inclinaison, l’ouverture et les plis des paupières, ainsi que la couleur et les nuances visibles des iris. Respecte les différences naturelles entre les deux yeux. Ne les agrandis pas, ne les arrondis pas et ne les remplace pas par des yeux de dessin génériques. Ne change pas la couleur des iris.
+
+Préserve la morphologie propre à cette personne dans toute sa diversité. Si le selfie montre des yeux en amande, une ouverture étroite, une paupière supérieure sans pli visible ou un épicanthus (pli au coin interne de l’œil), conserve exactement ces caractéristiques sans les atténuer, les accentuer ni ajouter un pli absent. Reproduis de même la largeur et le relief du nez, les narines, le volume et le contour des lèvres, les pommettes et la texture naturelle des cheveux. Chaque caractéristique doit venir de la photo : ne déduis ni n’attribue une origine ethnique et n’applique aucun visage stéréotypé. Garde les particularités observées même lorsque la tête change d’orientation.
 
 Conserve la teinte et le sous-ton de la peau visibles sur la photo, avec leurs variations naturelles, les taches de rousseur et les grains de beauté visibles. N’éclaircis pas et n’assombris pas la carnation, n’ajoute pas de bronzage et évite le lissage excessif de la peau.
 
@@ -21,9 +34,15 @@ Reprends exactement les accessoires présents. Si la personne porte des lunettes
 
 Dessine un t-shirt dont la couleur correspond au vêtement visible sur la photo. Pour un vêtement multicolore, reprends sa couleur dominante. Si aucun vêtement n’est visible, utilise un t-shirt uni crème.
 
-Illustration dessinée avec une stylisation légère, des contours fins et précis et des ombres douces. Utilise un éclairage neutre sur la personne pour conserver les couleurs du selfie. Réserve le bleu nuit et les reflets dorés au décor : aucune dominante bleue ou dorée sur la peau ou les iris. Conserve les proportions naturelles et l’orientation de la tête pour préserver la ressemblance. Cadrage du haut du buste, tête entière visible, composition centrée adaptée à un avatar circulaire.
+Illustration dessinée avec une stylisation légère, des contours fins et précis et des ombres douces. Utilise un éclairage neutre sur la personne pour conserver les couleurs du selfie. Réserve le bleu nuit et les reflets dorés au décor : aucune dominante bleue ou dorée sur la peau ou les iris. Conserve les proportions naturelles du visage en les adaptant uniquement à la perspective de la pose retenue ci-dessous. Applique cette seule pose, sans reprendre obligatoirement l’orientation du selfie et sans produire de planche de variantes. Portrait professionnel et accessible : tête droite sans inclinaison latérale, épaules détendues, appareil à hauteur des yeux, perspective naturelle sans effet grand-angle ni raccourci marqué. Conserve l’expression du selfie. Cadrage du haut du buste, tête et cheveux entièrement visibles avec une marge au-dessus et sur les côtés, visage suffisamment grand et centré pour rester reconnaissable dans un avatar circulaire.
 
 Fond bleu nuit avec une grande lune croissante ivoire et dorée derrière la personne et quelques étoiles dorées. La position des étoiles et les détails de la lune peuvent légèrement varier entre les générations. Une seule personne, vêtement sans inscription, aucun texte ni logo.`
+
+/** Nouveau tirage pour chaque appel fournisseur, sans historique de photo ni de pose. */
+export function buildSelfiePrompt() {
+  const pose = SELFIE_POSES[randomInt(SELFIE_POSES.length)]
+  return `${SELFIE_PROMPT}\n\nPose retenue pour cette génération (une seule) : ${pose}`
+}
 
 type QuotaResult = Awaited<ReturnType<typeof consommerQuotaIA>>
 type Dependencies = {
@@ -94,7 +113,7 @@ export async function generateSelfieAvatar(request: Request, overrides: Partial<
     signal.throwIfAborted()
     const form = new FormData()
     form.append('input_image_0', new Blob([Uint8Array.from(photo)], { type: 'image/jpeg' }), 'selfie.jpg')
-    form.append('prompt', SELFIE_PROMPT)
+    form.append('prompt', buildSelfiePrompt())
     form.append('width', String(SELFIE_OUTPUT_SIDE))
     form.append('height', String(SELFIE_OUTPUT_SIDE))
     const response = await deps.fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/ai/run/${SELFIE_MODEL}`, {

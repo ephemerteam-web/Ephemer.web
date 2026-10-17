@@ -1,0 +1,799 @@
+{
+  "colonnes": [
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "actions",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "actions",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "action",
+      "type": "text",
+      "table": "actions",
+      "position": 3,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "actions",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "celebrations",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "titre",
+      "type": "text",
+      "table": "celebrations",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "date_fete",
+      "type": "date",
+      "table": "celebrations",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "date_canonique",
+      "type": "date",
+      "table": "celebrations",
+      "position": 4,
+      "obligatoire": false
+    },
+    {
+      "nom": "heure",
+      "type": "time without time zone",
+      "table": "celebrations",
+      "position": 5,
+      "obligatoire": false
+    },
+    {
+      "nom": "lieu",
+      "type": "text",
+      "table": "celebrations",
+      "position": 6,
+      "obligatoire": false
+    },
+    {
+      "nom": "mode",
+      "type": "text",
+      "table": "celebrations",
+      "position": 7,
+      "obligatoire": true
+    },
+    {
+      "nom": "surprise",
+      "type": "boolean",
+      "table": "celebrations",
+      "position": 8,
+      "obligatoire": true
+    },
+    {
+      "nom": "destinataire",
+      "type": "uuid",
+      "table": "celebrations",
+      "position": 9,
+      "obligatoire": false
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "celebrations",
+      "position": 10,
+      "obligatoire": true
+    },
+    {
+      "nom": "revision",
+      "type": "bigint",
+      "table": "celebrations",
+      "position": 11,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "celebrations",
+      "position": 12,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "commentaires",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "commentaires",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "auteur",
+      "type": "uuid",
+      "table": "commentaires",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "texte",
+      "type": "text",
+      "table": "commentaires",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "revision",
+      "type": "bigint",
+      "table": "commentaires",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "commentaires",
+      "position": 6,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "demandes",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "demandes",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "demandeur",
+      "type": "uuid",
+      "table": "demandes",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "motif",
+      "type": "text",
+      "table": "demandes",
+      "position": 4,
+      "obligatoire": false
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "demandes",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "revision",
+      "type": "bigint",
+      "table": "demandes",
+      "position": 6,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "demandes",
+      "position": 7,
+      "obligatoire": true
+    },
+    {
+      "nom": "decide_at",
+      "type": "timestamp with time zone",
+      "table": "demandes",
+      "position": 8,
+      "obligatoire": false
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "invitations",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "invitations",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "emetteur",
+      "type": "uuid",
+      "table": "invitations",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "cible",
+      "type": "uuid",
+      "table": "invitations",
+      "position": 4,
+      "obligatoire": false
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "invitations",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "invitations",
+      "position": 6,
+      "obligatoire": true
+    },
+    {
+      "nom": "expire_at",
+      "type": "timestamp with time zone",
+      "table": "invitations",
+      "position": 7,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "notifications",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "notifications",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "compte",
+      "type": "uuid",
+      "table": "notifications",
+      "position": 3,
+      "obligatoire": true
+    },
+    {
+      "nom": "type",
+      "type": "text",
+      "table": "notifications",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "notifications",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "acteur",
+      "type": "uuid",
+      "table": "operations",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "operations",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "operations",
+      "position": 3,
+      "obligatoire": true
+    },
+    {
+      "nom": "empreinte",
+      "type": "text",
+      "table": "operations",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "action",
+      "type": "text",
+      "table": "operations",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "created_at",
+      "type": "timestamp with time zone",
+      "table": "operations",
+      "position": 6,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "participations",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "participations",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "compte",
+      "type": "uuid",
+      "table": "participations",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "role",
+      "type": "text",
+      "table": "participations",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "participations",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "generation",
+      "type": "bigint",
+      "table": "participations",
+      "position": 6,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "sources",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "proprietaire",
+      "type": "uuid",
+      "table": "sources",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "preparation",
+      "type": "uuid",
+      "table": "sources",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "taches",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "taches",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "auteur",
+      "type": "uuid",
+      "table": "taches",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "titre",
+      "type": "text",
+      "table": "taches",
+      "position": 4,
+      "obligatoire": true
+    },
+    {
+      "nom": "type",
+      "type": "text",
+      "table": "taches",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "responsable",
+      "type": "uuid",
+      "table": "taches",
+      "position": 6,
+      "obligatoire": false
+    },
+    {
+      "nom": "echeance",
+      "type": "date",
+      "table": "taches",
+      "position": 7,
+      "obligatoire": false
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "taches",
+      "position": 8,
+      "obligatoire": true
+    },
+    {
+      "nom": "revision",
+      "type": "bigint",
+      "table": "taches",
+      "position": 9,
+      "obligatoire": true
+    },
+    {
+      "nom": "id",
+      "type": "uuid",
+      "table": "transferts",
+      "position": 1,
+      "obligatoire": true
+    },
+    {
+      "nom": "celebration",
+      "type": "uuid",
+      "table": "transferts",
+      "position": 2,
+      "obligatoire": true
+    },
+    {
+      "nom": "initiateur",
+      "type": "uuid",
+      "table": "transferts",
+      "position": 3,
+      "obligatoire": false
+    },
+    {
+      "nom": "cible",
+      "type": "uuid",
+      "table": "transferts",
+      "position": 4,
+      "obligatoire": false
+    },
+    {
+      "nom": "etat",
+      "type": "text",
+      "table": "transferts",
+      "position": 5,
+      "obligatoire": true
+    },
+    {
+      "nom": "expire_at",
+      "type": "timestamp with time zone",
+      "table": "transferts",
+      "position": 6,
+      "obligatoire": true
+    }
+  ],
+  "triggers": [
+    {
+      "nom": "celebrations_blocage",
+      "actif": "O",
+      "table": "ephemer_social.blocages_etoiles",
+      "definition": "CREATE TRIGGER celebrations_blocage AFTER INSERT ON ephemer_social.blocages_etoiles FOR EACH ROW EXECUTE FUNCTION ephemer_celebrations.apres_blocage()"
+    },
+    {
+      "nom": "celebrations_effacement",
+      "actif": "O",
+      "table": "auth.users",
+      "definition": "CREATE TRIGGER celebrations_effacement BEFORE DELETE ON auth.users FOR EACH ROW EXECUTE FUNCTION ephemer_celebrations.avant_effacement()"
+    }
+  ],
+  "contraintes": [
+    {
+      "nom": "actions_celebration_fkey",
+      "table": "actions",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "actions_pkey",
+      "table": "actions",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "celebrations_check",
+      "table": "celebrations",
+      "definition": "CHECK (NOT surprise OR mode = 'seul'::text OR destinataire IS NOT NULL)"
+    },
+    {
+      "nom": "celebrations_date_fete_check",
+      "table": "celebrations",
+      "definition": "CHECK (date_fete >= '0001-01-01'::date AND date_fete <= '9999-12-31'::date)"
+    },
+    {
+      "nom": "celebrations_etat_check",
+      "table": "celebrations",
+      "definition": "CHECK (etat = ANY (ARRAY['active'::text, 'annulee'::text, 'archivee'::text, 'supprimee'::text, 'suspendue'::text]))"
+    },
+    {
+      "nom": "celebrations_lieu_check",
+      "table": "celebrations",
+      "definition": "CHECK (length(lieu) <= 500)"
+    },
+    {
+      "nom": "celebrations_mode_check",
+      "table": "celebrations",
+      "definition": "CHECK (mode = ANY (ARRAY['seul'::text, 'partage'::text]))"
+    },
+    {
+      "nom": "celebrations_pkey",
+      "table": "celebrations",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "celebrations_revision_check",
+      "table": "celebrations",
+      "definition": "CHECK (revision >= 1 AND revision <= '9007199254740991'::bigint)"
+    },
+    {
+      "nom": "celebrations_titre_check",
+      "table": "celebrations",
+      "definition": "CHECK (length(btrim(titre)) >= 1 AND length(btrim(titre)) <= 200)"
+    },
+    {
+      "nom": "commentaires_auteur_fkey",
+      "table": "commentaires",
+      "definition": "FOREIGN KEY (auteur) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "commentaires_celebration_fkey",
+      "table": "commentaires",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "commentaires_pkey",
+      "table": "commentaires",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "commentaires_texte_check",
+      "table": "commentaires",
+      "definition": "CHECK (length(btrim(texte)) >= 1 AND length(btrim(texte)) <= 2000)"
+    },
+    {
+      "nom": "demandes_celebration_fkey",
+      "table": "demandes",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "demandes_demandeur_fkey",
+      "table": "demandes",
+      "definition": "FOREIGN KEY (demandeur) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "demandes_etat_check",
+      "table": "demandes",
+      "definition": "CHECK (etat = ANY (ARRAY['attente'::text, 'acceptee'::text, 'refusee'::text, 'fermee'::text]))"
+    },
+    {
+      "nom": "demandes_motif_check",
+      "table": "demandes",
+      "definition": "CHECK (length(motif) <= 500)"
+    },
+    {
+      "nom": "demandes_pkey",
+      "table": "demandes",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "invitations_celebration_fkey",
+      "table": "invitations",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "invitations_cible_fkey",
+      "table": "invitations",
+      "definition": "FOREIGN KEY (cible) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "invitations_emetteur_fkey",
+      "table": "invitations",
+      "definition": "FOREIGN KEY (emetteur) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "nom": "invitations_etat_check",
+      "table": "invitations",
+      "definition": "CHECK (etat = ANY (ARRAY['attente'::text, 'acceptee'::text, 'refusee'::text, 'revoquee'::text]))"
+    },
+    {
+      "nom": "invitations_pkey",
+      "table": "invitations",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "notifications_celebration_fkey",
+      "table": "notifications",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "notifications_compte_fkey",
+      "table": "notifications",
+      "definition": "FOREIGN KEY (compte) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "notifications_pkey",
+      "table": "notifications",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "notifications_type_check",
+      "table": "notifications",
+      "definition": "CHECK (type = ANY (ARRAY['invitation'::text, 'tache'::text, 'changement'::text, 'demande'::text, 'reponse'::text]))"
+    },
+    {
+      "nom": "operations_acteur_fkey",
+      "table": "operations",
+      "definition": "FOREIGN KEY (acteur) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "operations_celebration_fkey",
+      "table": "operations",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "operations_pkey",
+      "table": "operations",
+      "definition": "PRIMARY KEY (acteur, id)"
+    },
+    {
+      "nom": "participations_celebration_fkey",
+      "table": "participations",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "participations_celebration_id_key",
+      "table": "participations",
+      "definition": "UNIQUE (celebration, id)"
+    },
+    {
+      "nom": "participations_compte_fkey",
+      "table": "participations",
+      "definition": "FOREIGN KEY (compte) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "nom": "participations_etat_check",
+      "table": "participations",
+      "definition": "CHECK (etat = ANY (ARRAY['active'::text, 'partie'::text, 'maintenance'::text]))"
+    },
+    {
+      "nom": "participations_pkey",
+      "table": "participations",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "participations_role_check",
+      "table": "participations",
+      "definition": "CHECK (role = ANY (ARRAY['organisateur'::text, 'participant'::text]))"
+    },
+    {
+      "nom": "sources_celebration_fkey",
+      "table": "sources",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "sources_pkey",
+      "table": "sources",
+      "definition": "PRIMARY KEY (celebration)"
+    },
+    {
+      "nom": "sources_preparation_fkey",
+      "table": "sources",
+      "definition": "FOREIGN KEY (preparation) REFERENCES preparations_evenements(id) ON DELETE SET NULL"
+    },
+    {
+      "nom": "sources_proprietaire_fkey",
+      "table": "sources",
+      "definition": "FOREIGN KEY (proprietaire) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "sources_proprietaire_preparation_key",
+      "table": "sources",
+      "definition": "UNIQUE (proprietaire, preparation)"
+    },
+    {
+      "nom": "taches_auteur_fkey",
+      "table": "taches",
+      "definition": "FOREIGN KEY (auteur) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "nom": "taches_celebration_fkey",
+      "table": "taches",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "taches_celebration_responsable_fkey",
+      "table": "taches",
+      "definition": "FOREIGN KEY (celebration, responsable) REFERENCES ephemer_celebrations.participations(celebration, id)"
+    },
+    {
+      "nom": "taches_echeance_check",
+      "table": "taches",
+      "definition": "CHECK (echeance >= '0001-01-01'::date AND echeance <= '9999-12-31'::date)"
+    },
+    {
+      "nom": "taches_etat_check",
+      "table": "taches",
+      "definition": "CHECK (etat = ANY (ARRAY['a_faire'::text, 'faite'::text, 'abandonnee'::text]))"
+    },
+    {
+      "nom": "taches_pkey",
+      "table": "taches",
+      "definition": "PRIMARY KEY (id)"
+    },
+    {
+      "nom": "taches_titre_check",
+      "table": "taches",
+      "definition": "CHECK (length(btrim(titre)) >= 1 AND length(btrim(titre)) <= 200)"
+    },
+    {
+      "nom": "taches_type_check",
+      "table": "taches",
+      "definition": "CHECK (type = ANY (ARRAY['cadeau'::text, 'message'::text, 'gateau'::text, 'repas'::text, 'boissons'::text, 'decoration'::text, 'appel'::text, 'sortie'::text, 'libre'::text]))"
+    },
+    {
+      "nom": "transferts_celebration_fkey",
+      "table": "transferts",
+      "definition": "FOREIGN KEY (celebration) REFERENCES ephemer_celebrations.celebrations(id)"
+    },
+    {
+      "nom": "transferts_cible_fkey",
+      "table": "transferts",
+      "definition": "FOREIGN KEY (cible) REFERENCES auth.users(id) ON DELETE CASCADE"
+    },
+    {
+      "nom": "transferts_etat_check",
+      "table": "transferts",
+      "definition": "CHECK (etat = ANY (ARRAY['attente'::text, 'accepte'::text, 'refuse'::text, 'annule'::text]))"
+    },
+    {
+      "nom": "transferts_initiateur_fkey",
+      "table": "transferts",
+      "definition": "FOREIGN KEY (initiateur) REFERENCES auth.users(id) ON DELETE SET NULL"
+    },
+    {
+      "nom": "transferts_pkey",
+      "table": "transferts",
+      "definition": "PRIMARY KEY (id)"
+    }
+  ]
+}

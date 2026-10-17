@@ -9,6 +9,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase-browser'
 import { exportOwnData, readOwnRows } from '@/lib/user-data'
+import { CELEBRATIONS_ENABLED } from '@/lib/celebration-contract'
 import { parisDay } from '@/lib/calendar-day'
 import { deliveryLimit } from '@/lib/delivery-status'
 
@@ -48,7 +49,8 @@ export default function DataPage() {
     <PageHeading title="Mes données et diagnostic">Comprendre les rappels et récupérer une copie personnelle.</PageHeading>
     {error && <Notice error>{error}</Notice>}
     <Card><h2 className="text-xl font-semibold">Exporter mes données</h2>
-      <p>Profil, contacts, dates et occurrences, listes, préparations et brouillons, idées, choix et cadeaux offerts, styles et affectations, centres d’intérêt, rappels, notifications, préférences et métadonnées des invitations au format JSON (version 5). Les liens secrets et clés push sont exclus. Conserve ce fichier personnel dans un endroit sûr.</p>
+      <p>Profil, contacts, dates et occurrences, listes, préparations et brouillons, idées, choix et cadeaux offerts, styles et affectations, centres d’intérêt, rappels, notifications, préférences et métadonnées des invitations au format JSON. Les liens secrets et clés push sont exclus. Conserve ce fichier personnel dans un endroit sûr.</p>
+      {CELEBRATIONS_ENABLED&&<p>Les célébrations partagées incluent tes propres contributions et les informations auxquelles tu as encore accès. Les contributions des autres participants et les surprises qui te sont destinées sont exclues.</p>}
       <Button disabled={busy} onClick={() => run('export')}>{busy ? 'Opération en cours…' : 'Télécharger mon export'}</Button>
     </Card>
     <Card><h2 className="text-xl font-semibold">Diagnostic sans envoi</h2>

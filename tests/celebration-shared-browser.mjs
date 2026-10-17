@@ -32,4 +32,4 @@ try{
  await click('Voir la préparation');await ready('Réveillon entre amis');await click('Révoquer');await ready('Cette célébration est indisponible');assert.equal(await page.evaluate(()=>document.querySelector('main').textContent.includes('Nous apportons les boissons.')),false)
  assert.equal(await page.evaluate(()=>localStorage.length),0);assert.deepEqual(errors,[])
  console.log('Réussi : 320/390/1440, clair/sombre, liste/création/onglets, date nullable, publication explicite, réponse perdue, conflit, clavier, compte, hors ligne et révocation. Transport fictif uniquement.')
-}catch(error){await page.screenshot({path:path.join(dir,'failure.png'),fullPage:true});console.error(errors);throw error}finally{await browser.close()}
+}catch(error){await page.screenshot({path:path.join(dir,'failure.png'),fullPage:true}).catch(()=>{});console.error(errors);throw error}finally{await browser.close()}

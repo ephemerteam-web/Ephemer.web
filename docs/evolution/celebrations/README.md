@@ -1,6 +1,6 @@
-# Célébrations — livraison locale du 13 octobre 2026
+# Célébrations — état au 17 octobre 2026
 
-**Parcours personnel intégré ; création libre et organisation partagée préparées et désactivées jusqu’à installation humaine et validation des accès. Permissions des cinq tables privées confirmées : aucun nouveau GRANT nécessaire.**
+**Parcours personnel intégré ; SQL corrigé installé humainement et catalogue conforme. Organisation partagée ouverte avec `npm run dev` pour la recette pilote ; builds de production fermés jusqu’au GO général. Permissions des cinq tables privées confirmées : aucun nouveau GRANT nécessaire.** La copie Supabase n’est plus obligatoire pour B, sur décision explicite de l’utilisateur. Procédure actuelle : [GO-PRODUCTION.md](GO-PRODUCTION.md), [correctif complet](correctifs-production.sql), [vérification en lecture seule](verification-production.sql). Les anciennes recettes de copie gardent leurs protections.
 
 Lire [README-B.md](README-B.md) pour le contrat final de la tranche B, son dossier SQL, les vérifications et l’activation. [CONCEPTION.md](CONCEPTION.md) conserve la conception des tranches suivantes ; les soutiens, sondages, envies, réservations et frais partagés sont reportés.
 
@@ -19,18 +19,20 @@ Le diagnostic initial omettait les permissions de colonne. Le catalogue et le r�
 
 [SQL complet proposé](schema-propose.sql), [vérification](verification.sql), [recette sur copie](recette-copie.sql), scripts de concurrence et [retour arrière](retour-arriere.sql). Le vieux `schema-revue.sql` renvoie à ce dossier sans proposer de tables C/D.
 
-Création libre avec date facultative, publication sélectionnée depuis privé, invitations, participants, tâches, commentaires, demandes de suppression privées, transfert accepté, intégration au blocage, export et effacement de compte sont préparés. Contrats isolés ; **CELEBRATIONS_ENABLED reste false**. Aucune table future ajoutée aux types générés.
+Création libre avec date facultative, publication sélectionnée depuis privé, invitations, participants, tâches, commentaires, demandes de suppression privées, transfert accepté, intégration au blocage, export et effacement de compte sont préparés. Contrats isolés ; **CELEBRATIONS_ENABLED est vrai uniquement en développement**. Aucune table future ajoutée aux types générés.
 
 ## Vérifications et limites
+
+17/10 : protections des réponses tardives et de l’export corrigées ; erreurs de concurrence récupérables. **418 tests**, TypeScript/build, zéro erreur lint et cinq avertissements préexistants après activation locale et correction du responsable facultatif ; journal `out/celebrations-production/verify-activation.txt`. Préconditions et douze scénarios SQL synthétiques validés en READ ONLY. Application humaine et catalogue corrigé conformes ; [parcours fonctionnels réels](RECETTE-PILOTE.md) exercés avec les deux comptes successivement, puis tailles 320/390/1440, deux thèmes et clavier sur page réelle. **GO local ; GO général en attente des courses et rejeux réseau réels.** Le bilan ci-dessous conserve les preuves du 13/10.
 
 `npm run verify` : **411 tests réussis**, TypeScript et build, zéro erreur lint et cinq avertissements préexistants. Journal final : `out/celebrations-b/verify.txt`.
 
 Recettes Edge avec composants/CSS réels et Auth/transports fictifs : A à 320/390/1440 px, deux thèmes et trois onglets (18 captures) ; B aux mêmes tailles et thèmes, liste/création/trois onglets, clavier, panne réseau, conflit, compte et révocation (30 captures). Aucun appel à Supabase ou à un fournisseur externe dans ces recettes.
 
-L’installation SQL humaine est désormais confirmée par le catalogue READ ONLY, avec les 25 corps de fonctions identiques au dossier. Types publics régénérés depuis la base installée. **Comportements SQL, droits JWT réels et concurrence PostgreSQL restent à valider sur copie.** Aucun SQL métier appliqué par l’assistant. [ACTIVATION.md](ACTIVATION.md) détaille les étapes restantes et les accès aux invitations dans une célébration existante.
+L’installation SQL humaine initiale est confirmée par le catalogue READ ONLY, avec les 25 corps de fonctions identiques au dossier historique. Types publics régénérés depuis la base installée. **Droits JWT réels et concurrence PostgreSQL restent à valider par la recette pilote dédiée, après correctif humain.** Aucun SQL métier appliqué par l’assistant. [ACTIVATION.md](ACTIVATION.md) détaille les étapes restantes et les accès aux invitations dans une célébration existante.
 
 ## Suite et retour
 
-Installation humaine et recettes sur copie, contrôle du catalogue cible puis activation des seuls parcours validés selon [README-B.md](README-B.md). Les permissions privées ne constituent plus un préalable de correction. Frais D : politique de conservation à valider avant tout SQL financier.
+Correctif humain limité, catalogue corrigé, activation locale pour les deux comptes pilotes puis décision GO selon [GO-PRODUCTION.md](GO-PRODUCTION.md). Les permissions privées ne constituent plus un préalable de correction. Frais D : politique de conservation à valider avant tout SQL financier.
 
 L’utilisateur contrôle l’application avec `npm run dev` et effectue lui-même tout commit/déploiement. Aucun commit, déploiement, dépendance, migration ou vrai email/IA/push ajouté. Retour B : verrou à false, application précédente restaurée, API fermées sans suppression des données ou sources privées.

@@ -16,7 +16,7 @@ export function harness(file,{overrides={},globals={},extra='',sources={}}={}) {
   const slots=[], effects=[], modules=new Map(); let cursor=0,tree
   const hooks={...React,
     useState(initial){const i=cursor++; if(!(i in slots)) slots[i]=typeof initial==='function'?initial():initial; return [slots[i],value=>{slots[i]=typeof value==='function'?value(slots[i]):value}]},
-    useRef(initial){return hooks.useState(()=>({current:initial}))[0]}, useMemo(fn){return fn()},useCallback(fn,deps){const ref=hooks.useRef(null);if(!ref.current || deps.some((dep,i)=>!Object.is(dep,ref.current.deps[i]))) ref.current={fn,deps};return ref.current.fn},useId(){return hooks.useState('synthetic-title')[0]},
+    useRef(initial){return hooks.useState(()=>({current:initial}))[0]}, useMemo(fn){return fn()},useCallback(fn,deps){const ref=hooks.useRef(null);if(!ref.current || deps.some((dep,i)=>!Object.is(dep,ref.current.deps[i]))) ref.current={fn,deps};return ref.current.fn},useId(){return hooks.useState('synthetic-title')[0]},useSyncExternalStore(subscribe,snapshot){return snapshot()},
     useEffect(fn,deps){const i=cursor++; if(!slots[i] || !deps || deps.some((dep,index)=>!Object.is(dep,slots[i].deps[index]))) {slots[i]?.cleanup?.(); slots[i]={deps}; effects.push(()=>{slots[i].cleanup=fn()})}}
   }
   function load(path){

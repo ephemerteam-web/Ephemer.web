@@ -1,24 +1,24 @@
-# Où en est l’activation des célébrations à plusieurs ?
+# Activation des célébrations à plusieurs
 
-13 octobre 2026. Le SQL a été installé humainement. Le contrôle du catalogue connecté a réussi : `celebrations_b_catalogue_conforme`, 11 tables internes, six procédures publiques et protections de révocation présentes. Les 25 corps de fonctions correspondent au dossier local. Les types publics ont été régénérés depuis cette installation, sans ajouter les tables internes aux types exposés.
+17 octobre 2026. **Le correctif est installé humainement et le catalogue corrigé est conforme**, confirmé par l’utilisateur puis par une vérification indépendante READ ONLY. **Le module est ouvert localement avec `npm run dev`** pour les deux comptes pilotes. Les builds de production restent fermés jusqu’au GO général après recette réelle.
 
-**L’interface reste désactivée : les tests des droits et de concurrence sur une copie n’ont pas encore été effectués.** Le plan demandé prévoit leur réussite avant ouverture. Le catalogue confirme la présence des protections, pas leur comportement avec plusieurs personnes.
+À la demande de l’utilisateur, une deuxième base Supabase n’est plus obligatoire pour cette tranche. Le protocole actuel est [GO-PRODUCTION.md](GO-PRODUCTION.md). Les anciennes recettes de copie restent protégées et ne doivent jamais être exécutées dans la base de l’application.
 
-## Parcours préparé
+## Ordre restant
 
-- Depuis une préparation personnelle existante : **Inviter des Étoiles à cette célébration** → choisir les éléments à partager → vérifier l’aperçu → confirmer → ouvrir la célébration créée → inviter des Étoiles acceptées. Seule la copie confirmée devient partageable ; les notes, coordonnées, brouillons et budget restent personnels.
-- Depuis une célébration du nouveau module, déjà créée seul : **Participants → Inviter des Étoiles** → confirmer le passage à plusieurs → choisir une Étoile → **Inviter cette Étoile**. Cette étape conserve la même célébration et ne lance aucune invitation avant la sélection explicite.
-- Depuis une célébration déjà partagée : **Participants → Inviter des Étoiles**. L’invitation reste en attente jusqu’à la réponse de son destinataire.
-- La surprise conserve l’exclusion de son destinataire ; sans compte identifié, elle ne peut pas passer à plusieurs.
+1. Installation du correctif et [vérification en lecture seule](verification-production.sql) **terminées** : `celebrations_production_catalogue_conforme`. Ne pas réinstaller `schema-propose.sql`.
+2. Lancer `npm run dev`. `CELEBRATIONS_ENABLED` est activé en développement uniquement, sans variable supplémentaire. Un build de production reste fermé pendant la recette.
+3. Parcours fonctionnels réels effectués avec les deux comptes successivement : [résultats](RECETTE-PILOTE.md). Restent les courses et rejeux réels avec deux profils indépendants ; les changements successifs de session ne les prouvent pas. Utiliser uniquement des célébrations dédiées depuis l’application, sans SQL de données de test.
+4. Donner le GO général après réussite réelle des parcours et contrôles. Le commit et le déploiement restent humains. L’effacement d’un compte réel n’est pas testé ; cette limite et les courses non observées doivent être consignées.
 
-Ces boutons seront accessibles après activation. La recette navigateur utilise déjà les vrais composants et des réponses fictives pour vérifier le parcours, les pannes et les réessais sans doublon.
+Les préconditions du correctif et douze scénarios SQL synthétiques passent en READ ONLY. `npm run verify` réussit après correction du formulaire : **418 tests**, TypeScript/build, zéro erreur lint et cinq avertissements préexistants. Navigateur à 320/390/1440 px, deux thèmes, clavier, panne réseau, changement de compte et révocation : réussi avec données fictives. Les contrôles réels effectués ensuite avec les deux comptes sont consignés dans [RECETTE-PILOTE.md](RECETTE-PILOTE.md) ; les courses entre sessions indépendantes restent non effectuées.
 
-## Ce qu’il reste à vérifier
+## Boutons disponibles localement
 
-1. Utiliser **une copie isolée de la base**, sans vrais emails, push, crons ou webhooks. Identifier cette copie avant d’exécuter les scripts. Ne pas utiliser la base courante de l’application pour créer les données de test.
-2. Sur cette copie avec le schéma B installé, exécuter [verification.sql](verification.sql). Il doit répondre `celebrations_b_catalogue_conforme`.
-3. Dans la même session SQL de cette copie, placer `SET ephemer.recette_celebrations='copie_autorisee';` avant le contenu complet de [recette-copie.sql](recette-copie.sql). Le script crée des comptes fictifs, vérifie les différents droits puis termine par `ROLLBACK`. Aucune erreur ne doit être ignorée. Le marqueur ne prouve pas à lui seul que la connexion vise une copie.
-4. Faire les cinq tests à deux connexions décrits dans [README-B.md](README-B.md) : invitation/révocation, tâche rejouée, suppression concurrente, transfert/départ et blocage. Utiliser les fixtures dédiées, exécuter le blocage en dernier puis le contrôle final. Refaire dans l’ordre inverse sur une copie restaurée.
-5. Vérifier avec des comptes de test et des connexions réelles : organisateur, participant, invitation en attente, ex-membre, personne extérieure et destinataire d’une surprise. Contrôler les appels directs, les identifiants changés, l’export, la révocation et l’effacement du compte. Les claims SQL fictifs ne remplacent pas ce test.
+- **Préparation personnelle existante** : « Inviter des Étoiles à cette célébration » → sélectionner les éléments → vérifier l’aperçu → confirmer → inviter depuis la copie partagée. Notes, coordonnées, brouillons et budget restent privés.
+- **Célébration créée seul** : Organisation → Participants → « Inviter des Étoiles » → confirmer le passage à plusieurs → choisir une Étoile → « Inviter cette Étoile ». La célébration garde son identifiant ; aucune invitation implicite.
+- **Célébration déjà partagée** : Organisation → Participants → « Inviter des Étoiles ». Le destinataire répond lui-même.
 
-Après ces résultats confirmés, ouvrir le module avec `CELEBRATIONS_ENABLED`, puis refaire les vérifications locales et la recette utilisateur. Ne pas réexécuter le fichier d’installation sur le schéma déjà présent. Aucune installation ou recette métier distante n’a été exécutée automatiquement par l’assistant.
+Une surprise exclut son destinataire de tous les accès. Sans identité valide, son partage est suspendu et sa clôture reste possible pour un organisateur autorisé.
+
+Aucune commande SQL métier, installation, activation générale ou suppression de compte n’a été exécutée par l’assistant.

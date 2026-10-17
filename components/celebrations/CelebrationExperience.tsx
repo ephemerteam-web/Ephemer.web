@@ -19,17 +19,19 @@ function useQuery<T>(loader: (signal: AbortSignal) => Promise<T>) {
   const loaderRef = useRef(loader)
   useEffect(() => { loaderRef.current = loader })
   const [data, setData] = useState<T | null>(null), [error, setError] = useState(''), [version, setVersion] = useState(0)
+  const epoch=useRef(0), requests=useRef(new Set<AbortController>())
   const offline=useSyncExternalStore(subscribeNetwork,()=>!navigator.onLine,()=>false)
-  const invalidate = () => { setData(null); setError('Cette célébration est indisponible. Les contenus partagés ont été retirés de cet écran.') }
+  const invalidate = () => { epoch.current++;requests.current.forEach(request=>request.abort());requests.current.clear();setData(null); setError('Cette célébration est indisponible. Les contenus partagés ont été retirés de cet écran.') }
   useEffect(() => {
     const abort = new AbortController()
     if (!navigator.onLine) return () => abort.abort()
-    loaderRef.current(abort.signal).then(result => { if (!abort.signal.aborted) { setData(result); setError('') } }, cause => {
-      if (abort.signal.aborted) return
+    const generation=++epoch.current,controllers=requests.current;controllers.add(abort)
+    loaderRef.current(abort.signal).then(result => { if (!abort.signal.aborted&&epoch.current===generation) { setData(result); setError('') } }, cause => {
+      if (abort.signal.aborted||epoch.current!==generation) return
       if ([401,403,404].includes(cause?.status)) setData(null)
       setError(cause instanceof Error ? cause.message : 'Lecture indisponible. Réessaie.')
-    })
-    return () => abort.abort()
+    }).finally(()=>controllers.delete(abort))
+    return () => {abort.abort();controllers.delete(abort)}
   }, [version])
   useEffect(() => {
     const change = () => { if (navigator.onLine) setVersion(v => v + 1) }
@@ -57,7 +59,7 @@ function useActions(owner: string, api: CelebrationService, refresh: () => void,
       setNotice('Ton action a été enregistrée.'); refresh(); return result
     } catch (cause) {
       if (mounted.current && !controller.signal.aborted) {
-        if ([401,403,404].includes((cause as {status?: number})?.status??0)) invalidate()
+        if ([401,403,404].includes((cause as {status?: number})?.status??0)) { ids.current.clear();setNotice('');invalidate() }
         setError(cause instanceof Error ? cause.message : 'Action indisponible. Ta saisie est conservée.')
       }
       throw cause
@@ -145,7 +147,7 @@ export function CelebrationHub({ legacy, api = celebrationService }: { legacy?: 
 function InvitationCard({ invitation:i,run }: {invitation:CelebrationInvitation;run:Run}) {
   const demand = useRef<string|null>(null)
   if(i.type==='suppression')return <p className="border-t border-line py-3" role="status">Ta demande de suppression a été acceptée. La célébration a été supprimée ; ses préparatifs ne sont plus accessibles.</p>
-  return <article className="space-y-2 border-t border-line py-3"><h3 className="break-words font-semibold">{i.titre}</h3><p>{i.date??'Date à choisir'} · {i.emetteur}</p><p className="text-xs text-muted">Expire le {new Date(i.expiration).toLocaleDateString('fr-FR')}. Aucun accès aux préparatifs avant acceptation.</p>
+  return <article className="space-y-2 border-t border-line py-3"><h3 className="break-words font-semibold">{i.titre}</h3><p>{i.date??'Date à choisir'} · {i.emetteur}</p><p className="text-xs text-muted">Expire le {new Date(i.expiration).toLocaleDateString('fr-FR')}. {i.type==='transfert'?'Tu deviendras organisateur après ton acceptation.':'Aucun accès aux préparatifs avant acceptation.'}</p>
     <div className="flex flex-wrap gap-2">{[['accepter','Accepter'],['refuser','Refuser']].map(([action,label])=><button key={action} className={button} onClick={()=>void run((i.type==='transfert'?action+'_transfert':action) as CelebrationAction,{id:i.celebration,[i.type==='transfert'?'transfert':'invitation']:i.id}).catch(()=>{})}>{label}{i.type==='transfert'?' le transfert':''}</button>)}</div>
     {i.type==='invitation' && <details><summary className="min-h-11 cursor-pointer py-3">Demander la suppression</summary>{i.demande?.etat==='attente'?<p>Demande en attente</p>:<EditForm label="Envoyer ma demande" onSaved={()=>{demand.current=null}} save={async data=>{demand.current??=crypto.randomUUID();await run('demander_suppression',{id:i.celebration,demande:demand.current,motif:optional(data,'motif')})}}><NoteField name="motif" label="Motif facultatif, visible uniquement aux organisateurs" maxLength={500}/></EditForm>}{i.demande && <p>Statut : {statusLabels[i.demande.etat]}</p>}</details>}
   </article>
@@ -162,12 +164,12 @@ function TaskForm({ task,detail,run }: {task?:CelebrationTask;detail:Celebration
   const [kind,setKind]=useState(task?.type??'libre')
   return <EditForm key={version} label={task?'Enregistrer la tâche':'Ajouter ma tâche'} onSaved={()=>{id.current=null;setVersion(v=>v+1)}} save={async data=>{
     id.current??=crypto.randomUUID()
-    const values={id:detail.celebration.id,tache:base?.id??id.current,titre:text(data,'titre'),responsable:admin?optional(data,'responsable'):base?.responsable??me?.id??null,echeance:optional(data,'echeance')}
+    const values={id:detail.celebration.id,tache:base?.id??id.current,titre:text(data,'titre'),responsable:admin?optional(data,'responsable'):(base?base.responsable:me?.id??null),echeance:optional(data,'echeance')}
     await run(task?'modifier_tache':'ajouter_tache',task?{...values,revision:base!.revision,etat:text(data,'etat')}:{...values,type:text(data,'type')})
     if(base)setBase({...base,titre:values.titre,responsable:values.responsable,echeance:values.echeance,etat:text(data,'etat') as CelebrationTask['etat'],revision:base.revision+1})
   }}><TextField name="titre" label="Titre de la tâche" value={base?.titre} required maxLength={200}/>
     {!task&&<label className="block text-sm">Type<select name="type" className={field} value={kind} onChange={e=>setKind(e.target.value)}>{[['libre','Libre'],['cadeau','Cadeau'],['message','Carte ou message'],['gateau','Gâteau'],['repas','Repas'],['boissons','Boissons'],['decoration','Décoration'],['appel','Appel'],['sortie','Sortie']].filter(([key])=>detail.celebration.destinataire!==user.id||!['cadeau','message'].includes(key)).map(([key,label])=><option key={key} value={key}>{label}</option>)}</select></label>}
-    {admin&&<label className="block text-sm">Responsable<select name="responsable" className={field} defaultValue={base?.responsable??me?.id??''}><option value="">À choisir</option>{detail.participants.filter(p=>!['cadeau','message'].includes(kind)||p.compte!==detail.celebration.destinataire).map(p=><option key={p.id} value={p.id}>{p.identite}</option>)}</select></label>}
+    {admin&&<label className="block text-sm">Responsable<select name="responsable" className={field} defaultValue={(base?base.responsable:me?.id)??''}><option value="">À choisir</option>{detail.participants.filter(p=>!['cadeau','message'].includes(kind)||p.compte!==detail.celebration.destinataire).map(p=><option key={p.id} value={p.id}>{p.identite}</option>)}</select></label>}
     <TextField name="echeance" type="date" label="Échéance facultative" value={base?.echeance??''}/>
     {task&&<><label className="block text-sm">Progression<select name="etat" className={field} defaultValue={base?.etat}><option value="a_faire">À faire</option><option value="faite">Faite</option><option value="abandonnee">Abandonnée</option></select></label><button type="button" className={button} onClick={()=>{if(window.confirm('Relire la tâche et abandonner cette saisie ?')){setBase(task);setVersion(v=>v+1)}}}>Relire la tâche avant de comparer</button></>}
     <p className="text-xs text-muted">Une tâche faite ne prouve aucun achat ni envoi.</p>

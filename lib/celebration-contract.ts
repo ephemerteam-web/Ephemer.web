@@ -1,7 +1,7 @@
-// Contrat B proposé, indépendant des types DB tant que le SQL n'est pas installé.
+// Catalogue corrigé confirmé ; ouverture locale pour la recette des comptes pilotes.
 import { isCalendarDay } from './calendar-day'
 
-export const CELEBRATIONS_ENABLED = false // À changer seulement après catalogue + recette sur copie confirmés.
+export const CELEBRATIONS_ENABLED = process.env.NODE_ENV === 'development' // Production fermée jusqu’au GO après recette réelle.
 export const CELEBRATION_ACTIONS = {
   creer: ['id', 'titre', 'date', 'heure', 'lieu', 'mode', 'surprise', 'destinataire'],
   publier: ['id', 'titre', 'date', 'heure', 'lieu', 'mode', 'surprise', 'destinataire', 'preparation', 'taches', 'apercuSource', 'confirmer'],
